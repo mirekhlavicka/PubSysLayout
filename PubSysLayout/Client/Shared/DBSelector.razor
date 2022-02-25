@@ -1,0 +1,64 @@
+﻿@inject CurrentDB currentDB
+@inject NavigationManager uriHelper;
+@inject HttpClient Http
+@inject LocalStorage localStorage
+
+<style>
+    .dbselect input, .dbselect label, .dbselect .mud-icon-default {
+        color: white !important;
+    }
+
+    .dbselect {
+        width:300px;
+    }
+</style>
+
+@if (conlist != null)
+{
+    <div class="dbselect">
+        <MudSelect T="string" Label="Database" Variant="Variant.Text" AnchorOrigin="Origin.BottomCenter" Value="@currentDB.Current" ValueChanged="@SetCurrent" Margin="Margin.Dense"> @*OpenIcon="@Icons.Material.Filled.SettingsSuggest"*@
+            @foreach (var constr in conlist)
+            {
+                <MudSelectItem Value="@constr" />
+            }
+        </MudSelect>
+    </div>
+}
+
+@code {
+    private string[] conlist = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        conlist = await Http.GetFromJsonAsync<string[]>("api/dblist");
+
+        if (String.IsNullOrEmpty(currentDB.Current))
+        {
+            var val = await localStorage.GetAsync<string>("currentDB");
+
+            if (String.IsNullOrEmpty(val))
+            {
+                val = conlist[0];
+                await localStorage.SetAsync("currentDB", val);
+            }
+
+            currentDB.Current = val;
+            Reload();
+        }
+    }
+
+    private void Reload()
+    {
+        var uri = uriHelper.ToAbsoluteUri(uriHelper.ToBaseRelativePath(uriHelper.Uri).Split('/').FirstOrDefault()).ToString();
+        uriHelper.NavigateTo("/dummy", forceLoad: false);
+        uriHelper.NavigateTo(/*uriHelper.Uri*/uri, forceLoad: false);
+
+    }
+
+    private async Task SetCurrent(string s)
+    {
+        currentDB.Current = s;
+        await localStorage.SetAsync("currentDB", currentDB.Current);
+        Reload();
+    }
+}

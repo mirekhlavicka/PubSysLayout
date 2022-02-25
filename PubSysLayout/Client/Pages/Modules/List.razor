@@ -1,0 +1,39 @@
+﻿@page "/modules"
+@inject HttpClient Http
+@using PubSysLayout.Shared.Model
+
+<PageTitle>Modules</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">Modules</MudText>
+@*<MudText Class="mb-8">This component demonstrates fetching data from the server.</MudText>*@
+@if (modules == null)
+{
+    <MudProgressCircular Color="Color.Default" Indeterminate="true" />
+}
+else
+{
+    <MudTable Items="modules" Hover="true" SortLabel="Sort By" Elevation="0" RowsPerPage="50">
+        <HeaderContent>
+            <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Module, object>(x=>x.IdModule)">ID</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortBy="new Func<Module, object>(x=>x.Name)">Name</MudTableSortLabel></MudTh>
+            <MudTh>Path</MudTh>
+        </HeaderContent>
+        <RowTemplate>
+            <MudTd DataLabel="ID">@context.IdModule</MudTd>
+            <MudTd DataLabel="Name">@context.Name</MudTd>
+            <MudTd DataLabel="Path">@context.DesktopSrc</MudTd>
+        </RowTemplate>
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new int[]{10, 50, 100, 500}" />
+        </PagerContent>
+    </MudTable>
+}
+
+@code {
+    private Module[] modules;
+
+    protected override async Task OnInitializedAsync()
+    {
+        modules = await Http.GetFromJsonAsync<Module[]>("api/modules");
+    }
+}

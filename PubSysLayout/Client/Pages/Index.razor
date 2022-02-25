@@ -1,0 +1,45 @@
+﻿@page "/"
+@inject HttpClient Http
+@inject NavigationManager uriHelper;
+@inject CurrentDB currentDB
+@implements IDisposable
+
+<PageTitle>Index</PageTitle>
+
+<MudText Typo="Typo.h3" GutterBottom="true">@server</MudText>
+<MudText Class="mb-8">@currentDB.Current</MudText>
+@*<MudAlert Severity="Severity.Normal">You can find documentation and examples on our website here: <MudLink Href="https://mudblazor.com" Typo="Typo.body2" Color="Color.Inherit"><b>www.mudblazor.com</b></MudLink></MudAlert>*@
+
+@code {
+    private string server = null;
+    private Action currentDBChanged;
+    private bool disposed = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!String.IsNullOrEmpty(currentDB.Current))
+        {
+            server = await Http.GetStringAsync("api/dblist/server");
+        }
+
+        if (!disposed)
+        {
+            currentDB.OnChange += CurrentDBChanged;
+        }
+    }
+
+    private void CurrentDBChanged()
+    {
+        if (!disposed)
+        {
+            uriHelper.NavigateTo("/dummy");
+            uriHelper.NavigateTo("/");
+        }
+    }
+
+    public void Dispose()
+    {
+        currentDB.OnChange -= CurrentDBChanged;
+        disposed = true;
+    }
+}
