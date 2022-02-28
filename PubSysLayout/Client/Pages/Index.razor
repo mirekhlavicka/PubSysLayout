@@ -2,7 +2,7 @@
 @inject HttpClient Http
 @inject NavigationManager uriHelper;
 @inject CurrentDB currentDB
-@implements IDisposable
+@*@implements IDisposable*@
 
 <PageTitle>Index</PageTitle>
 
@@ -12,7 +12,7 @@
 
 @code {
     private string server = null;
-    private bool disposed = true;
+    //private bool disposed = true;
 
     protected override async Task OnInitializedAsync()
     {
@@ -21,24 +21,24 @@
             server = await Http.GetStringAsync("api/dblist/server");
         }
 
-        if (!disposed)
-        {
-            currentDB.OnChange += CurrentDBChanged;
-        }
+        //if (!disposed)
+        //{
+        //    currentDB.OnChange += CurrentDBChanged;
+        //}
     }
 
-    private void CurrentDBChanged()
-    {
-        if (!disposed)
-        {
-            uriHelper.NavigateTo("/dummy");
-            uriHelper.NavigateTo("/");
-        }
-    }
+    //private void CurrentDBChanged()
+    //{
+    //    if (!disposed)
+    //    {
+    //        uriHelper.NavigateTo("/dummy");
+    //        uriHelper.NavigateTo("/");
+    //    }
+    //}
 
-    public void Dispose()
-    {
-        currentDB.OnChange -= CurrentDBChanged;
-        disposed = true;
-    }
+    //public void Dispose()
+    //{
+    //    currentDB.OnChange -= CurrentDBChanged;
+    //    disposed = true;
+    //}
 }

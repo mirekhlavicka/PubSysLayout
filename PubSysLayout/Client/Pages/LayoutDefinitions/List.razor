@@ -1,25 +1,37 @@
 ﻿@page "/layoutdefinitions"
 @inject HttpClient Http
+@inject IJSRuntime js
+@inject MudBlazor.ISnackbar snackBar
 @using PubSysLayout.Shared.Model
 
 <PageTitle>Layout definitions</PageTitle>
 
-<MudText Typo="Typo.h3" GutterBottom="true">Layout definitions</MudText>
-<MudText Class="mb-8">This component demonstrates fetching data from the server.</MudText>
+@*<MudText Typo="Typo.h3" GutterBottom="true">Layout definitions</MudText>*@
 @if (layoutDefinitions == null)
 {
     <MudProgressCircular Color="Color.Default" Indeterminate="true" />
 }
 else
 {
-    <MudTable Items="layoutDefinitions" Hover="true" SortLabel="Sort By" Elevation="0" RowsPerPage="50">
+    <MudFab Color="Color.Primary" Title="Add new" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Link="layoutdefinitions/edit/0" />
+
+    <MudTable Items="layoutDefinitions" Hover="true" SortLabel="Sort By" Elevation="0" RowsPerPage="10">
         <HeaderContent>
             <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<LayoutDefinition, object>(x=>x.IdLayoutdefinition)">ID</MudTableSortLabel></MudTh>
             <MudTh><MudTableSortLabel SortBy="new Func<LayoutDefinition, object>(x=>x.Name)">Name</MudTableSortLabel></MudTh>
+            <MudTh>Layout</MudTh>
+            <MudTh>Style</MudTh>
+            <MudTh></MudTh>
         </HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="ID">@context.IdLayoutdefinition</MudTd>
             <MudTd DataLabel="Name">@context.Name</MudTd>
+            <MudTd DataLabel="Layout">@layouts[context.IdLayout]</MudTd>
+            <MudTd DataLabel="Layout">@(styles.ContainsKey(context.IdStyle)?styles[context.IdStyle]:"(not selected)")</MudTd>
+            <MudTd DataLabel="">
+                <MudFab Color="Color.Primary" Title="Edit" Icon="@Icons.Material.Filled.Edit" Size="Size.Small" IconSize="Size.Small" Link="@("layoutdefinitions/edit/" + @context.IdLayoutdefinition)" />
+                <MudFab Color="Color.Secondary" Title="Delete" Icon="@Icons.Material.Filled.Delete" Size="Size.Small" IconSize="Size.Small" @onclick="@(()=>Delete(@context.IdLayoutdefinition))" />
+            </MudTd>
         </RowTemplate>
         <PagerContent>
             <MudTablePager PageSizeOptions="new int[]{10, 50, 100, 500}" />
@@ -29,9 +41,25 @@ else
 
 @code {
     private LayoutDefinition[] layoutDefinitions;
+    private Dictionary<int, string> layouts;
+    private Dictionary<int, string> styles;
 
     protected override async Task OnInitializedAsync()
     {
+        layouts = (await Http.GetFromJsonAsync<LayoutDefinition[]>("api/layouts")).ToDictionary(l => l.IdLayout, l => l.Name);
+        styles = (await Http.GetFromJsonAsync<Style[]>("api/styles")).ToDictionary(s => s.IdStyle, s => s.Name);
+
         layoutDefinitions = await Http.GetFromJsonAsync<LayoutDefinition[]>("api/layoutdefinitions");
+    }
+
+    async Task Delete(int idLayoutdefinition)
+    {
+        var l = layoutDefinitions.First(x => x.IdLayoutdefinition == idLayoutdefinition);
+        if (await js.InvokeAsync<bool>("confirm", $"Do you want to delete {l.Name} ({l.IdLayoutdefinition}) ?"))
+        {
+            await Http.DeleteAsync($"api/layoutdefinitions/{idLayoutdefinition}");
+            snackBar.Add($"LayoutDefinition {idLayoutdefinition} deleted.", Severity.Success);
+            await OnInitializedAsync();
+        }
     }
 }

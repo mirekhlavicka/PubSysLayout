@@ -25,7 +25,18 @@ namespace PubSysLayout.Server.Controllers
         {
             using (var command = _context.Database.GetDbConnection().CreateCommand())
             {
-                command.CommandText = "SELECT name  FROM sys.databases WHERE [name] LIKE '%layout%' ORDER BY [name]";
+                command.CommandText = //"SELECT name  FROM sys.databases WHERE [name] LIKE '%layout%' ORDER BY [name]";
+                    @"SELECT name  FROM sys.databases WHERE [name] IN
+                    (
+	                    'finexpert_Layout_1',
+	                    'finexpert_M_Layout_1',
+	                    'Gadgets_Layout_1',
+	                    'HuraDoSkoly_Layout_1',
+	                    'JakChutnaPodzim_Layout_1',
+	                    'ZiveCZ_Touch_Layout_1',
+	                    'ZiveCZ_Layout_retro'
+                    )";
+
                 command.CommandType = System.Data.CommandType.Text;
 
                 _context.Database.OpenConnection();

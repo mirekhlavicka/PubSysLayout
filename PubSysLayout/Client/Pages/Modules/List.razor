@@ -12,7 +12,7 @@
 }
 else
 {
-    <MudTable Items="modules" Hover="true" SortLabel="Sort By" Elevation="0" RowsPerPage="50">
+    <MudTable Items="modules" Hover="true" SortLabel="Sort By" Elevation="0" RowsPerPage="15">
         <HeaderContent>
             <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Module, object>(x=>x.IdModule)">ID</MudTableSortLabel></MudTh>
             <MudTh><MudTableSortLabel SortBy="new Func<Module, object>(x=>x.Name)">Name</MudTableSortLabel></MudTh>
@@ -24,7 +24,7 @@ else
             <MudTd DataLabel="Path">@context.DesktopSrc</MudTd>
         </RowTemplate>
         <PagerContent>
-            <MudTablePager PageSizeOptions="new int[]{10, 50, 100, 500}" />
+            <MudTablePager PageSizeOptions="new int[]{15, 50, 100, 500}" />
         </PagerContent>
     </MudTable>
 }

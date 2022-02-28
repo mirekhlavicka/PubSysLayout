@@ -1,0 +1,105 @@
+﻿@page "/layoutdefinitions/edit/{idLayoutdefinition:int}"
+@inject HttpClient Http
+@inject IJSRuntime js
+@inject NavigationManager uriHelper
+@inject MudBlazor.ISnackbar snackBar
+@inject CurrentDB currentDB
+@using PubSysLayout.Shared.Model
+
+@if (layoutDefinition != null)
+{
+    <MudGrid>
+        <MudItem xs="4">
+            <MudCard>
+                <MudCardContent>
+                    <MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
+                        <MudTextField @bind-Value="layoutDefinition.Name" Label="Name" Required="true" RequiredError="Name is required!" />
+                        <MudSelect @bind-Value="@layoutDefinition.IdLayout" Label="Layout" Validation="(int x) => x != 0" Required="true">
+                            <MudSelectItem Value="0">(not selected)</MudSelectItem>
+                            @foreach (var l in layouts)
+                            {
+                            <MudSelectItem Value="@l.IdLayout">@l.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                        <MudSelect @bind-Value="@layoutDefinition.IdStyle" Label="Style">
+                            <MudSelectItem Value="0">(not selected)</MudSelectItem>
+                            @foreach (var s in styles)
+                            {
+                            <MudSelectItem Value="@s.IdStyle">@s.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                        <MudSwitch @bind-Checked="@layoutDefinition.Mainstyle" Label="Main style" Color="Color.Info" />
+                    </MudForm>
+                </MudCardContent>
+                <MudCardActions>
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!success)" OnClick="Save" Class="ml-auto" Style="margin-right:10px">Save</MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="GoBack">Cancel</MudButton>
+                </MudCardActions>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    [Parameter] public int idLayoutdefinition { get; set; }
+    LayoutDefinition layoutDefinition;
+    Layout[] layouts;
+    Style[] styles;
+
+    bool success;
+    string[] errors = { };
+    MudForm form;
+
+    protected async override Task OnParametersSetAsync()
+    {
+        if (currentDB.Current is null)
+        {
+            return;
+        }
+
+        layouts = await Http.GetFromJsonAsync<Layout[]>("api/layouts");
+        styles = await Http.GetFromJsonAsync<Style[]>("api/styles");
+
+        if (idLayoutdefinition == 0)
+        {
+            layoutDefinition = new LayoutDefinition
+                {
+                    //Name = "",
+                    //IdLayout = 0,
+                    //IdStyle = 0,
+                    //Mainstyle = false
+                };
+        }
+        else
+        {
+            layoutDefinition = await Http.GetFromJsonAsync<LayoutDefinition>($"api/layoutdefinitions/{idLayoutdefinition}");
+        }
+    }
+
+    async Task Save()
+    {
+        await form.Validate();
+
+        if (!form.IsValid)
+        {
+            return;
+        }
+
+        if (layoutDefinition.IdLayoutdefinition != 0)
+        {
+            await Http.PutAsJsonAsync($"api/layoutdefinitions/{idLayoutdefinition}", layoutDefinition);
+        }
+        else
+        {
+            await Http.PostAsJsonAsync("api/layoutdefinitions", layoutDefinition);            
+        }
+
+        snackBar.Add($"LayoutDefinition {layoutDefinition.Name} saved.", Severity.Success);
+        uriHelper.NavigateTo("layoutdefinitions");
+    }
+
+    private async void GoBack()
+    {
+        await js.InvokeVoidAsync("history.back");
+    }
+}
