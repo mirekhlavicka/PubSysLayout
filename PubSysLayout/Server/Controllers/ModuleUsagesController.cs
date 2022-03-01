@@ -11,47 +11,47 @@ namespace PubSysLayout.Server.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class ModulesController : ControllerBase
+    public class ModuleUsagesController : ControllerBase
     {
         private readonly LayoutDBContext _context;
 
-        public ModulesController(LayoutDBContext context)
+        public ModuleUsagesController(LayoutDBContext context)
         {
             _context = context;
         }
 
-        // GET: api/Modules
+        // GET: api/ModuleUsages
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Module>>> GetModules()
+        public async Task<ActionResult<IEnumerable<ModuleUsage>>> GetModuleUsages()
         {
-            return await _context.Modules.Where(m => !m.Admin).ToListAsync();
+            return await _context.ModuleUsages.ToListAsync();
         }
 
-        // GET: api/Modules/5
+        // GET: api/ModuleUsages/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Module>> GetModule(int id)
+        public async Task<ActionResult<ModuleUsage>> GetModuleUsage(int id)
         {
-            var @module = await _context.Modules.FindAsync(id);
+            var moduleUsage = await _context.ModuleUsages.FindAsync(id);
 
-            if (@module == null)
+            if (moduleUsage == null)
             {
                 return NotFound();
             }
 
-            return @module;
+            return moduleUsage;
         }
 
-        // PUT: api/Modules/5
+        // PUT: api/ModuleUsages/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutModule(int id, Module @module)
+        public async Task<IActionResult> PutModuleUsage(int id, ModuleUsage moduleUsage)
         {
-            if (id != @module.IdModule)
+            if (id != moduleUsage.IdModuleusage)
             {
                 return BadRequest();
             }
 
-            _context.Entry(@module).State = EntityState.Modified;
+            _context.Entry(moduleUsage).State = EntityState.Modified;
 
             try
             {
@@ -59,7 +59,7 @@ namespace PubSysLayout.Server.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!ModuleExists(id))
+                if (!ModuleUsageExists(id))
                 {
                     return NotFound();
                 }
@@ -72,36 +72,36 @@ namespace PubSysLayout.Server.Controllers
             return NoContent();
         }
 
-        // POST: api/Modules
+        // POST: api/ModuleUsages
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Module>> PostModule(Module @module)
+        public async Task<ActionResult<ModuleUsage>> PostModuleUsage(ModuleUsage moduleUsage)
         {
-            _context.Modules.Add(@module);
+            _context.ModuleUsages.Add(moduleUsage);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetModule", new { id = @module.IdModule }, @module);
+            return CreatedAtAction("GetModuleUsage", new { id = moduleUsage.IdModuleusage }, moduleUsage);
         }
 
-        // DELETE: api/Modules/5
+        // DELETE: api/ModuleUsages/5
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteModule(int id)
+        public async Task<IActionResult> DeleteModuleUsage(int id)
         {
-            var @module = await _context.Modules.FindAsync(id);
-            if (@module == null)
+            var moduleUsage = await _context.ModuleUsages.FindAsync(id);
+            if (moduleUsage == null)
             {
                 return NotFound();
             }
 
-            _context.Modules.Remove(@module);
+            _context.ModuleUsages.Remove(moduleUsage);
             await _context.SaveChangesAsync();
 
             return NoContent();
         }
 
-        private bool ModuleExists(int id)
+        private bool ModuleUsageExists(int id)
         {
-            return _context.Modules.Any(e => e.IdModule == id);
+            return _context.ModuleUsages.Any(e => e.IdModuleusage == id);
         }
     }
 }

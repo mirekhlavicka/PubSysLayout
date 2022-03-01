@@ -14,28 +14,20 @@ namespace PubSysLayout.Server.Controllers
     public class DBListController : ControllerBase
     {
         private readonly LayoutDBContext _context;
+        private readonly IConfiguration _configuration;
 
-        public DBListController(LayoutDBContext context)
+        public DBListController(LayoutDBContext context, IConfiguration configuration)
         {
             _context = context;
+            _configuration = configuration;
         }
 
-        [HttpGet/*("conlist")*/]
+        [HttpGet]
         public async Task<ActionResult<string[]>> GetConList()
         {
             using (var command = _context.Database.GetDbConnection().CreateCommand())
             {
-                command.CommandText = //"SELECT name  FROM sys.databases WHERE [name] LIKE '%layout%' ORDER BY [name]";
-                    @"SELECT name  FROM sys.databases WHERE [name] IN
-                    (
-	                    'finexpert_Layout_1',
-	                    'finexpert_M_Layout_1',
-	                    'Gadgets_Layout_1',
-	                    'HuraDoSkoly_Layout_1',
-	                    'JakChutnaPodzim_Layout_1',
-	                    'ZiveCZ_Touch_Layout_1',
-	                    'ZiveCZ_Layout_retro'
-                    )";
+                command.CommandText = _configuration["SELECT_databases"];
 
                 command.CommandType = System.Data.CommandType.Text;
 

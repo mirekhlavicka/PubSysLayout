@@ -16,7 +16,7 @@
 @if (conlist != null)
 {
     <div class="dbselect">
-        <MudSelect T="string" Label="Database" Variant="Variant.Text" AnchorOrigin="Origin.BottomCenter" Value="@currentDB.Current" ValueChanged="@SetCurrent" Margin="Margin.Dense"> @*OpenIcon="@Icons.Material.Filled.SettingsSuggest"*@
+        <MudSelect T="string" Label="Database" Variant="Variant.Text" AnchorOrigin="Origin.BottomCenter" Value="@currentDB.Current" ValueChanged="@SetCurrent" Margin="Margin.Dense">
             @foreach (var constr in conlist)
             {
                 <MudSelectItem Value="@constr" />
@@ -51,7 +51,7 @@
     {
         var uri = uriHelper.ToAbsoluteUri(uriHelper.ToBaseRelativePath(uriHelper.Uri).Split('/').FirstOrDefault()).ToString();
         uriHelper.NavigateTo("/dummy", forceLoad: false);
-        uriHelper.NavigateTo(/*uriHelper.Uri*/uri, forceLoad: false);
+        uriHelper.NavigateTo(uri, forceLoad: false);
 
     }
 

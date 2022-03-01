@@ -10,7 +10,7 @@
 {
     <MudGrid>
         <MudItem xs="4">
-            <MudCard>
+            <MudCard Elevation="5" Class="mt-16">
                 <MudCardContent>
                     <MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
                         <MudTextField @bind-Value="layoutDefinition.Name" Label="Name" Required="true" RequiredError="Name is required!" />
@@ -20,23 +20,80 @@
                             {
                             <MudSelectItem Value="@l.IdLayout">@l.Name</MudSelectItem>
                             }
-                        </MudSelect>
-                        <MudSelect @bind-Value="@layoutDefinition.IdStyle" Label="Style">
-                            <MudSelectItem Value="0">(not selected)</MudSelectItem>
-                            @foreach (var s in styles)
+                    </MudSelect>
+                    <MudSelect @bind-Value="@layoutDefinition.IdStyle" Label="Style">
+                        <MudSelectItem Value="0">(not selected)</MudSelectItem>
+                        @foreach (var s in styles)
                             {
                             <MudSelectItem Value="@s.IdStyle">@s.Name</MudSelectItem>
                             }
-                        </MudSelect>
-                        <MudSwitch @bind-Checked="@layoutDefinition.Mainstyle" Label="Main style" Color="Color.Info" />
-                    </MudForm>
-                </MudCardContent>
-                <MudCardActions>
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!success)" OnClick="Save" Class="ml-auto" Style="margin-right:10px">Save</MudButton>
-                    <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="GoBack">Cancel</MudButton>
-                </MudCardActions>
-            </MudCard>
-        </MudItem>
+                    </MudSelect>
+                    <MudSwitch @bind-Checked="@layoutDefinition.Mainstyle" Label="Main style" Color="Color.Info" />
+                </MudForm>
+            </MudCardContent>
+            <MudCardActions>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!success)" OnClick="Save" Class="ml-auto" Style="margin-right:10px">Save</MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="GoBack">Cancel</MudButton>
+            </MudCardActions>
+        </MudCard>
+    </MudItem>
+    @if (layoutDefinition.IdLayoutdefinition != 0)
+        {
+            <MudItem xs="8">
+                <MudFab Color="Color.Primary" Title="Add new" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-1" OnClick="AddModule" Disabled="@(newModuleUsage!=null || muBeforeEdit != null)" />
+                <MudTable @ref="muTable" Items="layoutDefinition.ModuleUsages" Hover="true" SortLabel="Sort By" Elevation="5" Class="mt-4" Dense="false" CanCancelEdit="true" CommitEditTooltip="Commit Edit" CancelEditTooltip="Cancel Edit"
+                  OnCommitEditClick="@(() => snackBar.Add("Edit saved"))" RowEditPreview="BackupItem" RowEditCancel="ResetItemToOriginalValues" RowEditCommit="ItemHasBeenCommitted" IsEditRowSwitchingBlocked="true">
+                    <ColGroup>
+                        <col style="width:50px;" />
+                        <col style="width:30%;" />
+                        <col style="width:30%;" />
+                        <col style="width:80px;" />
+                        <col style="width:150px;" />
+                    </ColGroup>
+                    <HeaderContent>
+                        <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<ModuleUsage, object>(x=>x.IdModuleusage == 0 ? 999999 : x.IdModuleusage)">ID</MudTableSortLabel></MudTh>
+                        <MudTh><MudTableSortLabel SortBy="new Func<ModuleUsage, object>(x=> x.IdSpot == 0 ? String.Empty : (spots[x.IdSpot]?.Name + x.Order.ToString()))">Spot</MudTableSortLabel></MudTh>
+                        <MudTh>Module</MudTh>
+                        <MudTh>Order</MudTh>
+                        <MudTh>Cache time</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="ID">@context.IdModuleusage</MudTd>
+                        <MudTd DataLabel="Spot">@(context.IdSpot == 0 ? "(not selected)" : spots[context.IdSpot]?.Name)</MudTd>
+                        <MudTd DataLabel="Module">@(context.IdModule == 0 ? "(not selected)" : @modules[context.IdModule]?.Name)</MudTd>
+                        <MudTd DataLabel="Order">@context.Order</MudTd>
+                        <MudTd DataLabel="Order">@context.CacheTime</MudTd>
+                    </RowTemplate>
+                    <RowEditingTemplate>
+                        <MudTd DataLabel="ID">@context.IdModuleusage</MudTd>
+                        <MudTd DataLabel="Spot">
+                            <MudSelect @bind-Value="@context.IdSpot" Validation="(int x) => x != 0" Required="true">
+                                <MudSelectItem Value="0">(not selected)</MudSelectItem>
+                                @foreach (var s in spots.Values.OrderBy(s => s.Name))
+                                {
+                            <MudSelectItem Value="@s.IdSpot">@s.Name</MudSelectItem>
+                                }
+                    </MudSelect>
+                </MudTd>
+                <MudTd DataLabel="Module">
+                    <MudSelect @bind-Value="@context.IdModule" Validation="(int x) => x != 0" Required="true">
+                        <MudSelectItem Value="0">(not selected)</MudSelectItem>
+                        @foreach (var m in modules.Values.OrderBy(m => m.Name))
+                                {
+                            <MudSelectItem Value="@m.IdModule">@m.Name</MudSelectItem>
+                                }
+                    </MudSelect>
+                </MudTd>
+                <MudTd DataLabel="Order">
+                    <MudTextField @bind-Value="@context.Order" Required />
+                </MudTd>
+                <MudTd DataLabel="Cache time">
+                    <MudTextField @bind-Value="@context.CacheTime" Required />
+                </MudTd>
+            </RowEditingTemplate>
+        </MudTable>
+    </MudItem>
+        }
     </MudGrid>
 }
 
@@ -45,10 +102,16 @@
     LayoutDefinition layoutDefinition;
     Layout[] layouts;
     Style[] styles;
+    Dictionary<int, Spot> spots;
+    Dictionary<int, Module> modules;
+
+    private ModuleUsage muBeforeEdit = null;
+    private ModuleUsage newModuleUsage = null;
 
     bool success;
     string[] errors = { };
     MudForm form;
+    MudTable<ModuleUsage> muTable;
 
     protected async override Task OnParametersSetAsync()
     {
@@ -59,16 +122,13 @@
 
         layouts = await Http.GetFromJsonAsync<Layout[]>("api/layouts");
         styles = await Http.GetFromJsonAsync<Style[]>("api/styles");
+        spots = (await Http.GetFromJsonAsync<Spot[]>("api/spots")).ToDictionary(s => s.IdSpot);
+        modules = (await Http.GetFromJsonAsync<Module[]>("api/modules")).ToDictionary(m => m.IdModule);
+
 
         if (idLayoutdefinition == 0)
         {
-            layoutDefinition = new LayoutDefinition
-                {
-                    //Name = "",
-                    //IdLayout = 0,
-                    //IdStyle = 0,
-                    //Mainstyle = false
-                };
+            layoutDefinition = new LayoutDefinition();
         }
         else
         {
@@ -88,18 +148,99 @@
         if (layoutDefinition.IdLayoutdefinition != 0)
         {
             await Http.PutAsJsonAsync($"api/layoutdefinitions/{idLayoutdefinition}", layoutDefinition);
+            uriHelper.NavigateTo("layoutdefinitions");
         }
         else
         {
-            await Http.PostAsJsonAsync("api/layoutdefinitions", layoutDefinition);            
+            using var response = await Http.PostAsJsonAsync("api/layoutdefinitions", layoutDefinition);
+            var ld = await response.Content.ReadFromJsonAsync<LayoutDefinition>();
+            uriHelper.NavigateTo($"layoutdefinitions/edit/{ld.IdLayoutdefinition}");
         }
 
         snackBar.Add($"LayoutDefinition {layoutDefinition.Name} saved.", Severity.Success);
-        uriHelper.NavigateTo("layoutdefinitions");
+
     }
 
     private async void GoBack()
     {
         await js.InvokeVoidAsync("history.back");
+    }
+
+    private void BackupItem(object element)
+    {
+        ModuleUsage b = element as ModuleUsage;
+
+        muBeforeEdit = new()
+            {
+                IdModule = b.IdModule,
+                IdSpot = b.IdSpot,
+                Order = b.Order,
+                CacheTime = b.CacheTime
+            };
+        StateHasChanged();
+    }
+
+    private void ResetItemToOriginalValues(object element)
+    {
+        if (muBeforeEdit != null)
+        {
+            ModuleUsage mu = element as ModuleUsage;
+            mu.IdModule = muBeforeEdit.IdModule;
+            mu.IdSpot = muBeforeEdit.IdSpot;
+            mu.Order = muBeforeEdit.Order;
+            mu.CacheTime = muBeforeEdit.CacheTime;
+            muBeforeEdit = null;
+            StateHasChanged();
+        }
+
+        if (newModuleUsage != null)
+        {
+            layoutDefinition.ModuleUsages.Remove(newModuleUsage);
+            newModuleUsage = null;
+            StateHasChanged();
+        }
+    }
+
+    private async void ItemHasBeenCommitted(object element)
+    {
+        muBeforeEdit = null;
+        newModuleUsage = null;
+
+        ModuleUsage mu = element as ModuleUsage;
+
+        if (mu.IdModuleusage != 0)
+        {
+            await Http.PutAsJsonAsync($"api/moduleusages/{mu.IdModuleusage}", mu);
+        }
+        else
+        {
+            using var response = await Http.PostAsJsonAsync("api/moduleusages", mu);
+            var xmu = await response.Content.ReadFromJsonAsync<ModuleUsage>();
+            mu.IdModuleusage = xmu.IdModuleusage;
+            StateHasChanged();
+        }
+    }
+
+    private void AddModule()
+    {
+        newModuleUsage = new ModuleUsage
+            {
+                IdLayoutdefinition = layoutDefinition.IdLayoutdefinition
+            };
+
+        layoutDefinition.ModuleUsages.Add(newModuleUsage);
+
+        Task.Run(async () =>
+        {
+            await Task.Delay(300);
+            if (newModuleUsage != null)
+            {
+                await InvokeAsync(() =>
+                {
+                    muTable.SetEditingItem(newModuleUsage);
+                    StateHasChanged();
+                });
+            }
+        });
     }
 }

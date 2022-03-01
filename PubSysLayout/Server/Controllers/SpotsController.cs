@@ -11,47 +11,47 @@ namespace PubSysLayout.Server.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class ModulesController : ControllerBase
+    public class SpotsController : ControllerBase
     {
         private readonly LayoutDBContext _context;
 
-        public ModulesController(LayoutDBContext context)
+        public SpotsController(LayoutDBContext context)
         {
             _context = context;
         }
 
-        // GET: api/Modules
+        // GET: api/Spots
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Module>>> GetModules()
+        public async Task<ActionResult<IEnumerable<Spot>>> GetSpots()
         {
-            return await _context.Modules.Where(m => !m.Admin).ToListAsync();
+            return await _context.Spots.ToListAsync();
         }
 
-        // GET: api/Modules/5
+        // GET: api/Spots/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Module>> GetModule(int id)
+        public async Task<ActionResult<Spot>> GetSpot(int id)
         {
-            var @module = await _context.Modules.FindAsync(id);
+            var spot = await _context.Spots.FindAsync(id);
 
-            if (@module == null)
+            if (spot == null)
             {
                 return NotFound();
             }
 
-            return @module;
+            return spot;
         }
 
-        // PUT: api/Modules/5
+        // PUT: api/Spots/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut("{id}")]
-        public async Task<IActionResult> PutModule(int id, Module @module)
+        public async Task<IActionResult> PutSpot(int id, Spot spot)
         {
-            if (id != @module.IdModule)
+            if (id != spot.IdSpot)
             {
                 return BadRequest();
             }
 
-            _context.Entry(@module).State = EntityState.Modified;
+            _context.Entry(spot).State = EntityState.Modified;
 
             try
             {
@@ -59,7 +59,7 @@ namespace PubSysLayout.Server.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!ModuleExists(id))
+                if (!SpotExists(id))
                 {
                     return NotFound();
                 }
@@ -72,36 +72,36 @@ namespace PubSysLayout.Server.Controllers
             return NoContent();
         }
 
-        // POST: api/Modules
+        // POST: api/Spots
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<Module>> PostModule(Module @module)
+        public async Task<ActionResult<Spot>> PostSpot(Spot spot)
         {
-            _context.Modules.Add(@module);
+            _context.Spots.Add(spot);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetModule", new { id = @module.IdModule }, @module);
+            return CreatedAtAction("GetSpot", new { id = spot.IdSpot }, spot);
         }
 
-        // DELETE: api/Modules/5
+        // DELETE: api/Spots/5
         [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteModule(int id)
+        public async Task<IActionResult> DeleteSpot(int id)
         {
-            var @module = await _context.Modules.FindAsync(id);
-            if (@module == null)
+            var spot = await _context.Spots.FindAsync(id);
+            if (spot == null)
             {
                 return NotFound();
             }
 
-            _context.Modules.Remove(@module);
+            _context.Spots.Remove(spot);
             await _context.SaveChangesAsync();
 
             return NoContent();
         }
 
-        private bool ModuleExists(int id)
+        private bool SpotExists(int id)
         {
-            return _context.Modules.Any(e => e.IdModule == id);
+            return _context.Spots.Any(e => e.IdSpot == id);
         }
     }
 }

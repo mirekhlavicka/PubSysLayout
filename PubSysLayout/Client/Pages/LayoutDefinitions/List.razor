@@ -6,18 +6,16 @@
 
 <PageTitle>Layout definitions</PageTitle>
 
-@*<MudText Typo="Typo.h3" GutterBottom="true">Layout definitions</MudText>*@
 @if (layoutDefinitions == null)
 {
     <MudProgressCircular Color="Color.Default" Indeterminate="true" />
 }
 else
 {
-    <MudFab Color="Color.Primary" Title="Add new" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Link="layoutdefinitions/edit/0" />
-
-    <MudTable Items="layoutDefinitions" Hover="true" SortLabel="Sort By" Elevation="0" RowsPerPage="10">
+    <MudFab Color="Color.Primary" Title="Add new" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Link="layoutdefinitions/edit/0" Class="mt-0 mb-5" />
+    <MudTable Items="layoutDefinitions" Hover="true" SortLabel="Sort By" Elevation="5" RowsPerPage="15" FixedHeader="true" FixedFooter="true" Height="80vh">
         <HeaderContent>
-            <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<LayoutDefinition, object>(x=>x.IdLayoutdefinition)">ID</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel InitialDirection="SortDirection.Descending" SortBy="new Func<LayoutDefinition, object>(x=>x.IdLayoutdefinition)">ID</MudTableSortLabel></MudTh>
             <MudTh><MudTableSortLabel SortBy="new Func<LayoutDefinition, object>(x=>x.Name)">Name</MudTableSortLabel></MudTh>
             <MudTh>Layout</MudTh>
             <MudTh>Style</MudTh>
@@ -34,7 +32,7 @@ else
             </MudTd>
         </RowTemplate>
         <PagerContent>
-            <MudTablePager PageSizeOptions="new int[]{10, 50, 100, 500}" />
+            <MudTablePager PageSizeOptions="new int[]{15, 50, 100, 500}" />
         </PagerContent>
     </MudTable>
 }

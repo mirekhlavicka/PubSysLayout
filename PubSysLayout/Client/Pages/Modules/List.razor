@@ -4,17 +4,15 @@
 
 <PageTitle>Modules</PageTitle>
 
-<MudText Typo="Typo.h3" GutterBottom="true">Modules</MudText>
-@*<MudText Class="mb-8">This component demonstrates fetching data from the server.</MudText>*@
 @if (modules == null)
 {
     <MudProgressCircular Color="Color.Default" Indeterminate="true" />
 }
 else
 {
-    <MudTable Items="modules" Hover="true" SortLabel="Sort By" Elevation="0" RowsPerPage="15">
+    <MudTable Items="modules" Hover="true" SortLabel="Sort By" Elevation="5" RowsPerPage="50" FixedHeader="true" FixedFooter="true" Height="80vh">
         <HeaderContent>
-            <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Module, object>(x=>x.IdModule)">ID</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel InitialDirection="SortDirection.Descending" SortBy="new Func<Module, object>(x=>x.IdModule)">ID</MudTableSortLabel></MudTh>
             <MudTh><MudTableSortLabel SortBy="new Func<Module, object>(x=>x.Name)">Name</MudTableSortLabel></MudTh>
             <MudTh>Path</MudTh>
         </HeaderContent>
