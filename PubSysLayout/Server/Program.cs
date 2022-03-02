@@ -55,6 +55,17 @@ app.UseRouting();
 
 app.MapRazorPages();
 app.MapControllers();
-app.MapFallbackToFile("index.html");
+app.MapFallbackToFile("index.html", new StaticFileOptions
+{
+    OnPrepareResponse = context =>
+    {
+        // !!!!!!!!!!!!!!  never cache index.html !!!!!!!!!!!!!!!!!
+        if (context.File.Name == "index.html")
+        {
+            context.Context.Response.Headers.Add("Cache-Control", "no-cache, no-store");
+            context.Context.Response.Headers.Add("Expires", "-1");
+        }
+    }
+});
 
 app.Run();

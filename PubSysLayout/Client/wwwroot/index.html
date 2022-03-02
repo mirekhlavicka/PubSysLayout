@@ -10,6 +10,19 @@
     <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
     <!--<link href="PubSysLayout.Client.styles.css" rel="stylesheet" />-->
 
+    <script>
+        window.scrollToElementId = (elementId) => {
+            //console.info('scrolling to element', elementId);
+            var element = document.getElementById(elementId);
+            if (!element) {
+                console.warn('element was not found', elementId);
+                //return false;
+            }
+            element.scrollIntoView();
+            //return true;
+        }
+    </script>
+
 </head>
 
 <body>

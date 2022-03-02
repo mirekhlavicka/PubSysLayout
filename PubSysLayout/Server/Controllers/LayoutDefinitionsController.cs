@@ -53,10 +53,10 @@ namespace PubSysLayout.Server.Controllers
 
             _context.Entry(layoutDefinition).State = EntityState.Modified;
 
-            //foreach (var mu in layoutDefinition.ModuleUsages)
-            //{
-            //    _context.Entry(mu).State = EntityState.Modified;
-            //}
+            foreach (var mu in layoutDefinition.ModuleUsages) //!!!
+            {
+                _context.Entry(mu).State = EntityState.Unchanged; //!!!
+            } //!!!
 
             try
             {
