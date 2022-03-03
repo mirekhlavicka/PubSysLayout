@@ -104,6 +104,45 @@ namespace PubSysLayout.Server.Controllers
             return NoContent();
         }
 
+        [HttpGet()]
+        [Route("copy/{id}")]
+        public ActionResult<int> CopyLayoutDefinition(int id)
+        {
+            LayoutDefinition layoutDefinition = _context.LayoutDefinitions.Include(ld => ld.ModuleUsages).SingleOrDefault(ld => ld.IdLayoutdefinition == id);
+
+            if (layoutDefinition == null)
+            {
+                return BadRequest();
+            }
+
+            LayoutDefinition nld = new LayoutDefinition
+            {
+                IdLayout = layoutDefinition.IdLayout,
+                IdStyle = layoutDefinition.IdStyle,
+                Mainstyle = layoutDefinition.Mainstyle,
+                Name = "Copy of " + layoutDefinition.Name
+            };
+
+            foreach (ModuleUsage mu in layoutDefinition.ModuleUsages)
+            {
+                nld.ModuleUsages.Add(new ModuleUsage
+                {
+                    IdModule = mu.IdModule,
+                    IdSpot = mu.IdSpot,
+                    Order = mu.Order,
+                    CacheTime = mu.CacheTime,
+                    ShowMobile = mu.ShowMobile
+                });
+            }
+
+            _context.LayoutDefinitions.Add(nld);
+
+            _context.SaveChanges();
+
+            return Ok(nld.IdLayoutdefinition);
+        }
+
+
         private bool LayoutDefinitionExists(int id)
         {
             return _context.LayoutDefinitions.Any(e => e.IdLayoutdefinition == id);

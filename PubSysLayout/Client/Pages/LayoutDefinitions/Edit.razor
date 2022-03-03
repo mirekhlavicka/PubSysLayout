@@ -10,47 +10,58 @@
 {
     <MudGrid>
         <MudItem xs="4">
-            <MudFab Color="Color.Primary" Title="Copy layout definition" Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-1" Disabled="@(layoutDefinition.IdLayoutdefinition == 0)" /> 
-            <MudCard Elevation="5" Class="mt-4">
-                <MudCardContent>
-                    <MudForm @ref="form" @bind-IsValid="@success" @bind-Errors="@errors">
-                        <MudTextField @bind-Value="layoutDefinition.Name" Label="Name" Required="true" RequiredError="Name is required!" />
-                        <MudSelect @bind-Value="@layoutDefinition.IdLayout" Label="Layout" Validation='(int x) => x == 0 ? "Select layout" : null' Required="true">
-                            <MudSelectItem Value="0">(not selected)</MudSelectItem>
-                            @foreach (var l in layouts)
-                            {
-                                <MudSelectItem Value="@l.IdLayout">@l.Name</MudSelectItem>
-                            }
-                        </MudSelect>
-                        <MudSelect @bind-Value="@layoutDefinition.IdStyle" Label="Style">
-                            <MudSelectItem Value="0">(not selected)</MudSelectItem>
-                            @foreach (var s in styles)
-                            {
-                                <MudSelectItem Value="@s.IdStyle">@s.Name</MudSelectItem>
-                            }
-                        </MudSelect>
-                        <MudSwitch @bind-Checked="@layoutDefinition.Mainstyle" Label="Main style" Color="Color.Info" />
-                    </MudForm>
-                </MudCardContent>
-                <MudCardActions>
-                    <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!success)" OnClick="Save" Class="ml-auto" Style="margin-right:10px">Save</MudButton>
-                    <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="GoBack">Cancel</MudButton>
-                </MudCardActions>
-            </MudCard>
-        </MudItem>
+            <MudFab Color="Color.Primary" Title="Back" Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-1" OnClick="GoBack" />
+                <MudCard Elevation="5" Class="mt-4">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">Layout definition</MudText>
+                        </CardHeaderContent>
+                        <CardHeaderActions>
+                            <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Color="Color.Default" Title="Copy layout definition" Disabled="@(layoutDefinition.IdLayoutdefinition == 0)" OnClick="CreateCopy" />
+                        </CardHeaderActions>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudForm @ref="form" @bind-IsValid="@canSave">
+                            <MudTextField @bind-Value="layoutDefinition.Name" Label="Name" Required="true" RequiredError="Name is required!" />
+                            <MudSelect @bind-Value="@layoutDefinition.IdLayout" Label="Layout" Validation='(int x) => x == 0 ? "Select layout" : null' Required="true" ToStringFunc='(id) => layouts.FirstOrDefault(l => l.IdLayout == id)?.Name ?? "(not selected)"'>
+                                <MudSelectItem Value="0">(not selected)</MudSelectItem>
+                                @foreach (var l in layouts.OrderBy(l => l.Name))
+                                {
+                                    <MudSelectItem Value="@l.IdLayout">@l.Name</MudSelectItem>
+                                }
+                            </MudSelect>
+                            <MudSelect @bind-Value="@layoutDefinition.IdStyle" Label="Style" ToStringFunc='(id) => styles.FirstOrDefault(s => s.IdStyle == id)?.Name ?? "(not selected)"'>
+                                <MudSelectItem Value="0">(not selected)</MudSelectItem>
+                                @foreach (var s in styles.OrderBy(s => s.Name))
+                                {
+                                    <MudSelectItem Value="@s.IdStyle">@s.Name</MudSelectItem>
+                                }
+                            </MudSelect>
+                            <MudSwitch @bind-Checked="@layoutDefinition.Mainstyle" Label="Main style" Color="Color.Info" />
+                        </MudForm>
+                    </MudCardContent>
+                    <MudCardActions>
+                        <MudButton Variant="Variant.Filled" IconColor="Color.Secondary" Color="Color.Default" Disabled="@(!canSave)" OnClick="Save" Class="ml-auto" StartIcon="@Icons.Material.Filled.Save">Save</MudButton>                    
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
     @if (layoutDefinition.IdLayoutdefinition != 0)
         {
             <MudItem xs="8">
                 <MudFab Color="Color.Primary" Title="Add new module" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-1" OnClick="AddModuleUsage" Disabled="@(newModuleUsage!=null || beforeEditModuleUsage != null)" />
                 <MudTable @ref="moduleUsageTable" Items="layoutDefinition.ModuleUsages" Hover="true" SortLabel="Sort By" Elevation="5" Class="mt-4" Dense="true" CanCancelEdit="true" CommitEditTooltip="Commit Edit" CancelEditTooltip="Cancel Edit"
-                  OnCommitEditClick="@(() => snackBar.Add("Edit saved"))" RowEditPreview="BackupModuleUsage" RowEditCancel="ResetEditModuleUsage" RowEditCommit="ModuleUsageHasBeenCommitted" IsEditRowSwitchingBlocked="true" FixedHeader="true" FixedFooter="true" Height="80vh">
+                  RowEditPreview="BackupModuleUsage" RowEditCancel="ResetEditModuleUsage" RowEditCommit="ModuleUsageHasBeenCommitted" IsEditRowSwitchingBlocked="true" 
+                  FixedHeader="true" FixedFooter="true" Height="80vh" T="ModuleUsage">
+                    <ToolBarContent>
+                        <MudText Typo="Typo.h6">Modules in @layoutDefinition.Name</MudText>
+                    </ToolBarContent>
                     <ColGroup>
                         <col style="width:50px;" />
                         <col style="width:30%;" />
                         <col style="width:30%;" />
                         <col style="width:80px;" />
                         <col style="width:150px;" />
-                        <col style="width:50px"/>
+                        <col style="width:50px;"/>
                     </ColGroup>
                     <HeaderContent>
                         <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<ModuleUsage, object>(x=>x.IdModuleusage == 0 ? 999999 : x.IdModuleusage)">ID</MudTableSortLabel></MudTh>
@@ -67,13 +78,13 @@
                         <MudTd DataLabel="Order">@context.Order</MudTd>
                         <MudTd DataLabel="Order">@context.CacheTime</MudTd>
                         <MudTd DataLabel="">                            
-                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Title="Delete row" @onclick="@(()=>DeleteModuleUsage(@context.IdModuleusage))"></MudIconButton>
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Title="Delete module usage" @onclick="@(()=>DeleteModuleUsage(@context.IdModuleusage))" Color="Color.Secondary" Size="Size.Medium" Variant="Variant.Text"></MudIconButton>
                         </MudTd>
                     </RowTemplate>
                     <RowEditingTemplate>
                         <MudTd DataLabel="ID">@context.IdModuleusage<a id="editRow"/></MudTd>
                         <MudTd DataLabel="Spot">
-                            <MudSelect @bind-Value="@context.IdSpot" Validation='(int x) => x == 0 ? "Select spot" : null' Required="true">
+                            <MudSelect @bind-Value="@context.IdSpot" Validation='(int x) => x == 0 ? "Select spot" : null' Required="true" ToStringFunc='(id) => spots.ContainsKey(id) ? spots[id].Name : "(not selected)"'>
                                 <MudSelectItem Value="0">(not selected)</MudSelectItem>
                                 @foreach (var s in spots.Values.OrderBy(s => s.Name))
                                 {
@@ -86,7 +97,7 @@
                                 ResetValueOnEmptyText="true" CoerceText="true" CoerceValue="false" 
                                 ToStringFunc='m => $"{m.Name} ({m.IdModule})"' @bind-Value="@context.IdModuleNavigation" MaxItems="100"
                                 Validation='(Module x) => x == null ? "Type module name or ID" : null' Required="true" Placeholder="(not selected)"
-                                AdornmentIcon="@Icons.Material.Filled.Search" AdornmentColor="Color.Primary"/>
+                                AdornmentIcon="@Icons.Material.Filled.Search" AdornmentColor="Color.Default" Clearable="true"/>
                         </MudTd>
                         <MudTd DataLabel="Order">
                             <MudTextField @bind-Value="@context.Order" Required />
@@ -114,10 +125,9 @@
     private ModuleUsage beforeEditModuleUsage = null;
     private ModuleUsage newModuleUsage = null;
 
-    bool success;
-    string[] errors = { };
-
     MudForm form;
+    bool canSave;
+
     MudTable<ModuleUsage> moduleUsageTable;
 
     protected async override Task OnParametersSetAsync()
@@ -158,7 +168,6 @@
         if (layoutDefinition.IdLayoutdefinition != 0)
         {
             await Http.PutAsJsonAsync($"api/layoutdefinitions/{idLayoutdefinition}", layoutDefinition);
-            uriHelper.NavigateTo("layoutdefinitions");
         }
         else
         {
@@ -168,11 +177,13 @@
         }
 
         snackBar.Add($"LayoutDefinition {layoutDefinition.Name} saved.", Severity.Success);
+        canSave = false;
     }
 
-    private async void GoBack()
+    private /*async*/ void GoBack()
     {
-        await js.InvokeVoidAsync("history.back");
+        //await js.InvokeVoidAsync("history.back");
+        uriHelper.NavigateTo("layoutdefinitions");
     }
 
     private void BackupModuleUsage(object element)
@@ -180,12 +191,12 @@
         ModuleUsage b = element as ModuleUsage;
 
         beforeEditModuleUsage = new()
-        {
-            IdModule = b.IdModule,
-            IdSpot = b.IdSpot,
-            Order = b.Order,
-            CacheTime = b.CacheTime
-        };
+            {
+                IdModule = b.IdModule,
+                IdSpot = b.IdSpot,
+                Order = b.Order,
+                CacheTime = b.CacheTime
+            };
 
         StateHasChanged();
     }
@@ -196,6 +207,7 @@
         {
             ModuleUsage mu = element as ModuleUsage;
             mu.IdModule = beforeEditModuleUsage.IdModule;
+            mu.IdModuleNavigation = modules[mu.IdModule];
             mu.IdSpot = beforeEditModuleUsage.IdSpot;
             mu.Order = beforeEditModuleUsage.Order;
             mu.CacheTime = beforeEditModuleUsage.CacheTime;
@@ -227,23 +239,27 @@
         if (mu.IdModuleusage != 0)
         {
             await Http.PutAsJsonAsync($"api/moduleusages/{mu.IdModuleusage}", mu);
+
+            //OnCommitEditClick="@(() => snackBar.Add("Module usage saved"))" 
+            snackBar.Add($"Module usage {mu.IdModuleusage} saved", Severity.Info);
         }
         else
         {
             using var response = await Http.PostAsJsonAsync("api/moduleusages", mu);
             var xmu = await response.Content.ReadFromJsonAsync<ModuleUsage>();
             mu.IdModuleusage = xmu.IdModuleusage;
-            StateHasChanged();
+            snackBar.Add($"Module usage {mu.IdModuleusage} created");            
         }
         mu.IdModuleNavigation = modules[mu.IdModule];
+        StateHasChanged();
     }
 
     private async void AddModuleUsage()
     {
         newModuleUsage = new ModuleUsage
-            {
-                IdLayoutdefinition = layoutDefinition.IdLayoutdefinition
-            };
+        {
+            IdLayoutdefinition = layoutDefinition.IdLayoutdefinition
+        };
 
         layoutDefinition.ModuleUsages.Add(newModuleUsage);
 
@@ -251,7 +267,7 @@
 
         await InvokeAsync(() =>
         {
-            moduleUsageTable.SetEditingItem(newModuleUsage);                
+            moduleUsageTable.SetEditingItem(newModuleUsage);
             StateHasChanged();
         });
 
@@ -265,7 +281,7 @@
             var mu = layoutDefinition.ModuleUsages.First(x => x.IdModuleusage == IdModuleusage);
             layoutDefinition.ModuleUsages.Remove(mu);
             await Http.DeleteAsync($"api/moduleusages/{IdModuleusage}");
-            snackBar.Add($"ModuleUsage {IdModuleusage} deleted.", Severity.Success);           
+            snackBar.Add($"ModuleUsage {IdModuleusage} deleted.", Severity.Success);
         }
     }
 
@@ -279,4 +295,15 @@
 
         return modules.Values.Where(m => m.Name.Contains(value, StringComparison.InvariantCultureIgnoreCase) || m.IdModule.ToString() == value).OrderBy(m => m.Name);
     }
+
+    private async void CreateCopy()
+    {
+        if (await js.InvokeAsync<bool>("confirm", $"Do you want to create copy of {layoutDefinition.Name} ?"))
+        {
+            var id = await Http.GetStringAsync($"api/layoutdefinitions/copy/{idLayoutdefinition}");
+            snackBar.Add($"LayoutDefinition {layoutDefinition.Name} copied as {id}", Severity.Success);
+            uriHelper.NavigateTo($"layoutdefinitions/edit/{id}");
+        }
+    }
 }
+    

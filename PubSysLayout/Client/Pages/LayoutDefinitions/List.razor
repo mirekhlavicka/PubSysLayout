@@ -2,6 +2,7 @@
 @inject HttpClient Http
 @inject IJSRuntime js
 @inject MudBlazor.ISnackbar snackBar
+@inject NavigationManager uriHelper
 @using PubSysLayout.Shared.Model
 
 <PageTitle>Layout definitions</PageTitle>
@@ -12,10 +13,23 @@
 }
 else
 {
-    <MudFab Color="Color.Primary" Title="Add new" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Link="layoutdefinitions/edit/0" Class="mt-0 mb-5" />
-    <MudTable Items="layoutDefinitions" Hover="true" SortLabel="Sort By" Elevation="5" RowsPerPage="15" FixedHeader="true" FixedFooter="true" Height="80vh">
+    <MudFab Color="Color.Primary" Title="Add new layout definition" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Link="layoutdefinitions/edit/0" Class="mt-0 mb-5" />
+    <MudTable Items="layoutDefinitions" Hover="true" SortLabel="Sort By" Elevation="5" RowsPerPage="0" FixedHeader="true" FixedFooter="true" Height="80vh" Dense="true" 
+        Filter="new Func<LayoutDefinition,bool>(FilterFunc)" OnRowClick="RowClicked" RowClass="cursor-pointer" T="LayoutDefinition">
+        <ToolBarContent>
+            <MudText Typo="Typo.h6">Layout definitions</MudText>
+            <MudSpacer />
+            <MudTextField DebounceInterval="500" @bind-Value="searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true" ></MudTextField>
+        </ToolBarContent>
+        <ColGroup>
+            <col style="width:150px;" />
+            <col />
+            <col style="width:30%;" />
+            <col style="width:30%;" />
+            <col style="width:150px;"/>
+        </ColGroup>
         <HeaderContent>
-            <MudTh><MudTableSortLabel InitialDirection="SortDirection.Descending" SortBy="new Func<LayoutDefinition, object>(x=>x.IdLayoutdefinition)">ID</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<LayoutDefinition, object>(x=>x.IdLayoutdefinition)">ID</MudTableSortLabel></MudTh>
             <MudTh><MudTableSortLabel SortBy="new Func<LayoutDefinition, object>(x=>x.Name)">Name</MudTableSortLabel></MudTh>
             <MudTh>Layout</MudTh>
             <MudTh>Style</MudTh>
@@ -27,13 +41,16 @@ else
             <MudTd DataLabel="Layout">@layouts[context.IdLayout]</MudTd>
             <MudTd DataLabel="Layout">@(styles.ContainsKey(context.IdStyle)?styles[context.IdStyle]:"(not selected)")</MudTd>
             <MudTd DataLabel="">
-                <MudFab Color="Color.Primary" Title="Edit" Icon="@Icons.Material.Filled.Edit" Size="Size.Small" IconSize="Size.Small" Link="@("layoutdefinitions/edit/" + @context.IdLayoutdefinition)" />
-                <MudFab Color="Color.Secondary" Title="Delete" Icon="@Icons.Material.Filled.Delete" Size="Size.Small" IconSize="Size.Small" @onclick="@(()=>Delete(@context.IdLayoutdefinition))" />
+@*                <MudIconButton Color="Color.Primary" Icon="@Icons.Material.Filled.Edit" Title="Edit layout definition" Link="@("layoutdefinitions/edit/" + @context.IdLayoutdefinition)" Size="Size.Medium" Variant="Variant.Text"/>
+*@                <MudIconButton Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" Title="Delete layout definition" @onclick="@(()=>Delete(@context.IdLayoutdefinition))"Size="Size.Medium" Variant="Variant.Text" />
+
+
+
             </MudTd>
         </RowTemplate>
-        <PagerContent>
-            <MudTablePager PageSizeOptions="new int[]{15, 50, 100, 500}" />
-        </PagerContent>
+@*        <PagerContent>
+            <MudTablePager PageSizeOptions="new int[]{25, 100, 500}" />
+        </PagerContent>*@
     </MudTable>
 }
 
@@ -41,6 +58,8 @@ else
     private LayoutDefinition[] layoutDefinitions;
     private Dictionary<int, string> layouts;
     private Dictionary<int, string> styles;
+
+    private string searchString = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -59,5 +78,20 @@ else
             snackBar.Add($"LayoutDefinition {idLayoutdefinition} deleted.", Severity.Success);
             await OnInitializedAsync();
         }
+    }
+
+    private bool FilterFunc(LayoutDefinition ld)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        if (ld.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return false;
+    }
+
+    private void RowClicked(TableRowClickEventArgs<LayoutDefinition> p)
+    {
+        uriHelper.NavigateTo($"layoutdefinitions/edit/{p.Item.IdLayoutdefinition}");
     }
 }
