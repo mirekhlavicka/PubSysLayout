@@ -52,7 +52,7 @@
                 <MudFab Color="Color.Primary" Title="Add new module" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-1" OnClick="AddModuleUsage" Disabled="@(newModuleUsage!=null || beforeEditModuleUsage != null)" />
                 <MudTable @ref="moduleUsageTable" Items="layoutDefinition.ModuleUsages" Hover="true" SortLabel="Sort By" Elevation="5" Class="mt-4" Dense="true" CanCancelEdit="true" CommitEditTooltip="Commit Edit" CancelEditTooltip="Cancel Edit"
                   RowEditPreview="BackupModuleUsage" RowEditCancel="ResetEditModuleUsage" RowEditCommit="ModuleUsageHasBeenCommitted" IsEditRowSwitchingBlocked="true" 
-                  FixedHeader="true" FixedFooter="true" Height="80vh" T="ModuleUsage">
+                  FixedHeader="true" FixedFooter="true" Height="calc(100vh - 250px)" T="ModuleUsage">
                     <ToolBarContent>
                         <MudText Typo="Typo.h6">Modules in @layoutDefinition.Name</MudText>
                     </ToolBarContent>

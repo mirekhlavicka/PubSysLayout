@@ -10,7 +10,7 @@
 }
 else
 {
-    <MudTable Items="modules" Hover="true" SortLabel="Sort By" Elevation="5" RowsPerPage="50" FixedHeader="true" FixedFooter="true" Height="80vh" T="Module">
+    <MudTable Items="modules" Hover="true" SortLabel="Sort By" Elevation="5" RowsPerPage="50" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 250px)" T="Module">
         <HeaderContent>
             <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Module, object>(x=>x.IdModule)">ID</MudTableSortLabel></MudTh>
             <MudTh><MudTableSortLabel SortBy="new Func<Module, object>(x=>x.Name)">Name</MudTableSortLabel></MudTh>
