@@ -19,7 +19,7 @@ else
         <ToolBarContent>
             <MudText Typo="Typo.h6">Layout definitions</MudText>
             <MudSpacer />
-            <MudTextField DebounceInterval="500" @bind-Value="searchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true" ></MudTextField>
+            <MudTextField DebounceInterval="500" @bind-Value="searchString" Placeholder="Search by name or ID" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true" ></MudTextField>
         </ToolBarContent>
         <ColGroup>
             <col style="width:150px;" />
@@ -41,11 +41,7 @@ else
             <MudTd DataLabel="Layout">@layouts[context.IdLayout]</MudTd>
             <MudTd DataLabel="Layout">@(styles.ContainsKey(context.IdStyle)?styles[context.IdStyle]:"(not selected)")</MudTd>
             <MudTd DataLabel="">
-@*                <MudIconButton Color="Color.Primary" Icon="@Icons.Material.Filled.Edit" Title="Edit layout definition" Link="@("layoutdefinitions/edit/" + @context.IdLayoutdefinition)" Size="Size.Medium" Variant="Variant.Text"/>
-*@                <MudIconButton Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" Title="Delete layout definition" @onclick="@(()=>Delete(@context.IdLayoutdefinition))"Size="Size.Medium" Variant="Variant.Text" />
-
-
-
+                <MudIconButton Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" Title="Delete layout definition" @onclick="@(()=>Delete(@context.IdLayoutdefinition))"Size="Size.Medium" Variant="Variant.Text" />
             </MudTd>
         </RowTemplate>
 @*        <PagerContent>
@@ -84,7 +80,11 @@ else
     {
         if (string.IsNullOrWhiteSpace(searchString))
             return true;
+
         if (ld.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if(ld.IdLayoutdefinition.ToString() == searchString)
             return true;
 
         return false;

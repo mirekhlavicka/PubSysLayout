@@ -1,0 +1,55 @@
+﻿@inject HttpClient Http
+@inject IJSRuntime js
+@inject NavigationManager uriHelper
+@inject MudBlazor.ISnackbar snackBar
+@inject IDialogService DialogService
+@inject CurrentDB currentDB
+@using PubSysLayout.Shared.Model
+
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Settings" Class="mr-3 mb-n1" />
+            @MudDialog.Title
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (moduleSettings == null)
+        {
+            <MudProgressCircular Color="Color.Default" Indeterminate="true" />
+        }
+        else
+        {
+            <MudTable Items="moduleSettings" Hover="true" SortLabel="Sort By" Elevation="0" RowsPerPage="0" FixedHeader="true" FixedFooter="true" T="ModuleSetting" Dense="true" Height="500px">
+                <HeaderContent>
+                    <MudTh>Name</MudTh>
+                    <MudTh>Value</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Name">@context.SettingName</MudTd>
+                    <MudTd DataLabel="Value">@context.SettingValue</MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close" Color="Color.Primary">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public int IdModule { get; set; }
+    [Parameter] public int IdModuleUsage { get; set; }
+
+    private ModuleSetting[] moduleSettings;
+
+    protected async override Task OnParametersSetAsync()
+    {
+        moduleSettings = await Http.GetFromJsonAsync<ModuleSetting[]>($"api/modulesettings?id_module={IdModule}");
+    }
+
+    void Close() => MudDialog.Close(DialogResult.Ok(true));
+}

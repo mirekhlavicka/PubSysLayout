@@ -3,6 +3,7 @@
 @inject IJSRuntime js
 @inject NavigationManager uriHelper
 @inject MudBlazor.ISnackbar snackBar
+@inject IDialogService DialogService
 @inject CurrentDB currentDB
 @using PubSysLayout.Shared.Model
 
@@ -22,7 +23,7 @@
                     </MudCardHeader>
                     <MudCardContent>
                         <MudForm @ref="form" @bind-IsValid="@canSave">
-                            <MudTextField @bind-Value="layoutDefinition.Name" Label="Name" Required="true" RequiredError="Name is required!" />
+                            <MudTextField @bind-Value="layoutDefinition.Name" Label="Name" Required="true" RequiredError="Name is required!" Immediate="true"/>
                             <MudSelect @bind-Value="@layoutDefinition.IdLayout" Label="Layout" Validation='(int x) => x == 0 ? "Select layout" : null' Required="true" ToStringFunc='(id) => layouts.FirstOrDefault(l => l.IdLayout == id)?.Name ?? "(not selected)"'>
                                 <MudSelectItem Value="0">(not selected)</MudSelectItem>
                                 @foreach (var l in layouts.OrderBy(l => l.Name))
@@ -56,12 +57,13 @@
                         <MudText Typo="Typo.h6">Modules in @layoutDefinition.Name</MudText>
                     </ToolBarContent>
                     <ColGroup>
-                        <col style="width:50px;" />
+                        <col style="width:80px;" />
                         <col style="width:30%;" />
-                        <col style="width:30%;" />
+                        <col />
                         <col style="width:80px;" />
                         <col style="width:150px;" />
-                        <col style="width:50px;"/>
+                        <col style="width:100px;"/>
+                        <col style="width:100px;"/>
                     </ColGroup>
                     <HeaderContent>
                         <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<ModuleUsage, object>(x=>x.IdModuleusage == 0 ? 999999 : x.IdModuleusage)">ID</MudTableSortLabel></MudTh>
@@ -78,7 +80,8 @@
                         <MudTd DataLabel="Order">@context.Order</MudTd>
                         <MudTd DataLabel="Order">@context.CacheTime</MudTd>
                         <MudTd DataLabel="">                            
-                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Title="Delete module usage" @onclick="@(()=>DeleteModuleUsage(@context.IdModuleusage))" Color="Color.Secondary" Size="Size.Medium" Variant="Variant.Text"></MudIconButton>
+                            <MudIconButton Icon="@Icons.Material.Filled.Settings" Title="Module settings" @onclick="@(()=>OpenModuleSettingsDialog(@context.IdModule, @context.IdModuleusage))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text"></MudIconButton>
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Title="Delete module usage" @onclick="@(()=>DeleteModuleUsage(@context.IdModuleusage))" Color="Color.Secondary" Size="Size.Small" Variant="Variant.Text"></MudIconButton>
                         </MudTd>
                     </RowTemplate>
                     <RowEditingTemplate>
@@ -304,6 +307,24 @@
             snackBar.Add($"LayoutDefinition {layoutDefinition.Name} copied as {id}", Severity.Success);
             uriHelper.NavigateTo($"layoutdefinitions/edit/{id}");
         }
+    }
+
+    private void OpenModuleSettingsDialog(int IdModule, int IdModuleUsage)
+    {
+        var options = new DialogOptions { 
+            MaxWidth = MaxWidth.Medium, 
+            FullWidth = true,
+            CloseOnEscapeKey = true,
+            CloseButton = true,
+            Position = DialogPosition.Center
+        };
+
+        var parameters = new DialogParameters();
+
+        parameters.Add("IdModule", IdModule);
+        parameters.Add("IdModuleUsage", IdModuleUsage);
+
+        DialogService.Show<Modules.ModuleSettingsDialog>($"{modules[IdModule].Name} in {layoutDefinition.Name} settings", parameters, options);
     }
 }
     
