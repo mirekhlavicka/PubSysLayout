@@ -68,6 +68,15 @@ else
     async Task Delete(int idLayoutdefinition)
     {
         var l = layoutDefinitions.First(x => x.IdLayoutdefinition == idLayoutdefinition);
+
+        if ((await DialogService.ShowMessageBox(
+            "Warning",
+            $"Do you want to delete {l.Name} ({l.IdLayoutdefinition}) ?",
+            yesText: "Delete!", cancelText: "Cancel") == null))
+        {
+            return;            
+        }
+        
         if (await js.InvokeAsync<bool>("confirm", $"Do you want to delete {l.Name} ({l.IdLayoutdefinition}) ?"))
         {
             await Http.DeleteAsync($"api/layoutdefinitions/{idLayoutdefinition}");
@@ -94,4 +103,6 @@ else
     {
         uriHelper.NavigateTo($"layoutdefinitions/edit/{p.Item.IdLayoutdefinition}");
     }
+
+     [Inject] private IDialogService DialogService { get; set; }
 }
