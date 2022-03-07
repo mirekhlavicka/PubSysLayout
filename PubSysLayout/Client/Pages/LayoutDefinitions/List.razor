@@ -3,6 +3,8 @@
 @inject IJSRuntime js
 @inject MudBlazor.ISnackbar snackBar
 @inject NavigationManager uriHelper
+@inject IDialogService DialogService
+
 @using PubSysLayout.Shared.Model
 
 <PageTitle>Layout definitions</PageTitle>
@@ -15,7 +17,7 @@ else
 {
     <MudFab Color="Color.Primary" Title="Add new layout definition" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Link="layoutdefinitions/edit/0" Class="mt-0 mb-5" />
     <MudTable Items="layoutDefinitions" Hover="true" SortLabel="Sort By" Elevation="5" RowsPerPage="0" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 250px)" Dense="true" 
-        Filter="new Func<LayoutDefinition,bool>(FilterFunc)" OnRowClick="RowClicked" RowClass="cursor-pointer" T="LayoutDefinition">
+        Filter="new Func<LayoutDefinition,bool>(FilterFunc)" OnRowClick="RowClicked" RowClass="cursor-pointer" Virtualize="true" T="LayoutDefinition">
         <ToolBarContent>
             <MudText Typo="Typo.h6">Layout definitions</MudText>
             <MudSpacer />
@@ -41,16 +43,15 @@ else
             <MudTd DataLabel="Layout">@layouts[context.IdLayout]</MudTd>
             <MudTd DataLabel="Layout">@(styles.ContainsKey(context.IdStyle)?styles[context.IdStyle]:"(not selected)")</MudTd>
             <MudTd DataLabel="">
-                <MudIconButton Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" Title="Delete layout definition" @onclick="@(()=>Delete(@context.IdLayoutdefinition))"Size="Size.Medium" Variant="Variant.Text" />
+                <MudIconButton Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" Title="Delete layout definition" @onclick="@(()=>Delete(@context.IdLayoutdefinition))"Size="Size.Small" Variant="Variant.Text" />
             </MudTd>
         </RowTemplate>
-@*        <PagerContent>
-            <MudTablePager PageSizeOptions="new int[]{25, 100, 500}" />
-        </PagerContent>*@
     </MudTable>
 }
 
 @code {
+    //[Inject] private IDialogService DialogService { get; set; }
+
     private LayoutDefinition[] layoutDefinitions;
     private Dictionary<int, string> layouts;
     private Dictionary<int, string> styles;
@@ -62,6 +63,11 @@ else
         layouts = (await Http.GetFromJsonAsync<LayoutDefinition[]>("api/layouts")).ToDictionary(l => l.IdLayout, l => l.Name);
         styles = (await Http.GetFromJsonAsync<Style[]>("api/styles")).ToDictionary(s => s.IdStyle, s => s.Name);
 
+        await LoadData();
+    }
+
+    protected async Task LoadData()
+    {
         layoutDefinitions = await Http.GetFromJsonAsync<LayoutDefinition[]>("api/layoutdefinitions");
     }
 
@@ -71,17 +77,12 @@ else
 
         if ((await DialogService.ShowMessageBox(
             "Warning",
-            $"Do you want to delete {l.Name} ({l.IdLayoutdefinition}) ?",
-            yesText: "Delete!", cancelText: "Cancel") == null))
-        {
-            return;            
-        }
-        
-        if (await js.InvokeAsync<bool>("confirm", $"Do you want to delete {l.Name} ({l.IdLayoutdefinition}) ?"))
+            $"Do you want to delete layout definition \"{l.Name} (id = {l.IdLayoutdefinition})\" ?",
+            yesText: "Delete!", cancelText: "Cancel") != null))
         {
             await Http.DeleteAsync($"api/layoutdefinitions/{idLayoutdefinition}");
             snackBar.Add($"LayoutDefinition {idLayoutdefinition} deleted.", Severity.Success);
-            await OnInitializedAsync();
+            await LoadData();
         }
     }
 
@@ -103,6 +104,4 @@ else
     {
         uriHelper.NavigateTo($"layoutdefinitions/edit/{p.Item.IdLayoutdefinition}");
     }
-
-     [Inject] private IDialogService DialogService { get; set; }
 }

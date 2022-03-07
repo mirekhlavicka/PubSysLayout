@@ -58,12 +58,12 @@
                     </ToolBarContent>
                     <ColGroup>
                         <col style="width:80px;" />
-                        <col style="width:30%;" />
+                        <col style="width:25%;" />
                         <col />
                         <col style="width:80px;" />
                         <col style="width:150px;" />
-                        <col style="width:100px;"/>
-                        <col style="width:100px;"/>
+                        <col style="width:120px;"/>
+                        <col style="width:10px;"/>
                     </ColGroup>
                     <HeaderContent>
                         <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<ModuleUsage, object>(x=>x.IdModuleusage == 0 ? 999999 : x.IdModuleusage)">ID</MudTableSortLabel></MudTh>
@@ -78,9 +78,9 @@
                         <MudTd DataLabel="Spot">@(context.IdSpot == 0 ? "(not selected)" : spots[context.IdSpot]?.Name)</MudTd>
                         <MudTd DataLabel="Module">@(context.IdModule == 0 ? "(not selected)" : modules[context.IdModule]?.Name)</MudTd>
                         <MudTd DataLabel="Order">@context.Order</MudTd>
-                        <MudTd DataLabel="Order">@context.CacheTime</MudTd>
+                        <MudTd DataLabel="CacheTime">@context.CacheTime</MudTd>
                         <MudTd DataLabel="">                            
-                            <MudIconButton Icon="@Icons.Material.Filled.Settings" Title="Module settings" @onclick="@(()=>OpenModuleSettingsDialog(@context.IdModule, @context.IdModuleusage))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text"></MudIconButton>
+                            <MudIconButton Icon="@Icons.Material.Filled.Settings" Title="Module settings" @onclick="@(()=>OpenModuleSettingsDialog(@context))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text"></MudIconButton>
                             <MudIconButton Icon="@Icons.Material.Filled.Delete" Title="Delete module usage" @onclick="@(()=>DeleteModuleUsage(@context.IdModuleusage))" Color="Color.Secondary" Size="Size.Small" Variant="Variant.Text"></MudIconButton>
                         </MudTd>
                     </RowTemplate>
@@ -279,7 +279,10 @@
 
     private async Task DeleteModuleUsage(int IdModuleusage)
     {
-        if (await js.InvokeAsync<bool>("confirm", $"Do you want to delete ModuleUsage {IdModuleusage}) ?"))
+        if ((await DialogService.ShowMessageBox(
+            "Warning",
+            $"Do you want to delete ModuleUsage {IdModuleusage} ?",
+            yesText: "Delete!", cancelText: "Cancel") != null))
         {
             var mu = layoutDefinition.ModuleUsages.First(x => x.IdModuleusage == IdModuleusage);
             layoutDefinition.ModuleUsages.Remove(mu);
@@ -301,7 +304,10 @@
 
     private async void CreateCopy()
     {
-        if (await js.InvokeAsync<bool>("confirm", $"Do you want to create copy of {layoutDefinition.Name} ?"))
+        if ((await DialogService.ShowMessageBox(
+            "Warning",
+            $"Do you want to create copy of {layoutDefinition.Name} ?",
+            yesText: "CREATE!", cancelText: "Cancel") != null))
         {
             var id = await Http.GetStringAsync($"api/layoutdefinitions/copy/{idLayoutdefinition}");
             snackBar.Add($"LayoutDefinition {layoutDefinition.Name} copied as {id}", Severity.Success);
@@ -309,22 +315,22 @@
         }
     }
 
-    private void OpenModuleSettingsDialog(int IdModule, int IdModuleUsage)
+    private void OpenModuleSettingsDialog(ModuleUsage mu)
     {
         var options = new DialogOptions { 
             MaxWidth = MaxWidth.Medium, 
-            FullWidth = true,
-            CloseOnEscapeKey = true,
-            CloseButton = true,
-            Position = DialogPosition.Center
+            //FullWidth = true,
+            //CloseOnEscapeKey = true,
+            CloseButton = true
+            //Position = DialogPosition.Center
         };
 
         var parameters = new DialogParameters();
 
-        parameters.Add("IdModule", IdModule);
-        parameters.Add("IdModuleUsage", IdModuleUsage);
+        parameters.Add("IdModule", mu.IdModule);
+        parameters.Add("IdModuleUsage", mu.IdModuleusage);
 
-        DialogService.Show<Modules.ModuleSettingsDialog>($"{modules[IdModule].Name} in {layoutDefinition.Name} settings", parameters, options);
+        DialogService.Show<Modules.ModuleSettingsDialog>($"{modules[mu.IdModule].Name} in {layoutDefinition.Name}/{spots[mu.IdSpot].Name} settings", parameters, options);
     }
 }
     

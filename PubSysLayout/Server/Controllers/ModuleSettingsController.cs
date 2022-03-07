@@ -22,21 +22,20 @@ namespace PubSysLayout.Server.Controllers
 
         // GET: api/ModuleSettings
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<ModuleSetting>>> GetModuleSettings(int? id_module, int? id_moduleusage)
+        public async Task<ActionResult<IEnumerable<ModuleSetting>>> GetModuleSettings(int id_module, int? id_moduleusage)
         {
-            var res = _context.ModuleSettings.AsQueryable();
+            var defaultSettings = await _context.ModuleSettings.Where(ms => ms.IdModule == id_module && ms.IdModuleusage == 0).ToListAsync();
 
-            if (id_module != null && id_module != 0)
-            {
-                res = res.Where(ms => ms.IdModule == id_module.Value);
+            if ((id_moduleusage??0) == 0)
+            { 
+                return defaultSettings.OrderBy(ms => ms.SettingName).ToList();
             }
-
-            if (id_moduleusage != null && id_moduleusage != 0)
+            else
             {
-                res = res.Where(ms => ms.IdModuleusage == id_moduleusage.Value);
-            }
+                var settings = await _context.ModuleSettings.Where(ms => ms.IdModule == id_module && ms.IdModuleusage == id_moduleusage.Value).ToDictionaryAsync(ms => ms.SettingName, ms => ms);
 
-            return await res.ToListAsync();
+                return defaultSettings.Where( ds => !settings.ContainsKey(ds.SettingName)).Concat(settings.Values).OrderBy(ms => ms.SettingName).ToList();
+            }
         }
 
         // GET: api/ModuleSettings/5

@@ -1,5 +1,10 @@
 ﻿@page "/modules"
 @inject HttpClient Http
+@inject IJSRuntime js
+@inject MudBlazor.ISnackbar snackBar
+@inject NavigationManager uriHelper
+@inject IDialogService DialogService
+
 @using PubSysLayout.Shared.Model
 
 <PageTitle>Modules</PageTitle>
@@ -10,28 +15,99 @@
 }
 else
 {
-    <MudTable Items="modules" Hover="true" SortLabel="Sort By" Elevation="5" RowsPerPage="50" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 250px)" T="Module">
+    <MudFab Color="Color.Primary" Title="Add new module" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Link="layoutdefinitions/edit/0" Class="mt-0 mb-5" />
+    <MudTable Items="modules" Hover="true" SortLabel="Sort By" Elevation="5" RowsPerPage="0" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 250px)" Dense="true" Filter="FilterFunc" T="Module" Virtualize="true">
+        <ToolBarContent>
+            <MudText Typo="Typo.h6">Modules</MudText>
+            <MudSpacer />
+            <MudTextField DebounceInterval="500" @bind-Value="searchString" Placeholder="Search by name or ID" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true" ></MudTextField>
+        </ToolBarContent>
+        <ColGroup>
+            <col style="width:100px;" />
+            <col style="width:20%;" />
+            <col />
+            <col style="width:150px;" />
+            <col style="width:20%;" />
+            <col style="width:150px;"/>
+        </ColGroup>
         <HeaderContent>
             <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Module, object>(x=>x.IdModule)">ID</MudTableSortLabel></MudTh>
             <MudTh><MudTableSortLabel SortBy="new Func<Module, object>(x=>x.Name)">Name</MudTableSortLabel></MudTh>
             <MudTh>Path</MudTh>
+            <MudTh>Active</MudTh>
+            <MudTh>Cache key</MudTh>
+            <MudTh/>
         </HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="ID">@context.IdModule</MudTd>
             <MudTd DataLabel="Name">@context.Name</MudTd>
             <MudTd DataLabel="Path">@context.DesktopSrc</MudTd>
+            <MudTd DataLabel="Active"><MudIcon Icon="@(@context.Active ? Icons.Material.Filled.CheckBox : Icons.Material.Filled.CheckBoxOutlineBlank)" Size="Size.Small" Class="mr-3 mb-n1"/></MudTd>
+            <MudTd DataLabel="Cache key">@context.Qskey</MudTd>
+            <MudTd DataLabel="">
+                <MudIconButton Icon="@Icons.Material.Filled.Settings" Title="Module default settings" @onclick="@(()=>OpenModuleSettingsDialog(@context))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text"></MudIconButton>
+                <MudIconButton Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" Title="Delete module" @onclick="@(()=>Delete(@context))"Size="Size.Small" Variant="Variant.Text" />
+            </MudTd>
         </RowTemplate>
-        <PagerContent>
-            <MudTablePager PageSizeOptions="new int[]{15, 50, 100, 500}" />
-        </PagerContent>
-    </MudTable>
-}
+    </MudTable>}
 
 @code {
     private Module[] modules;
+    private string searchString = "";
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadData();
+    }
+
+    protected async Task LoadData()
+    {
         modules = await Http.GetFromJsonAsync<Module[]>("api/modules");
+    }
+
+    async Task Delete(Module m)
+    {
+
+        if ((await DialogService.ShowMessageBox(
+            "Warning",
+            $"Do you want to delete module \"{m.Name} (id = {m.IdModule})\" ?",
+            yesText: "Delete!", cancelText: "Cancel") != null))
+        {
+            await Http.DeleteAsync($"api/modules/{m.IdModule}");
+            snackBar.Add($"Module {m.IdModule} deleted.", Severity.Success);
+            await LoadData();
+        }
+    }
+
+    private bool FilterFunc(Module m)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+
+        if (m.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if(m.IdModule.ToString() == searchString)
+            return true;
+
+        return false;
+    }
+
+    private void OpenModuleSettingsDialog(Module m)
+    {
+        var options = new DialogOptions { 
+            MaxWidth = MaxWidth.Medium, 
+            //FullWidth = true,
+            //CloseOnEscapeKey = true,
+            CloseButton = true
+            //Position = DialogPosition.Center
+        };
+
+        var parameters = new DialogParameters();
+
+        parameters.Add("IdModule", m.IdModule);
+        parameters.Add("IdModuleUsage", 0);
+
+        DialogService.Show<Modules.ModuleSettingsDialog>($"{m.Name} default settings", parameters, options);
     }
 }

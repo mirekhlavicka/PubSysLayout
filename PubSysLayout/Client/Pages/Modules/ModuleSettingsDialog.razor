@@ -6,6 +6,19 @@
 @inject CurrentDB currentDB
 @using PubSysLayout.Shared.Model
 
+<style>
+    /*.defaultSettings {
+        background-color: #1E88E5 !important;
+    }*/
+
+        .defaultSettings > td {
+            color: lightgray !important;
+        }
+
+            .defaultSettings > td .mud-input {
+                color: lightgray !important;
+            }
+</style>
 
 <MudDialog>
     <TitleContent>
@@ -21,7 +34,7 @@
         }
         else
         {
-            <MudTable Items="moduleSettings" Hover="true" SortLabel="Sort By" Elevation="0" RowsPerPage="0" FixedHeader="true" FixedFooter="true" T="ModuleSetting" Dense="true" Height="500px">
+            <MudTable Items="moduleSettings" Hover="true" SortLabel="Sort By" Elevation="0" RowsPerPage="0" FixedHeader="true" FixedFooter="true" T="ModuleSetting" Dense="true" Height="500px" RowClassFunc="RowClassFunc">
                 <HeaderContent>
                     <MudTh>Name</MudTh>
                     <MudTh>Value</MudTh>
@@ -46,10 +59,27 @@
 
     private ModuleSetting[] moduleSettings;
 
-    protected async override Task OnParametersSetAsync()
+    protected async override Task OnInitializedAsync()
     {
-        moduleSettings = await Http.GetFromJsonAsync<ModuleSetting[]>($"api/modulesettings?id_module={IdModule}");
+        await LoadData();
+    }
+
+    protected async Task LoadData()
+    {
+        moduleSettings = await Http.GetFromJsonAsync<ModuleSetting[]>($"api/modulesettings?id_module={IdModule}&id_moduleusage={IdModuleUsage}");
     }
 
     void Close() => MudDialog.Close(DialogResult.Ok(true));
+
+    private string RowClassFunc(ModuleSetting ms, int rowNumber)
+    {
+        if (IdModuleUsage != 0 && ms.IdModuleusage == 0)
+        {
+            return "defaultSettings";
+        }
+        else
+        {
+            return string.Empty;
+        }
+    }
 }
