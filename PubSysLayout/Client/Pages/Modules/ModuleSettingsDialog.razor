@@ -16,7 +16,7 @@
         }
 
             .defaultSettings > td .mud-input {
-                color: lightgray !important;
+                color: gray !important;
             }
 </style>
 
@@ -34,15 +34,36 @@
         }
         else
         {
-            <MudTable Items="moduleSettings" Hover="true" SortLabel="Sort By" Elevation="0" RowsPerPage="0" FixedHeader="true" FixedFooter="true" T="ModuleSetting" Dense="true" Height="500px" RowClassFunc="RowClassFunc">
+            <MudFab Color="Color.Primary" Title="Add new setting" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-1" OnClick="AddSetting" Disabled="@(newSetting !=null || beforeEditSetting != null)" />
+            <MudTable @ref="settingsTable" Items="moduleSettings" Hover="true" SortLabel="Sort By" Elevation="0" Class="mt-4" RowsPerPage="0" FixedHeader="true" FixedFooter="true" T="ModuleSetting" Dense="true" Height="500px" RowClassFunc="RowClassFunc"
+                CommitEditTooltip="Commit Edit" CancelEditTooltip="Cancel Edit" RowEditPreview="Backup" RowEditCancel="ResetEdit" RowEditCommit="Committed" CanCancelEdit="true" IsEditRowSwitchingBlocked="true" >
+                <ColGroup>
+                    <col style="width:200px;" />
+                    <col />
+                    <col style="width:150px;" />
+                    <col style="width:10px;"/>
+                </ColGroup>
                 <HeaderContent>
                     <MudTh>Name</MudTh>
                     <MudTh>Value</MudTh>
+                    <MudTh />
                 </HeaderContent>
                 <RowTemplate>
                     <MudTd DataLabel="Name">@context.SettingName</MudTd>
                     <MudTd DataLabel="Value">@context.SettingValue</MudTd>
+                    <MudTd DataLabel="">                            
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Title="Delete setting" @onclick="@(()=>DeleteModuleSetting(@context.IdSetting))" Color="Color.Secondary" Size="Size.Small" Variant="Variant.Text" Disabled="@(IdModuleUsage != context.IdModuleusage)"></MudIconButton>
+                    </MudTd>
                 </RowTemplate>
+                    <RowEditingTemplate>
+                        <MudTd DataLabel="Name">
+                            <a id="editRow"/>
+                            <MudTextField @bind-Value="@context.SettingName" Required Validation="@((string s) => CheckName(s, context))" />
+                        </MudTd>
+                        <MudTd DataLabel="Value">
+                            <MudTextField @bind-Value="@context.SettingValue" />
+                        </MudTd>
+                    </RowEditingTemplate>
             </MudTable>
         }
     </DialogContent>
@@ -57,7 +78,12 @@
     [Parameter] public int IdModule { get; set; }
     [Parameter] public int IdModuleUsage { get; set; }
 
-    private ModuleSetting[] moduleSettings;
+    private List<ModuleSetting> moduleSettings;
+
+    private ModuleSetting beforeEditSetting = null;
+    private ModuleSetting newSetting = null;
+
+    MudTable<ModuleSetting> settingsTable;
 
     protected async override Task OnInitializedAsync()
     {
@@ -66,7 +92,7 @@
 
     protected async Task LoadData()
     {
-        moduleSettings = await Http.GetFromJsonAsync<ModuleSetting[]>($"api/modulesettings?id_module={IdModule}&id_moduleusage={IdModuleUsage}");
+        moduleSettings = await Http.GetFromJsonAsync<List<ModuleSetting>>($"api/modulesettings?id_module={IdModule}&id_moduleusage={IdModuleUsage}");
     }
 
     void Close() => MudDialog.Close(DialogResult.Ok(true));
@@ -81,5 +107,113 @@
         {
             return string.Empty;
         }
+    }
+
+    private void Backup(object element)
+    {
+        ModuleSetting s = element as ModuleSetting;
+
+        beforeEditSetting = new()
+            {
+                SettingName = s.SettingName,
+                SettingValue = s.SettingValue
+            };
+
+        StateHasChanged();
+    }
+
+    private void ResetEdit(object element)
+    {
+        if (beforeEditSetting != null)
+        {
+            ModuleSetting s = element as ModuleSetting;
+            s.SettingName = beforeEditSetting.SettingName;
+            s.SettingValue = beforeEditSetting.SettingValue;
+            beforeEditSetting = null;
+            StateHasChanged();
+        }
+
+        if (newSetting != null)
+        {
+            moduleSettings.Remove(newSetting);
+            newSetting = null;
+            StateHasChanged();
+        }
+    }
+
+    private async void Committed(object element)
+    {
+        beforeEditSetting = null;
+        newSetting = null;
+
+        //ModuleUsage mu = element as ModuleUsage;
+
+        //if (mu.IdModuleNavigation != null)
+        //{
+        //    mu.IdModule = mu.IdModuleNavigation.IdModule;
+        //    mu.IdModuleNavigation = null;
+        //}
+
+        //if (mu.IdModuleusage != 0)
+        //{
+        //    await Http.PutAsJsonAsync($"api/moduleusages/{mu.IdModuleusage}", mu);
+
+        //    snackBar.Add($"Module usage {mu.IdModuleusage} saved", Severity.Info);
+        //}
+        //else
+        //{
+        //    using var response = await Http.PostAsJsonAsync("api/moduleusages", mu);
+        //    var xmu = await response.Content.ReadFromJsonAsync<ModuleUsage>();
+        //    mu.IdModuleusage = xmu.IdModuleusage;
+        //    snackBar.Add($"Module usage {mu.IdModuleusage} created");            
+        //}
+        //mu.IdModuleNavigation = modules[mu.IdModule];
+        StateHasChanged();
+    }
+
+    private async Task DeleteModuleSetting(int IdSetting)
+    {
+        //if ((await DialogService.ShowMessageBox(
+        //    "Warning",
+        //    $"Do you want to delete ModuleUsage {IdModuleusage} ?",
+        //    yesText: "Delete!", cancelText: "Cancel") != null))
+        //{
+        //    var mu = layoutDefinition.ModuleUsages.First(x => x.IdModuleusage == IdModuleusage);
+        //    layoutDefinition.ModuleUsages.Remove(mu);
+        //    await Http.DeleteAsync($"api/moduleusages/{IdModuleusage}");
+        //    snackBar.Add($"ModuleUsage {IdModuleusage} deleted.", Severity.Success);
+        //}
+    }
+
+    private async void AddSetting()
+    {
+        newSetting = new ModuleSetting
+        {
+            IdModule = IdModule,
+            IdModuleusage = IdModuleUsage,
+            SettingValue = ""
+        };
+
+        moduleSettings.Add(newSetting);
+
+        await Task.Delay(300);
+
+        await InvokeAsync(() =>
+        {
+            settingsTable.SetEditingItem(newSetting);
+            StateHasChanged();
+        });
+
+        await js.InvokeVoidAsync("scrollToElementId", "editRow");
+    }
+
+    private string CheckName(string name, ModuleSetting current)
+    {
+        if (moduleSettings.Where(ms => ms != current).Any(ms =>  string.Equals(ms.SettingName,name, StringComparison.InvariantCultureIgnoreCase)))
+        {
+            return "Setting name already exists";
+        }
+
+        return null;
     }
 }
