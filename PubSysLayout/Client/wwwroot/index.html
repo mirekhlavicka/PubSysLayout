@@ -21,6 +21,18 @@
             element.scrollIntoView();
             //return true;
         }
+
+        window.triggerClick = (ea) => {
+            const evt = new MouseEvent("click", {
+                //view: window,
+                bubbles: true,
+                cancelable: true,
+                clientX: ea.clientX,
+                clientY: ea.clientY
+            });
+            document.body.dispatchEvent(evt);
+            console.log(ea);
+        }
     </script>
 
 </head>

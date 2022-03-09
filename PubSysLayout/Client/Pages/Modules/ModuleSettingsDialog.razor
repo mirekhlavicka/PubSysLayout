@@ -35,8 +35,8 @@
         else
         {
             <MudFab Color="Color.Primary" Title="Add new setting" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-1" OnClick="AddSetting" Disabled="@(newSetting !=null || beforeEditSetting != null)" />
-            <MudTable @ref="settingsTable" Items="moduleSettings" Hover="true" SortLabel="Sort By" Elevation="0" Class="mt-4" RowsPerPage="0" FixedHeader="true" FixedFooter="true" T="ModuleSetting" Dense="true" Height="500px" RowClassFunc="RowClassFunc"
-                CommitEditTooltip="Commit Edit" CancelEditTooltip="Cancel Edit" RowEditPreview="Backup" RowEditCancel="ResetEdit" RowEditCommit="Committed" CanCancelEdit="true" IsEditRowSwitchingBlocked="true" >
+            <MudTable @ref="settingsTable" Items="moduleSettings" Hover="true" SortLabel="Sort By" Elevation="0" Class="mt-4" RowsPerPage="0" FixedHeader="true" FixedFooter="true"  Dense="true" Height="500px" RowClassFunc="RowClassFunc"
+                CommitEditTooltip="Commit Edit" CancelEditTooltip="Cancel Edit" RowEditPreview="Backup" RowEditCancel="ResetEdit" RowEditCommit="Committed" CanCancelEdit="true" IsEditRowSwitchingBlocked="true" OnRowClick="RowClicked" T="ModuleSetting">
                 <ColGroup>
                     <col style="width:200px;" />
                     <col />
@@ -52,7 +52,7 @@
                     <MudTd DataLabel="Name">@context.SettingName</MudTd>
                     <MudTd DataLabel="Value">@context.SettingValue</MudTd>
                     <MudTd DataLabel="">                            
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Title="Delete setting" @onclick="@(()=>DeleteModuleSetting(@context.IdSetting))" Color="Color.Secondary" Size="Size.Small" Variant="Variant.Text" Disabled="@(IdModuleUsage != context.IdModuleusage)"></MudIconButton>
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Title="Delete setting" @onclick="@(()=>DeleteModuleSetting(context))" Color="Color.Secondary" Size="Size.Small" Variant="Variant.Text" Disabled="@(IdModuleUsage != context.IdModuleusage)"></MudIconButton>
                     </MudTd>
                 </RowTemplate>
                     <RowEditingTemplate>
@@ -146,43 +146,44 @@
         beforeEditSetting = null;
         newSetting = null;
 
-        //ModuleUsage mu = element as ModuleUsage;
+        ModuleSetting ms = element as ModuleSetting;
 
-        //if (mu.IdModuleNavigation != null)
-        //{
-        //    mu.IdModule = mu.IdModuleNavigation.IdModule;
-        //    mu.IdModuleNavigation = null;
-        //}
+        if (ms.IdSetting != 0 && ms.IdModuleusage == IdModuleUsage)
+        {
+            await Http.PutAsJsonAsync($"api/modulesettings/{ms.IdSetting}", ms);
+            snackBar.Add($"Module setting {ms.SettingName} saved", Severity.Success);
+        }
+        else if (ms.IdSetting != 0 && ms.IdModuleusage != IdModuleUsage)
+        {
+            ms.IdModuleusage = IdModuleUsage;
+            ms.IdSetting = 0;
+            using var response = await Http.PostAsJsonAsync("api/modulesettings", ms);
+            var xms = await response.Content.ReadFromJsonAsync<ModuleSetting>();
+            ms.IdSetting = xms.IdSetting;
+            snackBar.Add($"Module setting {ms.SettingName} rewritten for this usage", Severity.Success);
+        }
+        else if (ms.IdSetting == 0)
+        {
+            using var response = await Http.PostAsJsonAsync("api/modulesettings", ms);
+            var xms = await response.Content.ReadFromJsonAsync<ModuleSetting>();
+            ms.IdSetting = xms.IdSetting;
+            snackBar.Add($"Module setting {ms.SettingName} created", Severity.Success);
+        }
 
-        //if (mu.IdModuleusage != 0)
-        //{
-        //    await Http.PutAsJsonAsync($"api/moduleusages/{mu.IdModuleusage}", mu);
-
-        //    snackBar.Add($"Module usage {mu.IdModuleusage} saved", Severity.Info);
-        //}
-        //else
-        //{
-        //    using var response = await Http.PostAsJsonAsync("api/moduleusages", mu);
-        //    var xmu = await response.Content.ReadFromJsonAsync<ModuleUsage>();
-        //    mu.IdModuleusage = xmu.IdModuleusage;
-        //    snackBar.Add($"Module usage {mu.IdModuleusage} created");            
-        //}
-        //mu.IdModuleNavigation = modules[mu.IdModule];
         StateHasChanged();
     }
 
-    private async Task DeleteModuleSetting(int IdSetting)
+    private async Task DeleteModuleSetting(ModuleSetting ms)
     {
-        //if ((await DialogService.ShowMessageBox(
-        //    "Warning",
-        //    $"Do you want to delete ModuleUsage {IdModuleusage} ?",
-        //    yesText: "Delete!", cancelText: "Cancel") != null))
-        //{
-        //    var mu = layoutDefinition.ModuleUsages.First(x => x.IdModuleusage == IdModuleusage);
-        //    layoutDefinition.ModuleUsages.Remove(mu);
-        //    await Http.DeleteAsync($"api/moduleusages/{IdModuleusage}");
-        //    snackBar.Add($"ModuleUsage {IdModuleusage} deleted.", Severity.Success);
-        //}
+        if ((await DialogService.ShowMessageBox(
+            "Warning",
+            $"Do you want to delete setting {ms.SettingName} ?",
+            yesText: "Delete!", cancelText: "Cancel") != null))
+        {
+            await Http.DeleteAsync($"api/modulesettings/{ms.IdSetting}");
+            snackBar.Add($"Setting {ms.SettingName} deleted.", Severity.Success);
+            await LoadData();
+        }
     }
 
     private async void AddSetting()
@@ -215,5 +216,14 @@
         }
 
         return null;
+    }
+
+    private async void RowClicked(TableRowClickEventArgs<ModuleSetting> p)
+    {
+        //uriHelper.NavigateTo($"layoutdefinitions/edit/{p.Item.IdLayoutdefinition}");
+
+        await Task.Delay(300);
+
+        await js.InvokeVoidAsync("triggerClick", p.MouseEventArgs);
     }
 }

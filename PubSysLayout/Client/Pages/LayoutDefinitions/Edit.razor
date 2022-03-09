@@ -80,8 +80,8 @@
                         <MudTd DataLabel="Order">@context.Order</MudTd>
                         <MudTd DataLabel="CacheTime">@context.CacheTime</MudTd>
                         <MudTd DataLabel="">                            
-                            <MudIconButton Icon="@Icons.Material.Filled.Settings" Title="Module settings" @onclick="@(()=>OpenModuleSettingsDialog(@context))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text"></MudIconButton>
-                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Title="Delete module usage" @onclick="@(()=>DeleteModuleUsage(@context.IdModuleusage))" Color="Color.Secondary" Size="Size.Small" Variant="Variant.Text"></MudIconButton>
+                            <MudIconButton Icon="@Icons.Material.Filled.Settings" Title="Module settings" @onclick="@(()=>OpenModuleSettingsDialog(context))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text"></MudIconButton>
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" Title="Delete module usage" @onclick="@(()=>DeleteModuleUsage(context))" Color="Color.Secondary" Size="Size.Small" Variant="Variant.Text"></MudIconButton>
                         </MudTd>
                     </RowTemplate>
                     <RowEditingTemplate>
@@ -242,16 +242,14 @@
         if (mu.IdModuleusage != 0)
         {
             await Http.PutAsJsonAsync($"api/moduleusages/{mu.IdModuleusage}", mu);
-
-            //OnCommitEditClick="@(() => snackBar.Add("Module usage saved"))" 
-            snackBar.Add($"Module usage {mu.IdModuleusage} saved", Severity.Info);
+            snackBar.Add($"Module usage {mu.IdModuleusage} saved", Severity.Success);
         }
         else
         {
             using var response = await Http.PostAsJsonAsync("api/moduleusages", mu);
             var xmu = await response.Content.ReadFromJsonAsync<ModuleUsage>();
             mu.IdModuleusage = xmu.IdModuleusage;
-            snackBar.Add($"Module usage {mu.IdModuleusage} created");            
+            snackBar.Add($"Module usage {mu.IdModuleusage} created", Severity.Success);            
         }
         mu.IdModuleNavigation = modules[mu.IdModule];
         StateHasChanged();
@@ -277,17 +275,17 @@
         await js.InvokeVoidAsync("scrollToElementId", "editRow");
     }
 
-    private async Task DeleteModuleUsage(int IdModuleusage)
+    private async Task DeleteModuleUsage(ModuleUsage mu)
     {
         if ((await DialogService.ShowMessageBox(
             "Warning",
-            $"Do you want to delete ModuleUsage {IdModuleusage} ?",
+            $"Do you want to delete ModuleUsage {mu.IdModuleusage} ?",
             yesText: "Delete!", cancelText: "Cancel") != null))
         {
-            var mu = layoutDefinition.ModuleUsages.First(x => x.IdModuleusage == IdModuleusage);
+            //var mu = layoutDefinition.ModuleUsages.First(x => x.IdModuleusage == IdModuleusage);
             layoutDefinition.ModuleUsages.Remove(mu);
-            await Http.DeleteAsync($"api/moduleusages/{IdModuleusage}");
-            snackBar.Add($"ModuleUsage {IdModuleusage} deleted.", Severity.Success);
+            await Http.DeleteAsync($"api/moduleusages/{mu.IdModuleusage}");
+            snackBar.Add($"ModuleUsage {mu.IdModuleusage} deleted.", Severity.Success);
         }
     }
 
