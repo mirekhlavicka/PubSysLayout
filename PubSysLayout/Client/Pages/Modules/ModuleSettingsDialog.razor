@@ -38,7 +38,7 @@
             <MudTable @ref="settingsTable" Items="moduleSettings" Hover="true" SortLabel="Sort By" Elevation="0" Class="mt-4" RowsPerPage="0" FixedHeader="true" FixedFooter="true"  Dense="true" Height="500px" RowClassFunc="RowClassFunc"
                 CommitEditTooltip="Commit Edit" CancelEditTooltip="Cancel Edit" RowEditPreview="Backup" RowEditCancel="ResetEdit" RowEditCommit="Committed" CanCancelEdit="true" IsEditRowSwitchingBlocked="true" OnRowClick="RowClicked" T="ModuleSetting">
                 <ColGroup>
-                    <col style="width:200px;" />
+                    <col style="width:250px;" />
                     <col />
                     <col style="width:150px;" />
                     <col style="width:10px;"/>
@@ -58,10 +58,10 @@
                     <RowEditingTemplate>
                         <MudTd DataLabel="Name">
                             <a id="editRow"/>
-                            <MudTextField @bind-Value="@context.SettingName" Required Validation="@((string s) => CheckName(s, context))" />
+                            <MudTextField Margin="Margin.Dense" @bind-Value="@context.SettingName" Required Validation="@((string s) => CheckName(s, context))" Immediate="true" />
                         </MudTd>
                         <MudTd DataLabel="Value">
-                            <MudTextField @bind-Value="@context.SettingValue" />
+                            <MudTextField Margin="Margin.Dense" @bind-Value="@context.SettingValue" />
                         </MudTd>
                     </RowEditingTemplate>
             </MudTable>
@@ -220,10 +220,7 @@
 
     private async void RowClicked(TableRowClickEventArgs<ModuleSetting> p)
     {
-        //uriHelper.NavigateTo($"layoutdefinitions/edit/{p.Item.IdLayoutdefinition}");
-
         await Task.Delay(300);
-
-        await js.InvokeVoidAsync("triggerClick", p.MouseEventArgs);
+        await js.InvokeVoidAsync("focusAt", p.MouseEventArgs.ClientX, p.MouseEventArgs.ClientY + 15);
     }
 }

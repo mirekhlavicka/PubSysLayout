@@ -22,16 +22,11 @@
             //return true;
         }
 
-        window.triggerClick = (ea) => {
-            const evt = new MouseEvent("click", {
-                //view: window,
-                bubbles: true,
-                cancelable: true,
-                clientX: ea.clientX,
-                clientY: ea.clientY
-            });
-            document.body.dispatchEvent(evt);
-            console.log(ea);
+        window.focusAt = (x, y) => {
+            const element = document.elementFromPoint(x, y)
+            if (element) {
+                element.focus();
+            }
         }
     </script>
 
