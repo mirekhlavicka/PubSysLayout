@@ -22,9 +22,18 @@ namespace PubSysLayout.Server.Controllers
 
         // GET: api/Modules
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Module>>> GetModules()
+        public async Task<ActionResult<IEnumerable<Module>>> GetModules(bool? hideUnused)
         {
-            return await _context.Modules.Where(m => !m.Admin).ToListAsync();
+            var res = _context.Modules.AsQueryable();
+
+            res = res.Where(m => !m.Admin);
+
+            if (hideUnused.HasValue && hideUnused.Value)
+            {
+                res = res.Where(m => m.ModuleUsages.Any());
+            }
+
+            return await res.ToListAsync();
         }
 
         // GET: api/Modules/5

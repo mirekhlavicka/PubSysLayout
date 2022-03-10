@@ -15,11 +15,15 @@
 }
 else
 {
-    <MudFab Color="Color.Primary" Title="Add new layout definition" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Link="layoutdefinitions/edit/0" Class="mt-0 mb-5" />
+    <MudTooltip Text="Add new layout definition">
+        <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Link="layoutdefinitions/edit/0" Class="mt-0 mb-5" />
+    </MudTooltip>
     <MudTable Items="layoutDefinitions" Hover="true" SortLabel="Sort By" Elevation="5" RowsPerPage="0" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 250px)" Dense="true" 
-        Filter="new Func<LayoutDefinition,bool>(FilterFunc)" OnRowClick="RowClicked" RowClass="cursor-pointer" Virtualize="true" T="LayoutDefinition">
+        Filter="new Func<LayoutDefinition,bool>(FilterFunc)" OnRowClick="RowClicked" RowClass="cursor-pointer" Virtualize="false" T="LayoutDefinition">
         <ToolBarContent>
             <MudText Typo="Typo.h6">Layout definitions</MudText>
+            <MudSpacer />
+            <MudSwitch Label="Hide unused" Color="Color.Info" Checked="@hideUnused" CheckedChanged="@(async (bool b) => {hideUnused = b; await LoadData();})" />
             <MudSpacer />
             <MudTextField DebounceInterval="500" @bind-Value="searchString" Placeholder="Search by name or ID" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true" ></MudTextField>
         </ToolBarContent>
@@ -43,7 +47,9 @@ else
             <MudTd DataLabel="Layout">@layouts[context.IdLayout]</MudTd>
             <MudTd DataLabel="Layout">@(styles.ContainsKey(context.IdStyle)?styles[context.IdStyle]:"(not selected)")</MudTd>
             <MudTd DataLabel="">
-                <MudIconButton Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" Title="Delete layout definition" @onclick="@(()=>Delete(@context.IdLayoutdefinition))"Size="Size.Small" Variant="Variant.Text" />
+                <MudTooltip Text="Delete layout definition">
+                    <MudIconButton Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>Delete(@context.IdLayoutdefinition))"Size="Size.Small" Variant="Variant.Text" />
+                </MudTooltip>
             </MudTd>
         </RowTemplate>
     </MudTable>
@@ -57,6 +63,7 @@ else
     private Dictionary<int, string> styles;
 
     private string searchString = "";
+    private bool hideUnused = true;
 
     protected override async Task OnInitializedAsync()
     {
@@ -68,7 +75,7 @@ else
 
     protected async Task LoadData()
     {
-        layoutDefinitions = await Http.GetFromJsonAsync<LayoutDefinition[]>("api/layoutdefinitions");
+        layoutDefinitions = await Http.GetFromJsonAsync<LayoutDefinition[]>($"api/layoutdefinitions?hideUnused={hideUnused}");
     }
 
     async Task Delete(int idLayoutdefinition)

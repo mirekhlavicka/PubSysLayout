@@ -22,9 +22,16 @@ namespace PubSysLayout.Server.Controllers
 
         // GET: api/LayoutDefinitions
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<LayoutDefinition>>> GetLayoutDefinitions()
+        public async Task<ActionResult<IEnumerable<LayoutDefinition>>> GetLayoutDefinitions(bool? hideUnused)
         {
-            return await _context.LayoutDefinitions.ToListAsync();
+            var res = _context.LayoutDefinitions.AsQueryable();
+
+            if (hideUnused.HasValue && hideUnused.Value)
+            {
+                res = res.Where(m => m.LayoutAssigns.Any());
+            }
+
+            return await res.ToListAsync();
         }
 
         // GET: api/LayoutDefinitions/5

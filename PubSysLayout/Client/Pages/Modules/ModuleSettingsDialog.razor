@@ -34,7 +34,9 @@
         }
         else
         {
-            <MudFab Color="Color.Primary" Title="Add new setting" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-1" OnClick="AddSetting" Disabled="@(newSetting !=null || beforeEditSetting != null)" />
+            <MudTooltip Text="Add new setting">
+                <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-1" OnClick="AddSetting" Disabled="@(newSetting !=null || beforeEditSetting != null)" />
+            </MudTooltip>
             <MudTable @ref="settingsTable" Items="moduleSettings" Hover="true" SortLabel="Sort By" Elevation="0" Class="mt-4" RowsPerPage="0" FixedHeader="true" FixedFooter="true"  Dense="true" Height="500px" RowClassFunc="RowClassFunc"
                 CommitEditTooltip="Commit Edit" CancelEditTooltip="Cancel Edit" RowEditPreview="Backup" RowEditCancel="ResetEdit" RowEditCommit="Committed" CanCancelEdit="true" IsEditRowSwitchingBlocked="true" OnRowClick="RowClicked" T="ModuleSetting">
                 <ColGroup>
@@ -52,18 +54,20 @@
                     <MudTd DataLabel="Name">@context.SettingName</MudTd>
                     <MudTd DataLabel="Value">@context.SettingValue</MudTd>
                     <MudTd DataLabel="">                            
-                        <MudIconButton Icon="@Icons.Material.Filled.Delete" Title="Delete setting" @onclick="@(()=>DeleteModuleSetting(context))" Color="Color.Secondary" Size="Size.Small" Variant="Variant.Text" Disabled="@(IdModuleUsage != context.IdModuleusage)"></MudIconButton>
+                        <MudTooltip Text="Delete setting">
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>DeleteModuleSetting(context))" Color="Color.Secondary" Size="Size.Small" Variant="Variant.Text" Disabled="@(IdModuleUsage != context.IdModuleusage)"></MudIconButton>
+                        </MudTooltip>
                     </MudTd>
                 </RowTemplate>
-                    <RowEditingTemplate>
-                        <MudTd DataLabel="Name">
-                            <a id="editRow"/>
-                            <MudTextField Margin="Margin.Dense" @bind-Value="@context.SettingName" Required Validation="@((string s) => CheckName(s, context))" Immediate="true" />
-                        </MudTd>
-                        <MudTd DataLabel="Value">
-                            <MudTextField Margin="Margin.Dense" @bind-Value="@context.SettingValue" />
-                        </MudTd>
-                    </RowEditingTemplate>
+                <RowEditingTemplate>
+                    <MudTd DataLabel="Name">
+                        <a id="editRow"/>
+                        <MudTextField Margin="Margin.Dense" @bind-Value="@context.SettingName" Required Validation="@((string s) => CheckName(s, context))" Immediate="true" spellcheck="false" />
+                    </MudTd>
+                    <MudTd DataLabel="Value">
+                        <MudTextField Margin="Margin.Dense" @bind-Value="@context.SettingValue" spellcheck="false"/>
+                    </MudTd>
+                </RowEditingTemplate>
             </MudTable>
         }
     </DialogContent>
@@ -221,6 +225,6 @@
     private async void RowClicked(TableRowClickEventArgs<ModuleSetting> p)
     {
         await Task.Delay(300);
-        await js.InvokeVoidAsync("focusAt", p.MouseEventArgs.ClientX, p.MouseEventArgs.ClientY + 15);
+        await js.InvokeVoidAsync("focusAt", p.MouseEventArgs.ClientX, p.MouseEventArgs.ClientY + 5);
     }
 }
