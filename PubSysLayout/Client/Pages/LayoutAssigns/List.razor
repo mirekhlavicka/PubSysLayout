@@ -1,5 +1,6 @@
 ﻿@inject HttpClient Http
 @inject IJSRuntime js
+@inject IDialogService DialogService
 @inject MudBlazor.ISnackbar snackBar
 @using PubSysLayout.Shared.Model
 
@@ -9,28 +10,31 @@
     @*OnClick="AddSetting" Disabled="@(newSetting !=null || beforeEditSetting != null)"*@
 </MudTooltip>
 <MudTable @ref="assignTable" Items="layoutAssigns" Hover="true" SortLabel="Sort By" Elevation="5" Class="mt-4" RowsPerPage="0" FixedHeader="true" FixedFooter="true"  Dense="true"
-    CommitEditTooltip="Commit Edit" CancelEditTooltip="Cancel Edit" T="LayoutAssign" Height="200px">
+    CommitEditTooltip="Commit Edit" CancelEditTooltip="Cancel Edit" T="LayoutAssign" Height="calc(100vh - 698px)">
     @*RowEditPreview="Backup" RowEditCancel="ResetEdit" RowEditCommit="Committed" CanCancelEdit="true" IsEditRowSwitchingBlocked="true" OnRowClick="RowClicked" *@
     <ToolBarContent>
         <MudText Typo="Typo.h6">@Title</MudText>
     </ToolBarContent>
     <ColGroup>
-        <col style="width:250px;" />
         <col />
-        <col style="width:150px;" />
+        <col />
+        <col />
+        <col style="width:50px;" />
         <col style="width:10px;"/>
     </ColGroup>
     <HeaderContent>
+        <MudTh>Server</MudTh>
         <MudTh>Section</MudTh>
         <MudTh>Action</MudTh>
         <MudTh />
     </HeaderContent>
     <RowTemplate>
-        <MudTd DataLabel="Name">@context.IdSection</MudTd>
+        <MudTd DataLabel="Name">@servers[context.IdServer].Name</MudTd>
+        <MudTd DataLabel="Name">@sections[context.IdSection].Name</MudTd>
         <MudTd DataLabel="Value">@qslayouts[context.IdQslayout].Name</MudTd>
         <MudTd DataLabel="">                            
-            <MudTooltip Text="Delete setting">
-                @*<MudIconButton Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>DeleteModuleSetting(context))" Color="Color.Secondary" Size="Size.Small" Variant="Variant.Text" Disabled="@(IdModuleUsage != context.IdModuleusage)"></MudIconButton>*@
+            <MudTooltip Text="Delete assign">
+                <MudIconButton Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>DeleteAssign(context))" Color="Color.Secondary" Size="Size.Small" Variant="Variant.Text" ></MudIconButton>
             </MudTooltip>
         </MudTd>
     </RowTemplate>
@@ -52,7 +56,9 @@
 
     private List<LayoutAssign> layoutAssigns;
     Dictionary<int, Qslayout> qslayouts;
-    
+    Dictionary<int, Section> sections;
+    Dictionary<int, Server> servers;
+
     MudTable<LayoutAssign> assignTable;
 
     protected async override Task OnParametersSetAsync()
@@ -63,6 +69,24 @@
     protected async Task LoadData()
     {
         qslayouts = (await Http.GetFromJsonAsync<Qslayout[]>("api/qslayouts")).ToDictionary(qs => qs.IdQslayout);
+        sections = (await Http.GetFromJsonAsync<Section[]>("api/dblist/sections")).ToDictionary(s => s.IdSection);
+        sections.Add(0, new Section { IdSection = 0, Name = "(All)"});
+        servers = (await Http.GetFromJsonAsync<Server[]>("api/dblist/servers")).ToDictionary(s => s.IdServer);
+        servers.Add(0, new Server{ IdServer= 0, Name = "(All)"});
+
         layoutAssigns = await Http.GetFromJsonAsync<List<LayoutAssign>>($"api/layoutassigns?id_layoutdefinition={IdLayoutdefinition}&id_qslayout=0");
+    }
+
+    private async Task DeleteAssign(LayoutAssign la)
+    {
+        if ((await DialogService.ShowMessageBox(
+            "Warning",
+            $"Do you want to delete layout assign ?",
+            yesText: "Delete!", cancelText: "Cancel") != null))
+        {
+            //await Http.DeleteAsync($"api/layoutassigns/{la.Id}");
+            snackBar.Add($"Layout assign deleted.", Severity.Success);
+            await LoadData();
+        }
     }
 }

@@ -61,5 +61,34 @@ namespace PubSysLayout.Server.Controllers
                 return (string)await command.ExecuteScalarAsync();
             }
         }
+
+        // GET: api/dblist/servers
+        [HttpGet("servers")]
+        public async Task<ActionResult<IEnumerable<PubSysLayout.Shared.Model.Server>>> GetServers()
+        {
+            return await _context.Servers.FromSqlRaw(@"
+                SELECT 
+                    *
+                FROM 
+                    servers
+                WHERE
+                    del = 0
+                ").ToListAsync();
+        }
+
+        // GET: api/dblist/sections
+        [HttpGet("sections")]
+        public async Task<ActionResult<IEnumerable<Section>>> GetSections()
+        {
+            return await _context.Sections.FromSqlRaw(@"
+                SELECT 
+                    id_section, id_metasection, id_server, id_section_parent, id_section_parent_top, treelevel, name, redirurl, target, visible, del, [order], options,
+                    0 AS id_file, 0 AS tag 
+                FROM 
+                    sections s
+                WHERE
+                    del = 0
+                ").ToListAsync();
+        }
     }
 }
