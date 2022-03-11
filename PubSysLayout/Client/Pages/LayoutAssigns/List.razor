@@ -1,0 +1,68 @@
+﻿@inject HttpClient Http
+@inject IJSRuntime js
+@inject MudBlazor.ISnackbar snackBar
+@using PubSysLayout.Shared.Model
+
+
+<MudTooltip Text="Add new assign">
+    <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-1"  /> 
+    @*OnClick="AddSetting" Disabled="@(newSetting !=null || beforeEditSetting != null)"*@
+</MudTooltip>
+<MudTable @ref="assignTable" Items="layoutAssigns" Hover="true" SortLabel="Sort By" Elevation="5" Class="mt-4" RowsPerPage="0" FixedHeader="true" FixedFooter="true"  Dense="true"
+    CommitEditTooltip="Commit Edit" CancelEditTooltip="Cancel Edit" T="LayoutAssign" Height="200px">
+    @*RowEditPreview="Backup" RowEditCancel="ResetEdit" RowEditCommit="Committed" CanCancelEdit="true" IsEditRowSwitchingBlocked="true" OnRowClick="RowClicked" *@
+    <ToolBarContent>
+        <MudText Typo="Typo.h6">@Title</MudText>
+    </ToolBarContent>
+    <ColGroup>
+        <col style="width:250px;" />
+        <col />
+        <col style="width:150px;" />
+        <col style="width:10px;"/>
+    </ColGroup>
+    <HeaderContent>
+        <MudTh>Section</MudTh>
+        <MudTh>Action</MudTh>
+        <MudTh />
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Name">@context.IdSection</MudTd>
+        <MudTd DataLabel="Value">@qslayouts[context.IdQslayout].Name</MudTd>
+        <MudTd DataLabel="">                            
+            <MudTooltip Text="Delete setting">
+                @*<MudIconButton Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>DeleteModuleSetting(context))" Color="Color.Secondary" Size="Size.Small" Variant="Variant.Text" Disabled="@(IdModuleUsage != context.IdModuleusage)"></MudIconButton>*@
+            </MudTooltip>
+        </MudTd>
+    </RowTemplate>
+@*    <RowEditingTemplate>
+        <MudTd DataLabel="Name">
+            <a id="editRow"/>
+            <MudTextField Margin="Margin.Dense" @bind-Value="@context.SettingName" Required Validation="@((string s) => CheckName(s, context))" Immediate="true" spellcheck="false" />
+        </MudTd>
+        <MudTd DataLabel="Value">
+            <MudTextField Margin="Margin.Dense" @bind-Value="@context.SettingValue" spellcheck="false"/>
+        </MudTd>
+    </RowEditingTemplate>
+*@</MudTable>
+
+
+@code {
+    [Parameter] public int IdLayoutdefinition { get; set; }
+    [Parameter] public string Title { get; set; }
+
+    private List<LayoutAssign> layoutAssigns;
+    Dictionary<int, Qslayout> qslayouts;
+    
+    MudTable<LayoutAssign> assignTable;
+
+    protected async override Task OnParametersSetAsync()
+    {
+        await LoadData();
+    }
+
+    protected async Task LoadData()
+    {
+        qslayouts = (await Http.GetFromJsonAsync<Qslayout[]>("api/qslayouts")).ToDictionary(qs => qs.IdQslayout);
+        layoutAssigns = await Http.GetFromJsonAsync<List<LayoutAssign>>($"api/layoutassigns?id_layoutdefinition={IdLayoutdefinition}&id_qslayout=0");
+    }
+}

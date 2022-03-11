@@ -12,21 +12,19 @@
 
     <script>
         window.scrollToElementId = (elementId) => {
-            //console.info('scrolling to element', elementId);
             var element = document.getElementById(elementId);
             if (!element) {
                 console.warn('element was not found', elementId);
-                //return false;
+                return false;
             }
             element.scrollIntoView();
-            //return true;
+            return true;
         }
 
         window.focusAt = (x, y) => {
             const element = document.elementFromPoint(x, y)
             if (element) {
                 element.focus();
-                //console.log(element);
             }
         }
     </script>

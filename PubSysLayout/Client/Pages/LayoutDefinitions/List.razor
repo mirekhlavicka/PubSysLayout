@@ -18,14 +18,14 @@ else
     <MudTooltip Text="Add new layout definition">
         <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Link="layoutdefinitions/edit/0" Class="mt-0 mb-5" />
     </MudTooltip>
-    <MudTable Items="layoutDefinitions" Hover="true" SortLabel="Sort By" Elevation="5" RowsPerPage="0" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 250px)" Dense="true" 
-        Filter="new Func<LayoutDefinition,bool>(FilterFunc)" OnRowClick="RowClicked" RowClass="cursor-pointer" Virtualize="false" T="LayoutDefinition">
+    <MudTable Items="layoutDefinitions" Hover="true" SortLabel="Sort By" AllowUnsorted="false" Elevation="5" RowsPerPage="0" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 250px)" Dense="true" 
+        Filter="new Func<LayoutDefinition,bool>(FilterFunc)" OnRowClick="RowClicked" RowClass="cursor-pointer" Virtualize="true" T="LayoutDefinition">
         <ToolBarContent>
             <MudText Typo="Typo.h6">Layout definitions</MudText>
             <MudSpacer />
             <MudSwitch Label="Hide unused" Color="Color.Info" Checked="@hideUnused" CheckedChanged="@(async (bool b) => {hideUnused = b; await LoadData();})" />
             <MudSpacer />
-            <MudTextField DebounceInterval="500" @bind-Value="searchString" Placeholder="Search by name or ID" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true" ></MudTextField>
+            <MudTextField DebounceInterval="500" @bind-Value="searchString" Placeholder="Search by name or ID" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true" ></MudTextField>
         </ToolBarContent>
         <ColGroup>
             <col style="width:150px;" />

@@ -18,14 +18,14 @@ else
     <MudTooltip Text="Add new module">
         <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5" OnClick="AddModule" Disabled="@(newModule !=null || beforeEditModule != null)"/>
     </MudTooltip>
-    <MudTable @ref="modulesTable" Items="modules" Hover="true" SortLabel="Sort By" Elevation="5" RowsPerPage="0" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 250px)" Dense="true" Filter="FilterFunc" T="Module" Virtualize="false"
+    <MudTable @ref="modulesTable" Items="modules" Hover="true" SortLabel="Sort By" AllowUnsorted="false" Elevation="5" RowsPerPage="25" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 300px)" Dense="true" Filter="FilterFunc" T="Module" Virtualize="false"
         CommitEditTooltip="Commit Edit" CancelEditTooltip="Cancel Edit" RowEditPreview="Backup" RowEditCancel="ResetEdit" RowEditCommit="Committed" CanCancelEdit="true" IsEditRowSwitchingBlocked="true" OnRowClick="RowClicked">
         <ToolBarContent>
             <MudText Typo="Typo.h6">Modules</MudText>
             <MudSpacer />
             <MudSwitch Label="Hide unused" Color="Color.Info" Checked="@hideUnused" CheckedChanged="@(async (bool b) => {hideUnused = b; await LoadData();})" Disabled="@(newModule !=null || beforeEditModule != null)" />
             <MudSpacer />
-            <MudTextField DebounceInterval="500" @bind-Value="searchString" Placeholder="Search by name or ID" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true" ></MudTextField>
+            <MudTextField DebounceInterval="500" @bind-Value="searchString" Placeholder="Search by name, path or ID" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true" ></MudTextField>
         </ToolBarContent>
         <ColGroup>
             <col style="width:100px;" />
@@ -36,8 +36,8 @@ else
             <col style="width:150px;"/>
         </ColGroup>
         <HeaderContent>
-            <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="(Module m) => m.IdModule == 0 ? 999999 :  m.IdModule">ID</MudTableSortLabel></MudTh>
-            <MudTh><MudTableSortLabel SortBy="new Func<Module, object>(x=>x.Name)">Name</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="(Module m) => m.IdModule == 0 ? 999999 :  m.IdModule" >ID</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortBy='(Module m) => m.IdModule == 0 ? "ZZZZZ" :  m.Name' >Name</MudTableSortLabel></MudTh>
             <MudTh>Path</MudTh>
             <MudTh>Active</MudTh>
             <MudTh>Cache key</MudTh>
@@ -59,7 +59,7 @@ else
             </MudTd>
         </RowTemplate>
         <RowEditingTemplate>
-            <MudTd DataLabel="ID">@context.IdModule<a id="editRow"/></MudTd>
+            <MudTd DataLabel="ID">@context.IdModule<a id="editRow" style="position:relative; top: -80px" /></MudTd>
             <MudTd DataLabel="Name">                
                 <MudTextField Margin="Margin.Dense" @bind-Value="@context.Name" Required Immediate="false" spellcheck="false" />
             </MudTd>
@@ -73,7 +73,9 @@ else
                 <MudTextField Margin="Margin.Dense" @bind-Value="@context.Qskey"  spellcheck="false" />
             </MudTd>
         </RowEditingTemplate>
-
+        <PagerContent>
+            <MudTablePager PageSizeOptions="new int[]{25, 100, 1000}" />
+        </PagerContent>
     </MudTable>}
 
 @code {
@@ -98,10 +100,13 @@ else
 
     private bool FilterFunc(Module m)
     {
-        if (string.IsNullOrWhiteSpace(searchString))
+        if (string.IsNullOrWhiteSpace(searchString) || m.IdModule == 0)
             return true;
 
         if (m.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if (m.DesktopSrc.Contains(searchString, StringComparison.OrdinalIgnoreCase))
             return true;
 
         if(m.IdModule.ToString() == searchString)
@@ -175,27 +180,18 @@ else
 
         Module m = element as Module;
 
-        //if (ms.IdSetting != 0 && ms.IdModuleusage == IdModuleUsage)
-        //{
-        //    await Http.PutAsJsonAsync($"api/modulesettings/{ms.IdSetting}", ms);
-        //    snackBar.Add($"Module setting {ms.SettingName} saved", Severity.Success);
-        //}
-        //else if (ms.IdSetting != 0 && ms.IdModuleusage != IdModuleUsage)
-        //{
-        //    ms.IdModuleusage = IdModuleUsage;
-        //    ms.IdSetting = 0;
-        //    using var response = await Http.PostAsJsonAsync("api/modulesettings", ms);
-        //    var xms = await response.Content.ReadFromJsonAsync<ModuleSetting>();
-        //    ms.IdSetting = xms.IdSetting;
-        //    snackBar.Add($"Module setting {ms.SettingName} rewritten for this usage", Severity.Success);
-        //}
-        //else if (ms.IdSetting == 0)
-        //{
-        //    using var response = await Http.PostAsJsonAsync("api/modulesettings", ms);
-        //    var xms = await response.Content.ReadFromJsonAsync<ModuleSetting>();
-        //    ms.IdSetting = xms.IdSetting;
-        //    snackBar.Add($"Module setting {ms.SettingName} created", Severity.Success);
-        //}
+        if (m.IdModule != 0)
+        {
+            await Http.PutAsJsonAsync($"api/modules/{m.IdModule}", m);
+            snackBar.Add($"Module {m.Name} saved", Severity.Success);
+        }
+        else
+        {
+            using var response = await Http.PostAsJsonAsync("api/modules", m);
+            var xm = await response.Content.ReadFromJsonAsync<Module>();
+            m.IdModule = xm.IdModule;
+            snackBar.Add($"Module  {m.Name} created", Severity.Success);
+        }
 
         StateHasChanged();
     }
@@ -218,8 +214,13 @@ else
     {
         newModule = new Module
         {
-            Admin =false,
-            Active = true
+            Name = "",
+            DesktopSrc = "",
+            Description = "",
+            Qskey = "",
+            Active = true,
+            Admin = false,
+            MobileSrc = "-"
         };
 
         modules.Add(newModule);
@@ -227,8 +228,18 @@ else
         await Task.Delay(300);
 
         await InvokeAsync(() =>
-        {
+        {            
+            if (modulesTable.Context.SortDirection == SortDirection.Ascending)
+            {
+                modulesTable.NavigateTo( Page.Last/*(int)System.Math.Ceiling((double)modulesTable.GetFilteredItemsCount() / modulesTable.RowsPerPage)*/);
+            }
+            else
+            {
+                modulesTable.NavigateTo(Page.First);
+            }
+
             modulesTable.SetEditingItem(newModule);
+
             StateHasChanged();
         });
 

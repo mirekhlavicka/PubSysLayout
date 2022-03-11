@@ -14,114 +14,121 @@
             <MudTooltip Text="Back to list">
                 <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-1" OnClick="GoBack" />
             </MudTooltip>
-                <MudCard Elevation="5" Class="mt-4">
-                    <MudCardHeader>
-                        <CardHeaderContent>
-                            <MudText Typo="Typo.h6">Layout definition</MudText>
-                        </CardHeaderContent>
-                        <CardHeaderActions>
-                            <MudTooltip Text="Copy layout definition">
-                                <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Color="Color.Default" Disabled="@(layoutDefinition.IdLayoutdefinition == 0)" OnClick="CreateCopy" />
-                            </MudTooltip>
-                        </CardHeaderActions>
-                    </MudCardHeader>
-                    <MudCardContent>
-                        <MudForm @ref="form" @bind-IsValid="@canSave">
-                            <MudTextField @bind-Value="layoutDefinition.Name" Label="Name" Required="true" RequiredError="Name is required!" Immediate="true" spellcheck="false"/>
-                            <MudSelect @bind-Value="@layoutDefinition.IdLayout" Label="Layout" Validation='(int x) => x == 0 ? "Select layout" : null' Required="true" ToStringFunc='(id) => layouts.FirstOrDefault(l => l.IdLayout == id)?.Name ?? "(not selected)"'>
-                                <MudSelectItem Value="0">(not selected)</MudSelectItem>
-                                @foreach (var l in layouts.OrderBy(l => l.Name))
-                                {
-                                    <MudSelectItem Value="@l.IdLayout">@l.Name</MudSelectItem>
-                                }
-                            </MudSelect>
-                            <MudSelect @bind-Value="@layoutDefinition.IdStyle" Label="Style" ToStringFunc='(id) => styles.FirstOrDefault(s => s.IdStyle == id)?.Name ?? "(not selected)"'>
-                                <MudSelectItem Value="0">(not selected)</MudSelectItem>
-                                @foreach (var s in styles.OrderBy(s => s.Name))
-                                {
-                                    <MudSelectItem Value="@s.IdStyle">@s.Name</MudSelectItem>
-                                }
-                            </MudSelect>
-                            <MudSwitch @bind-Checked="@layoutDefinition.Mainstyle" Label="Main style" Color="Color.Info" />
-                        </MudForm>
-                    </MudCardContent>
-                    <MudCardActions>
-                        <MudButton Variant="Variant.Filled" IconColor="Color.Secondary" Color="Color.Default" Disabled="@(!canSave)" OnClick="Save" Class="ml-auto" StartIcon="@Icons.Material.Filled.Save" accesskey="s" >Save</MudButton>                    
-                    </MudCardActions>
-                </MudCard>
-            </MudItem>
-    @if (layoutDefinition.IdLayoutdefinition != 0)
+            <MudCard Elevation="5" Class="mt-4">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Layout definition</MudText>
+                    </CardHeaderContent>
+                    <CardHeaderActions>
+                        <MudTooltip Text="Copy layout definition">
+                            <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Color="Color.Default" Disabled="@(layoutDefinition.IdLayoutdefinition == 0)" OnClick="CreateCopy" />
+                        </MudTooltip>
+                    </CardHeaderActions>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudForm @ref="form" @bind-IsValid="@canSave">
+                        <MudTextField @bind-Value="layoutDefinition.Name" Label="Name" Required="true" RequiredError="Name is required!" Immediate="true" spellcheck="false"/>
+                        <MudSelect @bind-Value="@layoutDefinition.IdLayout" Label="Layout" Validation='(int x) => x == 0 ? "Select layout" : null' Required="true" ToStringFunc='(id) => layouts.FirstOrDefault(l => l.IdLayout == id)?.Name ?? "(not selected)"'>
+                            <MudSelectItem Value="0">(not selected)</MudSelectItem>
+                            @foreach (var l in layouts.OrderBy(l => l.Name))
+                            {
+                                <MudSelectItem Value="@l.IdLayout">@l.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                        <MudSelect @bind-Value="@layoutDefinition.IdStyle" Label="Style" ToStringFunc='(id) => styles.FirstOrDefault(s => s.IdStyle == id)?.Name ?? "(not selected)"'>
+                            <MudSelectItem Value="0">(not selected)</MudSelectItem>
+                            @foreach (var s in styles.OrderBy(s => s.Name))
+                            {
+                                <MudSelectItem Value="@s.IdStyle">@s.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                        <MudSwitch @bind-Checked="@layoutDefinition.Mainstyle" Label="Main style" Color="Color.Info" />
+                    </MudForm>
+                </MudCardContent>
+                <MudCardActions>
+                    <MudButton Variant="Variant.Filled" IconColor="Color.Secondary" Color="Color.Default" Disabled="@(!canSave)" OnClick="Save" Class="ml-auto" StartIcon="@Icons.Material.Filled.Save" accesskey="s" >Save</MudButton>                    
+                </MudCardActions>
+            </MudCard>
+            @if (layoutDefinition.IdLayoutdefinition != 0)
+            {
+                <MudPaper Class="mt-6" Elevation="0">
+                <PubSysLayout.Client.Pages.LayoutAssigns.List IdLayoutdefinition="layoutDefinition.IdLayoutdefinition" Title='@("Assign layout " + layoutDefinition.Name + " to actions")'></PubSysLayout.Client.Pages.LayoutAssigns.List>
+                </MudPaper>
+            }
+        </MudItem>
+
+        @if (layoutDefinition.IdLayoutdefinition != 0)
         {
-            <MudItem xs="8">
-                <MudTooltip Text="Add module to layout definition">
-                    <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-1" OnClick="AddModuleUsage" Disabled="@(newModuleUsage!=null || beforeEditModuleUsage != null)" />
-                </MudTooltip>
-                <MudTable @ref="moduleUsageTable" Items="layoutDefinition.ModuleUsages" Hover="true" SortLabel="Sort By" Elevation="5" Class="mt-4" Dense="true" CanCancelEdit="true" CommitEditTooltip="Commit Edit" CancelEditTooltip="Cancel Edit"
-                  RowEditPreview="BackupModuleUsage" RowEditCancel="ResetEditModuleUsage" RowEditCommit="ModuleUsageHasBeenCommitted" IsEditRowSwitchingBlocked="true" 
-                  FixedHeader="true" FixedFooter="true" Height="calc(100vh - 250px)" OnRowClick="RowClicked" T="ModuleUsage">
-                    <ToolBarContent>
-                        <MudText Typo="Typo.h6">Modules in @layoutDefinition.Name</MudText>
-                    </ToolBarContent>
-                    <ColGroup>
-                        <col style="width:80px;" />
-                        <col style="width:25%;" />
-                        <col />
-                        <col style="width:80px;" />
-                        <col style="width:150px;" />
-                        <col style="width:120px;"/>
-                        <col style="width:10px;"/>
-                    </ColGroup>
-                    <HeaderContent>
-                        <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<ModuleUsage, object>(x=>x.IdModuleusage == 0 ? 999999 : x.IdModuleusage)">ID</MudTableSortLabel></MudTh>
-                        <MudTh><MudTableSortLabel SortBy="/*new Func<ModuleUsage, object>*/(ModuleUsage x) => x.IdSpot == 0 ? String.Empty : (spots[x.IdSpot]?.Name + x.Order.ToString())">Spot</MudTableSortLabel></MudTh>
-                        <MudTh>Module</MudTh>
-                        <MudTh>Order</MudTh>
-                        <MudTh>Cache time</MudTh>
-                        <MudTh></MudTh>
-                    </HeaderContent>
-                    <RowTemplate>
-                        <MudTd DataLabel="ID">@context.IdModuleusage</MudTd>
-                        <MudTd DataLabel="Spot">@(context.IdSpot == 0 ? "(not selected)" : spots[context.IdSpot]?.Name)</MudTd>
-                        <MudTd DataLabel="Module">@(context.IdModule == 0 ? "(not selected)" : modules[context.IdModule]?.Name)</MudTd>
-                        <MudTd DataLabel="Order">@context.Order</MudTd>
-                        <MudTd DataLabel="CacheTime">@context.CacheTime</MudTd>
-                        <MudTd DataLabel="">                            
-                            <MudTooltip Text="Edit module usage settings">
-                                <MudIconButton Icon="@Icons.Material.Filled.Settings" @onclick="@(()=>OpenModuleSettingsDialog(context))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text"></MudIconButton>
-                            </MudTooltip>
-                            <MudTooltip Text="Delete module usage">
-                                <MudIconButton Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>DeleteModuleUsage(context))" Color="Color.Secondary" Size="Size.Small" Variant="Variant.Text"></MudIconButton>
-                            </MudTooltip>
-                        </MudTd>
-                    </RowTemplate>
-                    <RowEditingTemplate>
-                        <MudTd DataLabel="ID">@context.IdModuleusage<a id="editRow"/></MudTd>
-                        <MudTd DataLabel="Spot">
-                            <MudSelect Dense="true" @bind-Value="@context.IdSpot" Validation='(int x) => x == 0 ? "Select spot" : null' Required="true" ToStringFunc='(id) => spots.ContainsKey(id) ? spots[id].Name : "(not selected)"'>
-                                <MudSelectItem Value="0">(not selected)</MudSelectItem>
-                                @foreach (var s in spots.Values.OrderBy(s => s.Name))
-                                {
-                                    <MudSelectItem Value="@s.IdSpot">@s.Name</MudSelectItem>
-                                }
-                            </MudSelect>
-                        </MudTd>
-                        <MudTd DataLabel="Module">
-                            <MudAutocomplete Dense="true" T="Module" SearchFunc="@SearchModule" 
-                                ResetValueOnEmptyText="true" CoerceText="true" CoerceValue="false" 
-                                ToStringFunc='m => $"{m.Name} ({m.IdModule})"' @bind-Value="@context.IdModuleNavigation" MaxItems="100"
-                                Validation='(Module x) => x == null ? "Type module name or ID" : null' Required="true" Placeholder="(not selected)"
-                                AdornmentIcon="@Icons.Material.Filled.Search" AdornmentColor="Color.Default" Clearable="true" spellcheck="false"/>
-                        </MudTd>
-                        <MudTd DataLabel="Order">
-                            <MudTextField Margin="Margin.Dense" @bind-Value="@context.Order" Required />
-                        </MudTd>
-                        <MudTd DataLabel="Cache time">
-                            <MudNumericField Margin="Margin.Dense"  @bind-Value="@context.CacheTime" Required Step="100"/>
-                        </MudTd>
-                        @*<MudTd></MudTd>*@
-                    </RowEditingTemplate>
-                </MudTable>
-            </MudItem>
+        <MudItem xs="8">
+            <MudTooltip Text="Add module to layout definition">
+                <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-1" OnClick="AddModuleUsage" Disabled="@(newModuleUsage!=null || beforeEditModuleUsage != null)" />
+            </MudTooltip>
+            <MudTable @ref="moduleUsageTable" Items="layoutDefinition.ModuleUsages" Hover="true" SortLabel="Sort By" AllowUnsorted="false" Elevation="5" Class="mt-4" Dense="true" CanCancelEdit="true" CommitEditTooltip="Commit Edit" CancelEditTooltip="Cancel Edit"
+                RowEditPreview="BackupModuleUsage" RowEditCancel="ResetEditModuleUsage" RowEditCommit="ModuleUsageHasBeenCommitted" IsEditRowSwitchingBlocked="true" 
+                FixedHeader="true" FixedFooter="true" Height="calc(100vh - 250px)" OnRowClick="RowClicked" T="ModuleUsage">
+                <ToolBarContent>
+                    <MudText Typo="Typo.h6">Modules in layout @layoutDefinition.Name</MudText>
+                </ToolBarContent>
+                <ColGroup>
+                    <col style="width:80px;" />
+                    <col style="width:25%;" />
+                    <col />
+                    <col style="width:80px;" />
+                    <col style="width:150px;" />
+                    <col style="width:120px;"/>
+                    <col style="width:10px;"/>
+                </ColGroup>
+                <HeaderContent>
+                    <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<ModuleUsage, object>(x=>x.IdModuleusage == 0 ? 999999 : x.IdModuleusage)">ID</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy="/*new Func<ModuleUsage, object>*/(ModuleUsage x) => x.IdSpot == 0 ? String.Empty : (spots[x.IdSpot]?.Name + x.Order.ToString())">Spot</MudTableSortLabel></MudTh>
+                    <MudTh>Module</MudTh>
+                    <MudTh>Order</MudTh>
+                    <MudTh>Cache time</MudTh>
+                    <MudTh></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="ID">@context.IdModuleusage</MudTd>
+                    <MudTd DataLabel="Spot">@(context.IdSpot == 0 ? "(not selected)" : spots[context.IdSpot]?.Name)</MudTd>
+                    <MudTd DataLabel="Module">@(context.IdModule == 0 ? "(not selected)" : modules[context.IdModule]?.Name)</MudTd>
+                    <MudTd DataLabel="Order">@context.Order</MudTd>
+                    <MudTd DataLabel="CacheTime">@context.CacheTime</MudTd>
+                    <MudTd DataLabel="">                            
+                        <MudTooltip Text="Edit module usage settings">
+                            <MudIconButton Icon="@Icons.Material.Filled.Settings" @onclick="@(()=>OpenModuleSettingsDialog(context))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text"></MudIconButton>
+                        </MudTooltip>
+                        <MudTooltip Text="Delete module usage">
+                            <MudIconButton Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>DeleteModuleUsage(context))" Color="Color.Secondary" Size="Size.Small" Variant="Variant.Text"></MudIconButton>
+                        </MudTooltip>
+                    </MudTd>
+                </RowTemplate>
+                <RowEditingTemplate>
+                    <MudTd DataLabel="ID">@context.IdModuleusage<a id="editRow" style="position:relative; top: -80px"/></MudTd>
+                    <MudTd DataLabel="Spot">
+                        <MudSelect Dense="true" @bind-Value="@context.IdSpot" Validation='(int x) => x == 0 ? "Select spot" : null' Required="true" ToStringFunc='(id) => spots.ContainsKey(id) ? spots[id].Name : "(not selected)"'>
+                            <MudSelectItem Value="0">(not selected)</MudSelectItem>
+                            @foreach (var s in spots.Values.OrderBy(s => s.Name))
+                            {
+                                <MudSelectItem Value="@s.IdSpot">@s.Name</MudSelectItem>
+                            }
+                        </MudSelect>
+                    </MudTd>
+                    <MudTd DataLabel="Module">
+                        <MudAutocomplete Dense="true" T="Module" SearchFunc="@SearchModule" 
+                            ResetValueOnEmptyText="true" CoerceText="true" CoerceValue="false" 
+                            ToStringFunc='m => $"{m.Name} ({m.IdModule})"' @bind-Value="@context.IdModuleNavigation" MaxItems="100"
+                            Validation='(Module x) => x == null ? "Type module name or ID" : null' Required="true" Placeholder="(not selected)"
+                            AdornmentIcon="@Icons.Material.Filled.Search" AdornmentColor="Color.Default" Clearable="true" spellcheck="false"/>
+                    </MudTd>
+                    <MudTd DataLabel="Order">
+                        <MudNumericField Margin="Margin.Dense" @bind-Value="@context.Order" Required Step="1" />
+                    </MudTd>
+                    <MudTd DataLabel="Cache time">
+                        <MudNumericField Margin="Margin.Dense"  @bind-Value="@context.CacheTime" Required Step="100"/>
+                    </MudTd>
+                    @*<MudTd></MudTd>*@
+                </RowEditingTemplate>
+            </MudTable>
+        </MudItem>
         }
     </MudGrid>
 }
