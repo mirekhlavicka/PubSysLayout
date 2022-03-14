@@ -86,8 +86,8 @@ namespace PubSysLayout.Server.Controllers
                     0 AS id_file, 0 AS tag 
                 FROM 
                     sections s
-                WHERE
-                    del = 0
+                --WHERE
+                --    del = 0
                 ").ToListAsync();
         }
     }

@@ -6,48 +6,78 @@
 
 
 <MudTooltip Text="Add new assign">
-    <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-1"  /> 
-    @*OnClick="AddSetting" Disabled="@(newSetting !=null || beforeEditSetting != null)"*@
+    <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-1"  OnClick="AddLA" Disabled="@(newLA !=null || beforeEditLA != null)"/> 
 </MudTooltip>
 <MudTable @ref="assignTable" Items="layoutAssigns" Hover="true" SortLabel="Sort By" Elevation="5" Class="mt-4" RowsPerPage="0" FixedHeader="true" FixedFooter="true"  Dense="true"
-    CommitEditTooltip="Commit Edit" CancelEditTooltip="Cancel Edit" T="LayoutAssign" Height="calc(100vh - 698px)">
-    @*RowEditPreview="Backup" RowEditCancel="ResetEdit" RowEditCommit="Committed" CanCancelEdit="true" IsEditRowSwitchingBlocked="true" OnRowClick="RowClicked" *@
+    CommitEditTooltip="Commit Edit" CancelEditTooltip="Cancel Edit" T="LayoutAssign" Height="calc(100vh - 698px)"
+    RowEditPreview="Backup" RowEditCancel="ResetEdit" RowEditCommit="Committed" CanCancelEdit="true" IsEditRowSwitchingBlocked="true" OnRowClick="RowClicked">
     <ToolBarContent>
         <MudText Typo="Typo.h6">@Title</MudText>
     </ToolBarContent>
     <ColGroup>
+        @if (servers.Count > 1)
+        {
+            <col style="width:25%;" />
+        }        
+        <col style="width:40%;"/>
         <col />
-        <col />
-        <col />
-        <col style="width:50px;" />
-        <col style="width:10px;"/>
+        <col style="width:120px;"/>
+        <col style="width:1px;"/>
     </ColGroup>
     <HeaderContent>
-        <MudTh>Server</MudTh>
+        @if (servers.Count > 1)
+        {
+            <MudTh>Server</MudTh>
+        }
         <MudTh>Section</MudTh>
         <MudTh>Action</MudTh>
         <MudTh />
     </HeaderContent>
     <RowTemplate>
-        <MudTd DataLabel="Name">@servers[context.IdServer].Name</MudTd>
-        <MudTd DataLabel="Name">@sections[context.IdSection].Name</MudTd>
-        <MudTd DataLabel="Value">@qslayouts[context.IdQslayout].Name</MudTd>
+        @if (servers.Count > 1)
+        {
+            <MudTd DataLabel="Name">@servers[context.IdServer].Name</MudTd>
+        }
+        <MudTd DataLabel="Name">@(sections.ContainsKey(context.IdSection)?  sections[context.IdSection].Name : "(!invalid ID)")</MudTd>
+        <MudTd DataLabel="Value">@(qslayouts.ContainsKey(context.IdQslayout) ? qslayouts[context.IdQslayout].Name : "(not selected)")</MudTd>
         <MudTd DataLabel="">                            
             <MudTooltip Text="Delete assign">
                 <MudIconButton Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>DeleteAssign(context))" Color="Color.Secondary" Size="Size.Small" Variant="Variant.Text" ></MudIconButton>
             </MudTooltip>
         </MudTd>
     </RowTemplate>
-@*    <RowEditingTemplate>
-        <MudTd DataLabel="Name">
-            <a id="editRow"/>
-            <MudTextField Margin="Margin.Dense" @bind-Value="@context.SettingName" Required Validation="@((string s) => CheckName(s, context))" Immediate="true" spellcheck="false" />
+    <RowEditingTemplate>
+        @if (servers.Count > 1)
+        {
+            <MudTd DataLabel="Server">
+                <MudSelect Dense="true" @bind-Value="@context.IdServer" Validation='(int x) => x == 0 ? "Select server" : null' Required="true" ToStringFunc='(id) => servers.ContainsKey(id) ? servers[id].Name : "(not selected)"' T="int">
+                    @*                <MudSelectItem Value="0">(not selected)</MudSelectItem>
+                    *@                @foreach (var s in servers.Values.OrderBy(s => s.Name))
+                    {
+                        <MudSelectItem Value="@s.IdServer">@s.Name </MudSelectItem>
+                    }
+                </MudSelect>
         </MudTd>
-        <MudTd DataLabel="Value">
-            <MudTextField Margin="Margin.Dense" @bind-Value="@context.SettingValue" spellcheck="false"/>
+        }
+        <MudTd DataLabel="Section">
+            <a id="editRow"/>
+            <MudAutocomplete Dense="true" T="Section" SearchFunc="@SearchSection" 
+                ResetValueOnEmptyText="true" CoerceText="true" CoerceValue="false" 
+                ToStringFunc='s => $"{s.Name} ({s.IdSection})"'  MaxItems="100"
+                Placeholder="Type section name or ID" Required="false" @bind-Value="@selectedSection"
+                AdornmentIcon="@Icons.Material.Filled.Search" AdornmentColor="Color.Default" Clearable="true" spellcheck="false"/>               
+        </MudTd>
+        <MudTd DataLabel="Action">
+            <MudSelect Dense="true" @bind-Value="@context.IdQslayout" Validation='(int x) => x == 0 ? "Select action" : null' Required="true" ToStringFunc='(id) => qslayouts.ContainsKey(id) ? qslayouts[id].Name : "(not selected)"' T="int">
+                <MudSelectItem Value="0">(not selected)</MudSelectItem>
+                @foreach (var qs in qslayouts.Values.OrderBy(qs => qs.Name))
+                {
+                    <MudSelectItem Value="@qs.IdQslayout">@(qs.Name + " (" + qs.ParamString + ")")</MudSelectItem>
+                }
+            </MudSelect>
         </MudTd>
     </RowEditingTemplate>
-*@</MudTable>
+</MudTable>
 
 
 @code {
@@ -58,6 +88,10 @@
     Dictionary<int, Qslayout> qslayouts;
     Dictionary<int, Section> sections;
     Dictionary<int, Server> servers;
+
+    private LayoutAssign beforeEditLA = null;
+    private LayoutAssign newLA = null;
+    private Section selectedSection = null;
 
     MudTable<LayoutAssign> assignTable;
 
@@ -70,11 +104,79 @@
     {
         qslayouts = (await Http.GetFromJsonAsync<Qslayout[]>("api/qslayouts")).ToDictionary(qs => qs.IdQslayout);
         sections = (await Http.GetFromJsonAsync<Section[]>("api/dblist/sections")).ToDictionary(s => s.IdSection);
-        sections.Add(0, new Section { IdSection = 0, Name = "(All)"});
+        sections.Add(0, new Section { IdSection = 0, Name = "(all)"});
         servers = (await Http.GetFromJsonAsync<Server[]>("api/dblist/servers")).ToDictionary(s => s.IdServer);
-        servers.Add(0, new Server{ IdServer= 0, Name = "(All)"});
+        //servers.Add(0, new Server{ IdServer= 0, Name = "(all)"});
 
         layoutAssigns = await Http.GetFromJsonAsync<List<LayoutAssign>>($"api/layoutassigns?id_layoutdefinition={IdLayoutdefinition}&id_qslayout=0");
+    }
+
+    private void Backup(object element)
+    {
+        LayoutAssign la = element as LayoutAssign;
+
+        beforeEditLA = new()
+            {
+                IdServer = la.IdServer,
+                IdSection = la.IdSection,
+                IdQslayout = la.IdQslayout,
+                IdLayoutdefinition = la.IdLayoutdefinition,
+                RefererRequired = la.RefererRequired
+            };
+
+        selectedSection = sections.ContainsKey(la.IdSection) ? sections[la.IdSection] : null;
+
+        StateHasChanged();
+    }
+
+    private void ResetEdit(object element)
+    {
+        if (beforeEditLA != null)
+        {
+            LayoutAssign la = element as LayoutAssign;
+            la.IdServer = beforeEditLA.IdServer;
+            la.IdSection = beforeEditLA.IdSection;
+            la.IdQslayout= beforeEditLA.IdQslayout;
+            la.IdLayoutdefinition = beforeEditLA.IdLayoutdefinition;
+            la.RefererRequired = beforeEditLA.RefererRequired;
+
+            beforeEditLA = null;
+            StateHasChanged();
+        }
+
+        if (newLA != null)
+        {
+            layoutAssigns.Remove(newLA);
+            newLA = null;
+            StateHasChanged();
+        }
+    }
+
+    private async void Committed(object element)
+    {
+
+        LayoutAssign la = element as LayoutAssign;
+
+        la.IdSection = (selectedSection == null ? 0 : selectedSection.IdSection);
+
+        if (beforeEditLA != null && newLA == null)
+        {
+            beforeEditLA = null;
+
+            await Http.PutAsJsonAsync($"api/layoutassigns?id_server={la.IdServer}&id_section={la.IdSection}&id_qslayout={la.IdQslayout}", la);
+            snackBar.Add($"layout assign saved", Severity.Success);
+        }
+        else
+        {
+            newLA = null;
+
+            using var response = await Http.PostAsJsonAsync("api/layoutassigns", la);
+            //var xm = await response.Content.ReadFromJsonAsync<Module>();
+            //m.IdModule = xm.IdModule;
+            snackBar.Add($"layout assign created", Severity.Success);
+        }
+
+        StateHasChanged();
     }
 
     private async Task DeleteAssign(LayoutAssign la)
@@ -84,9 +186,52 @@
             $"Do you want to delete layout assign ?",
             yesText: "Delete!", cancelText: "Cancel") != null))
         {
-            //await Http.DeleteAsync($"api/layoutassigns/{la.Id}");
+            await Http.DeleteAsync($"api/layoutassigns?id_server={la.IdServer}&id_section={la.IdSection}&id_qslayout={la.IdQslayout}");
             snackBar.Add($"Layout assign deleted.", Severity.Success);
             await LoadData();
         }
+    }
+
+    private async void AddLA()
+    {
+        newLA = new LayoutAssign
+        {
+            IdServer = 1,
+            IdLayoutdefinition = this.IdLayoutdefinition,
+            RefererRequired = false
+
+        };
+
+        layoutAssigns.Add(newLA);
+
+        selectedSection = null;
+
+        await Task.Delay(300);
+
+        await InvokeAsync(() =>
+        {
+            assignTable.SetEditingItem(newLA);
+            StateHasChanged();
+        });
+
+        await js.InvokeVoidAsync("scrollToElementId", "editRow");
+    }
+
+    private async Task<IEnumerable<Section>> SearchSection(string value)
+    {
+        // In real life use an asynchronous function for fetching data from an api.
+        await Task.Delay(5);
+
+        if (string.IsNullOrEmpty(value))
+            return sections.Values.Where(s => !s.Del && s.IdSectionParent == 0).OrderBy(s => s.Name);
+
+        return sections.Values.Where(m => m.Name.Contains(value, StringComparison.InvariantCultureIgnoreCase) || m.IdSection.ToString() == value).OrderBy(s => s.Name);
+    }
+
+
+    private async void RowClicked(TableRowClickEventArgs<LayoutAssign> p)
+    {
+        await Task.Delay(300);
+        await js.InvokeVoidAsync("focusAt", p.MouseEventArgs.ClientX, p.MouseEventArgs.ClientY + 5);
     }
 }

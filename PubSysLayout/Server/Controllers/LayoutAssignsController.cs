@@ -39,26 +39,26 @@ namespace PubSysLayout.Server.Controllers
             return await res.ToListAsync();
         }
 
-        // GET: api/LayoutAssigns/5
-        [HttpGet("{id}")]
-        public async Task<ActionResult<LayoutAssign>> GetLayoutAssign(int id)
-        {
-            var layoutAssign = await _context.LayoutAssigns.FindAsync(id);
+        //// GET: api/LayoutAssigns/5
+        //[HttpGet("{id}")]
+        //public async Task<ActionResult<LayoutAssign>> GetLayoutAssign(int id)
+        //{
+        //    var layoutAssign = await _context.LayoutAssigns.FindAsync(id);
 
-            if (layoutAssign == null)
-            {
-                return NotFound();
-            }
+        //    if (layoutAssign == null)
+        //    {
+        //        return NotFound();
+        //    }
 
-            return layoutAssign;
-        }
+        //    return layoutAssign;
+        //}
 
         // PUT: api/LayoutAssigns/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPut("{id}")]
-        public async Task<IActionResult> PutLayoutAssign(int id, LayoutAssign layoutAssign)
+        [HttpPut(/*"{id}"*/)]
+        public async Task<IActionResult> PutLayoutAssign(int id_server, int id_section, int id_qslayout, LayoutAssign layoutAssign)
         {
-            if (id != layoutAssign.IdServer)
+            if (id_server != layoutAssign.IdServer || id_section != layoutAssign.IdSection || id_qslayout != layoutAssign.IdQslayout)
             {
                 return BadRequest();
             }
@@ -71,7 +71,7 @@ namespace PubSysLayout.Server.Controllers
             }
             catch (DbUpdateConcurrencyException)
             {
-                if (!LayoutAssignExists(id))
+                if (!LayoutAssignExists(id_server, id_section, id_qslayout))
                 {
                     return NotFound();
                 }
@@ -96,7 +96,7 @@ namespace PubSysLayout.Server.Controllers
             }
             catch (DbUpdateException)
             {
-                if (LayoutAssignExists(layoutAssign.IdServer))
+                if (LayoutAssignExists(layoutAssign.IdServer, layoutAssign.IdSection, layoutAssign.IdQslayout))
                 {
                     return Conflict();
                 }
@@ -106,14 +106,14 @@ namespace PubSysLayout.Server.Controllers
                 }
             }
 
-            return CreatedAtAction("GetLayoutAssign", new { id = layoutAssign.IdServer }, layoutAssign);
+            return NoContent(); //CreatedAtAction("GetLayoutAssign", new { id = layoutAssign.IdServer }, layoutAssign);
         }
 
         // DELETE: api/LayoutAssigns/5
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeleteLayoutAssign(int id)
+        [HttpDelete(/*"{id}"*/)]
+        public async Task<IActionResult> DeleteLayoutAssign(int id_server, int id_section, int id_qslayout)
         {
-            var layoutAssign = await _context.LayoutAssigns.FindAsync(id);
+            var layoutAssign = await _context.LayoutAssigns.SingleOrDefaultAsync(la => la.IdServer == id_server && la.IdSection == id_section && la.IdQslayout == id_qslayout);
             if (layoutAssign == null)
             {
                 return NotFound();
@@ -125,9 +125,9 @@ namespace PubSysLayout.Server.Controllers
             return NoContent();
         }
 
-        private bool LayoutAssignExists(int id)
+        private bool LayoutAssignExists(int id_server, int id_section, int id_qslayout)
         {
-            return _context.LayoutAssigns.Any(e => e.IdServer == id);
+            return _context.LayoutAssigns.Any(e => e.IdServer == id_server && e.IdSection == id_section && e.IdQslayout == id_qslayout);
         }
     }
 }
