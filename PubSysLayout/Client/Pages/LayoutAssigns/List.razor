@@ -22,7 +22,7 @@
         <col style="width:40%;"/>
         <col />
         <col style="width:120px;"/>
-        <col style="width:1px;"/>
+        <col style="width:0px;"/>
     </ColGroup>
     <HeaderContent>
         @if (servers.Count > 1)
@@ -51,13 +51,12 @@
         {
             <MudTd DataLabel="Server">
                 <MudSelect Dense="true" @bind-Value="@context.IdServer" Validation='(int x) => x == 0 ? "Select server" : null' Required="true" ToStringFunc='(id) => servers.ContainsKey(id) ? servers[id].Name : "(not selected)"' T="int">
-                    @*                <MudSelectItem Value="0">(not selected)</MudSelectItem>
-                    *@                @foreach (var s in servers.Values.OrderBy(s => s.Name))
+                    @foreach (var s in servers.Values.OrderBy(s => s.Name))
                     {
                         <MudSelectItem Value="@s.IdServer">@s.Name </MudSelectItem>
                     }
                 </MudSelect>
-        </MudTd>
+            </MudTd>
         }
         <MudTd DataLabel="Section">
             <a id="editRow"/>
@@ -106,7 +105,6 @@
         sections = (await Http.GetFromJsonAsync<Section[]>("api/dblist/sections")).ToDictionary(s => s.IdSection);
         sections.Add(0, new Section { IdSection = 0, Name = "(all)"});
         servers = (await Http.GetFromJsonAsync<Server[]>("api/dblist/servers")).ToDictionary(s => s.IdServer);
-        //servers.Add(0, new Server{ IdServer= 0, Name = "(all)"});
 
         layoutAssigns = await Http.GetFromJsonAsync<List<LayoutAssign>>($"api/layoutassigns?id_layoutdefinition={IdLayoutdefinition}&id_qslayout=0");
     }

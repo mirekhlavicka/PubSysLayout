@@ -23,6 +23,9 @@ builder.Services.AddDbContext<PubSysLayout.Shared.Model.LayoutDBContext>((servic
     {
         options.UseSqlServer(String.Format(builder.Configuration.GetConnectionString("PubSysLayoutContext"), current));
     }
+
+    //!!!!!! loging on !!!!!!
+    options.LogTo(Console.WriteLine);
 });
 
 builder.Services.AddControllersWithViews().AddJsonOptions(
