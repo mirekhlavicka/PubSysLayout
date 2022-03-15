@@ -158,10 +158,9 @@
         la.IdSection = (selectedSection == null ? 0 : selectedSection.IdSection);
 
         if (beforeEditLA != null && newLA == null)
-        {
+        {          
+            await Http.PutAsJsonAsync($"api/layoutassigns?id_server={beforeEditLA.IdServer}&id_section={beforeEditLA.IdSection}&id_qslayout={beforeEditLA.IdQslayout}", la);
             beforeEditLA = null;
-
-            await Http.PutAsJsonAsync($"api/layoutassigns?id_server={la.IdServer}&id_section={la.IdSection}&id_qslayout={la.IdQslayout}", la);
             snackBar.Add($"layout assign saved", Severity.Success);
         }
         else

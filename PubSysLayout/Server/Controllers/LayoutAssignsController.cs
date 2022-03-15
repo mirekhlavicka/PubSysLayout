@@ -58,12 +58,24 @@ namespace PubSysLayout.Server.Controllers
         [HttpPut(/*"{id}"*/)]
         public async Task<IActionResult> PutLayoutAssign(int id_server, int id_section, int id_qslayout, LayoutAssign layoutAssign)
         {
-            if (id_server != layoutAssign.IdServer || id_section != layoutAssign.IdSection || id_qslayout != layoutAssign.IdQslayout)
+            //if (id_server != layoutAssign.IdServer || id_section != layoutAssign.IdSection || id_qslayout != layoutAssign.IdQslayout)
+            //{
+            //    return BadRequest();
+            //}
+
+            var la = _context.LayoutAssigns.SingleOrDefault(laa => laa.IdServer == id_server && laa.IdSection == id_section && laa.IdQslayout == id_qslayout);
+
+            _context.LayoutAssigns.Remove(la);
+
+            la = _context.LayoutAssigns.SingleOrDefault(laa => laa.IdServer == layoutAssign.IdServer && laa.IdSection == layoutAssign.IdSection && laa.IdQslayout == layoutAssign.IdQslayout);
+
+            if (la != null)
             {
-                return BadRequest();
+                _context.LayoutAssigns.Remove(la);
             }
 
-            _context.Entry(layoutAssign).State = EntityState.Modified;
+            //_context.Entry(layoutAssign).State = EntityState.Modified;
+            _context.LayoutAssigns.Add(layoutAssign);
 
             try
             {
@@ -89,6 +101,13 @@ namespace PubSysLayout.Server.Controllers
         [HttpPost]
         public async Task<ActionResult<LayoutAssign>> PostLayoutAssign(LayoutAssign layoutAssign)
         {
+            var la = _context.LayoutAssigns.SingleOrDefault(laa => laa.IdServer == layoutAssign.IdServer && laa.IdSection == layoutAssign.IdSection && laa.IdQslayout == layoutAssign.IdQslayout);
+
+            if (la != null)
+            {
+                _context.LayoutAssigns.Remove(la);
+            }
+
             _context.LayoutAssigns.Add(layoutAssign);
             try
             {
