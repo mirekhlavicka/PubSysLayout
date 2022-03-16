@@ -76,11 +76,28 @@ namespace PubSysLayout.Server.Controllers
                 ").ToListAsync();
         }
 
+        // GET: api/dblist/section/5
+        [HttpGet("section/{id}")]
+        public async Task<ActionResult<Section>> GetSection(int id)
+        {
+            return await _context.Sections.FromSqlRaw(@$"
+                SELECT 
+                    id_section, id_metasection, id_server, id_section_parent, id_section_parent_top, treelevel, name, redirurl, target, visible, del, [order], options,
+                    0 AS id_file, 0 AS tag 
+                FROM 
+                    sections s
+                WHERE
+                   id_section = {id}
+                ").FirstOrDefaultAsync();
+        }
+
         // GET: api/dblist/sections
         [HttpGet("sections")]
-        public async Task<ActionResult<IEnumerable<Section>>> GetSections()
+        public async Task<ActionResult<IEnumerable<Section>>> GetSections(string search)
         {
-            return await _context.Sections.FromSqlRaw(@"
+            if (search == null)
+            {
+                return await _context.Sections.FromSqlRaw(@"
                 SELECT 
                     id_section, id_metasection, id_server, id_section_parent, id_section_parent_top, treelevel, name, redirurl, target, visible, del, [order], options,
                     0 AS id_file, 0 AS tag 
@@ -88,6 +105,21 @@ namespace PubSysLayout.Server.Controllers
                     sections s
                 --WHERE
                 --    del = 0
+                ORDER BY
+                    name
+                ").ToListAsync();
+            }
+
+            return await _context.Sections.FromSqlRaw(@$"
+                SELECT 
+                    id_section, id_metasection, id_server, id_section_parent, id_section_parent_top, treelevel, name, redirurl, target, visible, del, [order], options,
+                    0 AS id_file, 0 AS tag 
+                FROM 
+                    sections s
+                WHERE
+                   name LIKE '%{search}%' OR CAST(id_section AS VARCHAR(10))={search}
+                ORDER BY
+                    name
                 ").ToListAsync();
         }
     }
