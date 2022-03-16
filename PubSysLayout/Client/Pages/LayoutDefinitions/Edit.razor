@@ -10,7 +10,7 @@
 @if (layoutDefinition != null)
 {
     <MudGrid>
-        <MudItem xs="5">
+        <MudItem xs="4">
             <MudTooltip Text="Back to list">
                 <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-1" OnClick="GoBack" />
             </MudTooltip>
@@ -59,7 +59,7 @@
 
         @if (layoutDefinition.IdLayoutdefinition != 0)
         {
-        <MudItem xs="7">
+        <MudItem xs="8">
             <MudTooltip Text="Add module to layout definition">
                 <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-1" OnClick="AddModuleUsage" Disabled="@(newModuleUsage!=null || beforeEditModuleUsage != null)" />
             </MudTooltip>
