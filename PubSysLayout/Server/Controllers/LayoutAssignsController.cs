@@ -39,29 +39,27 @@ namespace PubSysLayout.Server.Controllers
             return await res.ToListAsync();
         }
 
-        //// GET: api/LayoutAssigns/5
-        //[HttpGet("{id}")]
-        //public async Task<ActionResult<LayoutAssign>> GetLayoutAssign(int id)
-        //{
-        //    var layoutAssign = await _context.LayoutAssigns.FindAsync(id);
+        // GET: api/LayoutAssigns/5/6/7
+        [HttpGet("{id_server}/{id_section}/{id_qslayout}")]
+        public async Task<ActionResult<LayoutAssign>> GetLayoutAssign(int id_server, int id_section, int id_qslayout)
+        {
+            var layoutAssign = await _context.LayoutAssigns.SingleOrDefaultAsync(la => la.IdServer == id_server && la.IdSection == id_section && la.IdQslayout == id_qslayout);
 
-        //    if (layoutAssign == null)
-        //    {
-        //        return NotFound();
-        //    }
+            if (layoutAssign == null)
+            {
+                return NotFound();
+            }
 
-        //    return layoutAssign;
-        //}
+            return layoutAssign;
+        }
 
         // PUT: api/LayoutAssigns/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
-        [HttpPut(/*"{id}"*/)]
+        [HttpPut("{id_server}/{id_section}/{id_qslayout}")]
         public async Task<IActionResult> PutLayoutAssign(int id_server, int id_section, int id_qslayout, LayoutAssign layoutAssign, bool force)
         {
             if (id_server != layoutAssign.IdServer || id_section != layoutAssign.IdSection || id_qslayout != layoutAssign.IdQslayout)
             {
-                //return BadRequest();
-
                 var la = _context.LayoutAssigns.Include(laa => laa.IdLayoutdefinitionNavigation).SingleOrDefault(laa => laa.IdServer == layoutAssign.IdServer && laa.IdSection == layoutAssign.IdSection && laa.IdQslayout == layoutAssign.IdQslayout);
 
                 if (la != null)
@@ -109,13 +107,20 @@ namespace PubSysLayout.Server.Controllers
         // POST: api/LayoutAssigns
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPost]
-        public async Task<ActionResult<LayoutAssign>> PostLayoutAssign(LayoutAssign layoutAssign)
+        public async Task<ActionResult<LayoutAssign>> PostLayoutAssign(LayoutAssign layoutAssign, bool force)
         {
-            var la = _context.LayoutAssigns.SingleOrDefault(laa => laa.IdServer == layoutAssign.IdServer && laa.IdSection == layoutAssign.IdSection && laa.IdQslayout == layoutAssign.IdQslayout);
+            var la = _context.LayoutAssigns.Include(laa => laa.IdLayoutdefinitionNavigation).SingleOrDefault(laa => laa.IdServer == layoutAssign.IdServer && laa.IdSection == layoutAssign.IdSection && laa.IdQslayout == layoutAssign.IdQslayout);
 
             if (la != null)
             {
-                _context.LayoutAssigns.Remove(la);
+                if (force)
+                {
+                    _context.LayoutAssigns.Remove(la);
+                }
+                else
+                {
+                    return Conflict(la.IdLayoutdefinitionNavigation.Name);
+                }
             }
 
             _context.LayoutAssigns.Add(layoutAssign);
@@ -135,11 +140,11 @@ namespace PubSysLayout.Server.Controllers
                 }
             }
 
-            return NoContent(); //CreatedAtAction("GetLayoutAssign", new { id = layoutAssign.IdServer }, layoutAssign);
+            return CreatedAtAction("GetLayoutAssign", new { id_server = layoutAssign.IdServer, id_section = layoutAssign.IdSection, id_qslayout = layoutAssign.IdQslayout}, layoutAssign);
         }
 
-        // DELETE: api/LayoutAssigns/5
-        [HttpDelete(/*"{id}"*/)]
+        // DELETE: api/LayoutAssigns
+        [HttpDelete("{id_server}/{id_section}/{id_qslayout}")]
         public async Task<IActionResult> DeleteLayoutAssign(int id_server, int id_section, int id_qslayout)
         {
             var layoutAssign = await _context.LayoutAssigns.SingleOrDefaultAsync(la => la.IdServer == id_server && la.IdSection == id_section && la.IdQslayout == id_qslayout);

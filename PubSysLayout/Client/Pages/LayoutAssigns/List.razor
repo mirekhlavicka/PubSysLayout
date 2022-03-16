@@ -9,7 +9,7 @@
     <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-1"  OnClick="AddLA" Disabled="@(newLA !=null || beforeEditLA != null)"/> 
 </MudTooltip>
 <MudTable @ref="assignTable" Items="layoutAssigns" Hover="true" SortLabel="Sort By" Elevation="5" Class="mt-4" RowsPerPage="0" FixedHeader="true" FixedFooter="true"  Dense="true"
-    CommitEditTooltip="Commit Edit" CancelEditTooltip="Cancel Edit" T="LayoutAssign" Height="calc(100vh - 698px)" Style="min-height:300px"
+    CommitEditTooltip="Commit Edit" CancelEditTooltip="Cancel Edit" T="LayoutAssign" Height="max(calc(100vh - 698px),150px)"
     RowEditPreview="Backup" RowEditCancel="ResetEdit" RowEditCommit="Committed" CanCancelEdit="true" IsEditRowSwitchingBlocked="true" OnRowClick="RowClicked">
     <ToolBarContent>
         <MudText Typo="Typo.h6">@Title</MudText>
@@ -38,7 +38,7 @@
         {
             <MudTd DataLabel="Name">@servers[context.IdServer].Name</MudTd>
         }
-        <MudTd DataLabel="Name">@(sections.ContainsKey(context.IdSection)?  sections[context.IdSection].Name : "(!invalid ID)")</MudTd>
+        <MudTd DataLabel="Name">@(/*GetSection(context.IdSection)).Name*/sections.ContainsKey(context.IdSection)?  sections[context.IdSection].Name : "(!invalid ID)")</MudTd>
         <MudTd DataLabel="Value">@(qslayouts.ContainsKey(context.IdQslayout) ? qslayouts[context.IdQslayout].Name : "(not selected)")</MudTd>
         <MudTd DataLabel="">                            
             <MudTooltip Text="Delete assign">
@@ -159,7 +159,7 @@
 
         if (beforeEditLA != null && newLA == null)
         {          
-            using var response = await Http.PutAsJsonAsync($"api/layoutassigns?id_server={beforeEditLA.IdServer}&id_section={beforeEditLA.IdSection}&id_qslayout={beforeEditLA.IdQslayout}&force=False", la);
+            using var response = await Http.PutAsJsonAsync($"api/layoutassigns/{beforeEditLA.IdServer}/{beforeEditLA.IdSection}/{beforeEditLA.IdQslayout}?force=False", la);
 
             if (!response.IsSuccessStatusCode)
             {
@@ -170,7 +170,7 @@
                     $"Action already assigned to layout definition {msg}. Do you want to replace ?",
                     yesText: "Replace!", cancelText: "Cancel") != null))
                 {
-                    await Http.PutAsJsonAsync($"api/layoutassigns?id_server={beforeEditLA.IdServer}&id_section={beforeEditLA.IdSection}&id_qslayout={beforeEditLA.IdQslayout}&force=True", la);
+                    await Http.PutAsJsonAsync($"api/layoutassigns/{beforeEditLA.IdServer}/{beforeEditLA.IdSection}/{beforeEditLA.IdQslayout}?force=True", la);
                     beforeEditLA = null;
                     snackBar.Add($"layout assign replaced", Severity.Success);
                 }
@@ -187,12 +187,31 @@
         }
         else
         {
-            newLA = null;
+            using var response = await Http.PostAsJsonAsync($"api/layoutassigns?force=False", la);
 
-            using var response = await Http.PostAsJsonAsync("api/layoutassigns", la);
-            //var xm = await response.Content.ReadFromJsonAsync<Module>();
-            //m.IdModule = xm.IdModule;
-            snackBar.Add($"layout assign created", Severity.Success);
+            if (!response.IsSuccessStatusCode)
+            {
+                var msg = await response.Content.ReadAsStringAsync();
+
+                if ((await DialogService.ShowMessageBox(
+                    "Warning",
+                    $"Action already assigned to layout definition {msg}. Do you want to replace ?",
+                    yesText: "Replace!", cancelText: "Cancel") != null))
+                {
+                    await Http.PostAsJsonAsync($"api/layoutassigns?force=True", la);
+                    newLA = null;
+                    snackBar.Add($"layout assign replaced", Severity.Success);
+                }
+                else
+                {
+                    ResetEdit(element);
+                }
+            }
+            else
+            {
+                newLA = null;
+                snackBar.Add($"layout assign created", Severity.Success);
+            }
         }
 
         StateHasChanged();
@@ -205,7 +224,7 @@
             $"Do you want to delete layout assign ?",
             yesText: "Delete!", cancelText: "Cancel") != null))
         {
-            await Http.DeleteAsync($"api/layoutassigns?id_server={la.IdServer}&id_section={la.IdSection}&id_qslayout={la.IdQslayout}");
+            await Http.DeleteAsync($"api/layoutassigns/{la.IdServer}/{la.IdSection}/{la.IdQslayout}");
             snackBar.Add($"Layout assign deleted.", Severity.Success);
             await LoadData();
         }
@@ -236,15 +255,22 @@
         await js.InvokeVoidAsync("scrollToElementId", "editRow");
     }
 
+    private async Task<Section> GetSection(int id)
+    {        
+        return await Http.GetFromJsonAsync<Section>($"api/dblist/section/{id}");
+    }
+
     private async Task<IEnumerable<Section>> SearchSection(string value)
     {
         // In real life use an asynchronous function for fetching data from an api.
         await Task.Delay(5);
-
+         
         if (string.IsNullOrEmpty(value))
             return sections.Values.Where(s => !s.Del && s.IdSectionParent == 0).OrderBy(s => s.Name);
 
         return sections.Values.Where(m => m.Name.Contains(value, StringComparison.InvariantCultureIgnoreCase) || m.IdSection.ToString() == value).OrderBy(s => s.Name);
+        
+        //return await Http.GetFromJsonAsync<Section[]>($"api/dblist/sections?search={value}");
     }
 
 
