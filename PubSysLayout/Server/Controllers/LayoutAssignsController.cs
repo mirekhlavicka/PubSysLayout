@@ -56,26 +56,36 @@ namespace PubSysLayout.Server.Controllers
         // PUT: api/LayoutAssigns/5
         // To protect from overposting attacks, see https://go.microsoft.com/fwlink/?linkid=2123754
         [HttpPut(/*"{id}"*/)]
-        public async Task<IActionResult> PutLayoutAssign(int id_server, int id_section, int id_qslayout, LayoutAssign layoutAssign)
+        public async Task<IActionResult> PutLayoutAssign(int id_server, int id_section, int id_qslayout, LayoutAssign layoutAssign, bool force)
         {
-            //if (id_server != layoutAssign.IdServer || id_section != layoutAssign.IdSection || id_qslayout != layoutAssign.IdQslayout)
-            //{
-            //    return BadRequest();
-            //}
-
-            var la = _context.LayoutAssigns.SingleOrDefault(laa => laa.IdServer == id_server && laa.IdSection == id_section && laa.IdQslayout == id_qslayout);
-
-            _context.LayoutAssigns.Remove(la);
-
-            la = _context.LayoutAssigns.SingleOrDefault(laa => laa.IdServer == layoutAssign.IdServer && laa.IdSection == layoutAssign.IdSection && laa.IdQslayout == layoutAssign.IdQslayout);
-
-            if (la != null)
+            if (id_server != layoutAssign.IdServer || id_section != layoutAssign.IdSection || id_qslayout != layoutAssign.IdQslayout)
             {
-                _context.LayoutAssigns.Remove(la);
-            }
+                //return BadRequest();
 
-            //_context.Entry(layoutAssign).State = EntityState.Modified;
-            _context.LayoutAssigns.Add(layoutAssign);
+                var la = _context.LayoutAssigns.Include(laa => laa.IdLayoutdefinitionNavigation).SingleOrDefault(laa => laa.IdServer == layoutAssign.IdServer && laa.IdSection == layoutAssign.IdSection && laa.IdQslayout == layoutAssign.IdQslayout);
+
+                if (la != null)
+                {
+                    if (force)
+                    {
+                        _context.LayoutAssigns.Remove(la);
+                    }
+                    else
+                    {
+                        return Conflict(la.IdLayoutdefinitionNavigation.Name);
+                    }
+                }
+
+                la = _context.LayoutAssigns.SingleOrDefault(laa => laa.IdServer == id_server && laa.IdSection == id_section && laa.IdQslayout == id_qslayout);
+
+                _context.LayoutAssigns.Remove(la);
+
+                _context.LayoutAssigns.Add(layoutAssign);
+            }
+            else
+            {
+                _context.Entry(layoutAssign).State = EntityState.Modified;
+            }
 
             try
             {
