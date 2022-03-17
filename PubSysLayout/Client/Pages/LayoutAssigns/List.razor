@@ -5,6 +5,12 @@
 @using PubSysLayout.Shared.Model
 
 
+@if (servers == null)
+{
+    <MudProgressCircular Color="Color.Default" Indeterminate="true" />
+}
+else
+{
 <MudTooltip Text="Add new assign">
     <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-1"  OnClick="AddLA" Disabled="@(newLA !=null || beforeEditLA != null)"/> 
 </MudTooltip>
@@ -38,7 +44,7 @@
         {
             <MudTd DataLabel="Name">@servers[context.IdServer].Name</MudTd>
         }
-        <MudTd DataLabel="Name">@(/*GetSection(context.IdSection)).Name*/sections.ContainsKey(context.IdSection)?  sections[context.IdSection].Name : "(!invalid ID)")</MudTd>
+        <MudTd DataLabel="Name">@(sections.ContainsKey(context.IdSection) ? sections[context.IdSection].Name : "(!invalid ID)")</MudTd>
         <MudTd DataLabel="Value">@(qslayouts.ContainsKey(context.IdQslayout) ? qslayouts[context.IdQslayout].Name : "(not selected)")</MudTd>
         <MudTd DataLabel="">                            
             <MudTooltip Text="Delete assign">
@@ -60,7 +66,7 @@
         }
         <MudTd DataLabel="Section">
             <a id="editRow"/>
-            <MudAutocomplete Dense="true" T="Section" SearchFunc="@SearchSection" 
+            <MudAutocomplete Dense="true" T="Section" SearchFunc="@SearchSection" DebounceInterval="500"
                 ResetValueOnEmptyText="true" CoerceText="true" CoerceValue="false" 
                 ToStringFunc='s => $"{s.Name} ({s.IdSection})"'  MaxItems="100"
                 Placeholder="Type section name or ID" Required="false" @bind-Value="@selectedSection"
@@ -77,7 +83,7 @@
         </MudTd>
     </RowEditingTemplate>
 </MudTable>
-
+}
 
 @code {
     [Parameter] public int IdLayoutdefinition { get; set; }
@@ -101,12 +107,23 @@
 
     protected async Task LoadData()
     {
-        qslayouts = (await Http.GetFromJsonAsync<Qslayout[]>("api/qslayouts")).ToDictionary(qs => qs.IdQslayout);
-        sections = (await Http.GetFromJsonAsync<Section[]>("api/dblist/sections")).ToDictionary(s => s.IdSection);
-        sections.Add(0, new Section { IdSection = 0, Name = "(all)"});
-        servers = (await Http.GetFromJsonAsync<Server[]>("api/dblist/servers")).ToDictionary(s => s.IdServer);
-
         layoutAssigns = await Http.GetFromJsonAsync<List<LayoutAssign>>($"api/layoutassigns?id_layoutdefinition={IdLayoutdefinition}&id_qslayout=0");
+
+        sections = new Dictionary<int, Section>();
+
+        foreach (var id_section in layoutAssigns.Where(la => la.IdSection  != 0).Select(la => la.IdSection))
+        {
+            if (sections.ContainsKey(id_section))
+            {
+                continue;
+            }
+            sections.Add(id_section, await GetSection(id_section));
+        }
+
+        sections.Add(0, new Section { IdSection = 0, Name = "(all sections)"});
+
+        qslayouts = (await Http.GetFromJsonAsync<Qslayout[]>("api/qslayouts")).ToDictionary(qs => qs.IdQslayout);
+        servers = (await Http.GetFromJsonAsync<Server[]>("api/dblist/servers")).ToDictionary(s => s.IdServer);
     }
 
     private void Backup(object element)
@@ -156,6 +173,11 @@
         LayoutAssign la = element as LayoutAssign;
 
         la.IdSection = (selectedSection == null ? 0 : selectedSection.IdSection);
+
+        if (!sections.ContainsKey(la.IdSection))
+        {
+            sections.Add(la.IdSection, /*await GetSection(la.IdSection)*/selectedSection);
+        }
 
         if (beforeEditLA != null && newLA == null)
         {          
@@ -234,7 +256,7 @@
     {
         newLA = new LayoutAssign
         {
-            IdServer = 1,
+            IdServer = servers.Keys.First(),
             IdLayoutdefinition = this.IdLayoutdefinition,
             RefererRequired = false
 
@@ -261,18 +283,12 @@
     }
 
     private async Task<IEnumerable<Section>> SearchSection(string value)
-    {
-        // In real life use an asynchronous function for fetching data from an api.
-        await Task.Delay(5);
-         
+    {         
         if (string.IsNullOrEmpty(value))
-            return sections.Values.Where(s => !s.Del && s.IdSectionParent == 0).OrderBy(s => s.Name);
-
-        return sections.Values.Where(m => m.Name.Contains(value, StringComparison.InvariantCultureIgnoreCase) || m.IdSection.ToString() == value).OrderBy(s => s.Name);
+            return sections.Values.Where(s => !s.Del).OrderBy(s => s.Name);
         
-        //return await Http.GetFromJsonAsync<Section[]>($"api/dblist/sections?search={value}");
+        return await Http.GetFromJsonAsync<Section[]>($"api/dblist/sections?search={value}");
     }
-
 
     private async void RowClicked(TableRowClickEventArgs<LayoutAssign> p)
     {

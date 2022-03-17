@@ -95,19 +95,19 @@ namespace PubSysLayout.Server.Controllers
         [HttpGet("sections")]
         public async Task<ActionResult<IEnumerable<Section>>> GetSections(string search)
         {
-            if (search == null)
+            if (String.IsNullOrEmpty(search))
             {
                 return await _context.Sections.FromSqlRaw(@"
-                SELECT 
-                    id_section, id_metasection, id_server, id_section_parent, id_section_parent_top, treelevel, name, redirurl, target, visible, del, [order], options,
-                    0 AS id_file, 0 AS tag 
-                FROM 
-                    sections s
-                --WHERE
-                --    del = 0
-                ORDER BY
-                    name
-                ").ToListAsync();
+                    SELECT 
+                        id_section, id_metasection, id_server, id_section_parent, id_section_parent_top, treelevel, name, redirurl, target, visible, del, [order], options,
+                        0 AS id_file, 0 AS tag 
+                    FROM 
+                        sections s
+                    WHERE
+                        del = 0 AND id_section_parent = 0
+                    ORDER BY
+                        name
+                    ").ToListAsync();
             }
 
             return await _context.Sections.FromSqlRaw(@$"
@@ -117,7 +117,7 @@ namespace PubSysLayout.Server.Controllers
                 FROM 
                     sections s
                 WHERE
-                   name LIKE '%{search}%' OR CAST(id_section AS VARCHAR(10))={search}
+                   name LIKE '%{search}%' OR CAST(id_section AS VARCHAR(10))='{search}'
                 ORDER BY
                     name
                 ").ToListAsync();

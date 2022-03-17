@@ -25,7 +25,7 @@ builder.Services.AddDbContext<PubSysLayout.Shared.Model.LayoutDBContext>((servic
     }
 
     //!!!!!! loging on !!!!!!
-    options.LogTo(Console.WriteLine);
+    //options.LogTo(Console.WriteLine);
 });
 
 builder.Services.AddControllersWithViews().AddJsonOptions(
