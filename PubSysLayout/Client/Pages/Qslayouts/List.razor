@@ -27,7 +27,7 @@ else
                 <MudSpacer />
                 <MudSwitch Label="Hide unused" Color="Color.Info" Checked="@hideUnused" CheckedChanged="@(async (bool b) => {hideUnused = b; await LoadData();})" Disabled="@(newQS !=null || beforeEditQS != null)" />
                 <MudSpacer />
-                <MudTextField DebounceInterval="500" @bind-Value="searchString" Placeholder="Search by name, ID or QS param" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true" ></MudTextField>
+                <MudTextField DebounceInterval="500" @bind-Value="searchString" Placeholder="Search by name, QS param or ID" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true" ></MudTextField>
             </ToolBarContent>
             <ColGroup>
                 <col style="width:100px;" />
@@ -53,6 +53,9 @@ else
                 <MudTd DataLabel="Priority">@context.Priority</MudTd>
                 <MudTd DataLabel="Public"><MudIcon Icon="@(@context.Public ? Icons.Material.Filled.CheckBox : Icons.Material.Filled.CheckBoxOutlineBlank)" Size="Size.Small" Class="mr-3 mb-n1"/></MudTd>
                 <MudTd DataLabel="">
+                    <MudTooltip Text="Assign action to layout">
+                        <MudIconButton Icon="@Icons.Material.Filled.ElectricalServices" @onclick="@(()=>OpenLayoutAssignsDialog(@context))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text"></MudIconButton>
+                    </MudTooltip>
                     <MudTooltip Text="Delete QS action">
                         <MudIconButton Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>Delete(@context.IdQslayout))"Size="Size.Small" Variant="Variant.Text" />
                     </MudTooltip>
@@ -222,5 +225,19 @@ else
     {
         await Task.Delay(300);
         await js.InvokeVoidAsync("focusAt", p.MouseEventArgs.ClientX, p.MouseEventArgs.ClientY + 5);
+    }
+
+    private void OpenLayoutAssignsDialog(Qslayout qs)
+    {
+        var options = new DialogOptions { 
+            MaxWidth = MaxWidth.Medium, 
+            CloseButton = true
+        };
+
+        var parameters = new DialogParameters();
+
+        parameters.Add("IdQslayout", qs.IdQslayout);
+
+        DialogService.Show<LayoutAssigns.LayoutAssignsDialog>($"Assign action {qs.Name} to layout definitions", parameters, options);
     }
 }

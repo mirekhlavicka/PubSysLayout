@@ -14,19 +14,22 @@ else
 <MudTooltip Text="Add new assign">
     <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-1"  OnClick="AddLA" Disabled="@(newLA !=null || beforeEditLA != null)"/> 
 </MudTooltip>
-<MudTable @ref="assignTable" Items="layoutAssigns" Hover="true" SortLabel="Sort By" Elevation="5" Class="mt-4" RowsPerPage="0" FixedHeader="true" FixedFooter="true"  Dense="true"
+<MudTable @ref="assignTable" Items="layoutAssigns" Hover="true" SortLabel="Sort By" Elevation="@(IdQslayout ==0 ? 5 : 0)" Class="mt-4" RowsPerPage="0" FixedHeader="true" FixedFooter="true"  Dense="true"
     CommitEditTooltip="Commit Edit" CancelEditTooltip="Cancel Edit" T="LayoutAssign" Height="max(calc(100vh - 698px),150px)"
     RowEditPreview="Backup" RowEditCancel="ResetEdit" RowEditCommit="Committed" CanCancelEdit="true" IsEditRowSwitchingBlocked="true" OnRowClick="RowClicked">
     <ToolBarContent>
+    @if(IdQslayout == 0)
+    {
         <MudText Typo="Typo.h6">@Title</MudText>
+    }
     </ToolBarContent>
     <ColGroup>
         @if (servers.Count > 1)
         {
             <col style="width:25%;" />
         }        
-        <col style="width:40%;"/>
         <col />
+        <col style="width:30%;"/>
         <col style="width:120px;"/>
         <col style="width:0px;"/>
     </ColGroup>
@@ -36,7 +39,7 @@ else
             <MudTh>Server</MudTh>
         }
         <MudTh>Section</MudTh>
-        <MudTh>Action</MudTh>
+        <MudTh>@(IdLayoutdefinition == 0 ? "Layout definition" : "Action")</MudTh>
         <MudTh />
     </HeaderContent>
     <RowTemplate>
@@ -45,7 +48,19 @@ else
             <MudTd DataLabel="Name">@servers[context.IdServer].Name</MudTd>
         }
         <MudTd DataLabel="Name">@(sections.ContainsKey(context.IdSection) ? sections[context.IdSection].Name : "(!invalid ID)")</MudTd>
-        <MudTd DataLabel="Value">@(qslayouts.ContainsKey(context.IdQslayout) ? qslayouts[context.IdQslayout].Name : "(not selected)")</MudTd>
+        @if (@IdQslayout == 0)
+        {
+            <MudTd DataLabel="Value">@(qslayouts.ContainsKey(context.IdQslayout) ? qslayouts[context.IdQslayout].Name : "(not selected)")</MudTd>
+        }
+        @if (@IdLayoutdefinition == 0)
+        {
+            <MudTd DataLabel="Value">
+                @(layoutDefinitions.ContainsKey(context.IdLayoutdefinition) ? layoutDefinitions[context.IdLayoutdefinition].Name : "(not selected)")                
+                <MudTooltip Text="Edit layout definition">
+                    <MudIconButton Icon="@Icons.Material.Filled.ArrowRightAlt" Link='@($"layoutdefinitions/edit/{context.IdLayoutdefinition}")' Color="Color.Primary" Size="Size.Small" Variant="Variant.Text" ></MudIconButton>
+                </MudTooltip>
+            </MudTd>
+        }
         <MudTd DataLabel="">                            
             <MudTooltip Text="Delete assign">
                 <MudIconButton Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>DeleteAssign(context))" Color="Color.Secondary" Size="Size.Small" Variant="Variant.Text" ></MudIconButton>
@@ -72,25 +87,42 @@ else
                 Placeholder="Type section name or ID" Required="false" @bind-Value="@selectedSection"
                 AdornmentIcon="@Icons.Material.Filled.Search" AdornmentColor="Color.Default" Clearable="true" spellcheck="false"/>               
         </MudTd>
-        <MudTd DataLabel="Action">
-            <MudSelect Dense="true" @bind-Value="@context.IdQslayout" Validation='(int x) => x == 0 ? "Select action" : null' Required="true" ToStringFunc='(id) => qslayouts.ContainsKey(id) ? qslayouts[id].Name : "(not selected)"' T="int">
-                <MudSelectItem Value="0">(not selected)</MudSelectItem>
-                @foreach (var qs in qslayouts.Values.OrderBy(qs => qs.Name))
-                {
-                    <MudSelectItem Value="@qs.IdQslayout">@(qs.Name + " (" + qs.ParamString + ")")</MudSelectItem>
-                }
-            </MudSelect>
-        </MudTd>
+        @if (@IdQslayout == 0)
+        {
+            <MudTd DataLabel="Action">
+                <MudSelect Dense="true" @bind-Value="@context.IdQslayout" Validation='(int x) => x == 0 ? "Select action" : null' Required="true" ToStringFunc='(id) => qslayouts.ContainsKey(id) ? qslayouts[id].Name : "(not selected)"' T="int">
+                    <MudSelectItem Value="0">(not selected)</MudSelectItem>
+                    @foreach (var qs in qslayouts.Values.OrderBy(qs => qs.Name))
+                    {
+                        <MudSelectItem Value="@qs.IdQslayout">@(qs.Name + " (" + qs.ParamString + ")")</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudTd>
+        }
+        @if (@IdLayoutdefinition == 0)
+        {
+            <MudTd DataLabel="Layout definition">
+                <MudSelect Dense="true" @bind-Value="@context.IdLayoutdefinition" Validation='(int x) => x == 0 ? "Select Layout definition" : null' Required="true" ToStringFunc='(id) => layoutDefinitions.ContainsKey(id) ? layoutDefinitions[id].Name : "(not selected)"' T="int">
+                    <MudSelectItem Value="0">(not selected)</MudSelectItem>
+                    @foreach (var ld in layoutDefinitions.Values.OrderBy(ld => ld.Name))
+                    {
+                        <MudSelectItem Value="@ld.IdLayoutdefinition">@(ld.Name + " (" + ld.IdLayoutdefinition + ")")</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudTd>
+        }
     </RowEditingTemplate>
 </MudTable>
 }
 
 @code {
     [Parameter] public int IdLayoutdefinition { get; set; }
+    [Parameter] public int IdQslayout { get; set; }
     [Parameter] public string Title { get; set; }
 
     private List<LayoutAssign> layoutAssigns;
     Dictionary<int, Qslayout> qslayouts;
+    Dictionary<int, LayoutDefinition> layoutDefinitions;
     Dictionary<int, Section> sections;
     Dictionary<int, Server> servers;
 
@@ -107,7 +139,7 @@ else
 
     protected async Task LoadData()
     {
-        layoutAssigns = await Http.GetFromJsonAsync<List<LayoutAssign>>($"api/layoutassigns?id_layoutdefinition={IdLayoutdefinition}&id_qslayout=0");
+        layoutAssigns = await Http.GetFromJsonAsync<List<LayoutAssign>>($"api/layoutassigns?id_layoutdefinition={IdLayoutdefinition}&id_qslayout={IdQslayout}");
 
         sections = new Dictionary<int, Section>();
 
@@ -123,6 +155,7 @@ else
         sections.Add(0, new Section { IdSection = 0, Name = "(all sections)"});
 
         qslayouts = (await Http.GetFromJsonAsync<Qslayout[]>("api/qslayouts")).ToDictionary(qs => qs.IdQslayout);
+        layoutDefinitions = (await Http.GetFromJsonAsync<LayoutDefinition[]>("api/layoutdefinitions")).ToDictionary(ld => ld.IdLayoutdefinition);
         servers = (await Http.GetFromJsonAsync<Server[]>("api/dblist/servers")).ToDictionary(s => s.IdServer);
     }
 
@@ -257,17 +290,15 @@ else
         newLA = new LayoutAssign
         {
             IdServer = servers.Keys.First(),
+            IdSection = 0,
+            IdQslayout = this.IdQslayout,
             IdLayoutdefinition = this.IdLayoutdefinition,
             RefererRequired = false
-
         };
 
         layoutAssigns.Add(newLA);
-
         selectedSection = null;
-
         await Task.Delay(300);
-
         await InvokeAsync(() =>
         {
             assignTable.SetEditingItem(newLA);

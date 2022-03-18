@@ -1,0 +1,41 @@
+﻿@inject HttpClient Http
+@inject IJSRuntime js
+@inject NavigationManager uriHelper
+@inject MudBlazor.ISnackbar snackBar
+@inject IDialogService DialogService
+@inject CurrentDB currentDB
+@using PubSysLayout.Shared.Model
+
+<style>
+    .layoutAssignsDialog .mud-table-toolbar
+    {
+        display: none;
+    }
+</style>
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.ElectricalServices" Class="mr-3 mb-n1" />
+            @MudDialog.Title
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <div class="layoutAssignsDialog">
+            <PubSysLayout.Client.Pages.LayoutAssigns.List IdQslayout="IdQslayout" Title="@MudDialog.Title" />
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Close" Color="Color.Primary">Close</MudButton>
+    </DialogActions>
+</MudDialog>
+
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public int IdQslayout { get; set; }
+
+    void Close() => MudDialog.Close(DialogResult.Ok(true));
+
+}
