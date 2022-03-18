@@ -1,0 +1,226 @@
+﻿@page "/qslayouts"
+@inject HttpClient Http
+@inject IJSRuntime js
+@inject MudBlazor.ISnackbar snackBar
+@inject NavigationManager uriHelper
+@inject IDialogService DialogService
+
+@using PubSysLayout.Shared.Model
+
+<PageTitle>QS actions</PageTitle>
+
+@if (qslayouts == null)
+{
+    <MudProgressCircular Color="Color.Default" Indeterminate="true" />
+}
+else
+{
+    <MudContainer MaxWidth="MaxWidth.Large">
+        <MudTooltip Text="Add new QS action">
+            <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5" OnClick="AddQS" Disabled="@(newQS !=null || beforeEditQS != null)"/>
+        </MudTooltip>
+        <MudTable @ref="qsTable" Items="qslayouts" Hover="true" SortLabel="Sort By" AllowUnsorted="false" Elevation="5" RowsPerPage="0" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 250px)"  Dense="true" 
+            Filter="new Func<Qslayout,bool>(FilterFunc)" 
+            CommitEditTooltip="Commit Edit" CancelEditTooltip="Cancel Edit" RowEditPreview="Backup" RowEditCancel="ResetEdit" RowEditCommit="Committed" CanCancelEdit="true" IsEditRowSwitchingBlocked="true" OnRowClick="RowClicked" Virtualize="false" T="Qslayout">
+            <ToolBarContent>
+                <MudText Typo="Typo.h6">QS actions</MudText>
+                <MudSpacer />
+                <MudSwitch Label="Hide unused" Color="Color.Info" Checked="@hideUnused" CheckedChanged="@(async (bool b) => {hideUnused = b; await LoadData();})" Disabled="@(newQS !=null || beforeEditQS != null)" />
+                <MudSpacer />
+                <MudTextField DebounceInterval="500" @bind-Value="searchString" Placeholder="Search by name, ID or QS param" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true" ></MudTextField>
+            </ToolBarContent>
+            <ColGroup>
+                <col style="width:100px;" />
+                <col style="width:30%;" />
+                <col  />
+                <col style="width:100px;" />
+                <col style="width:100px;" />
+                <col style="width:100px;" />
+                <col style="width:0px;"/>
+            </ColGroup>
+            <HeaderContent>
+                <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Qslayout, object>(x => x.IdQslayout == 0 ? 999999 :  x.IdQslayout)">ID</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy='new Func<Qslayout, object>(x => x.IdQslayout == 0 ? "ZZZZZ" :  x.Name)'>Name</MudTableSortLabel></MudTh>
+                <MudTh>QS param</MudTh>
+                <MudTh><MudTableSortLabel SortBy='new Func<Qslayout, object>(x => x.Priority)'>Priority</MudTableSortLabel></MudTh>
+                <MudTh>Public</MudTh>
+                <MudTh></MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="ID">@context.IdQslayout</MudTd>
+                <MudTd DataLabel="Name">@context.Name</MudTd>
+                <MudTd DataLabel="QS param">@context.ParamString</MudTd>
+                <MudTd DataLabel="Priority">@context.Priority</MudTd>
+                <MudTd DataLabel="Public"><MudIcon Icon="@(@context.Public ? Icons.Material.Filled.CheckBox : Icons.Material.Filled.CheckBoxOutlineBlank)" Size="Size.Small" Class="mr-3 mb-n1"/></MudTd>
+                <MudTd DataLabel="">
+                    <MudTooltip Text="Delete QS action">
+                        <MudIconButton Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>Delete(@context.IdQslayout))"Size="Size.Small" Variant="Variant.Text" />
+                    </MudTooltip>
+                </MudTd>
+            </RowTemplate>
+            <RowEditingTemplate>
+                <MudTd DataLabel="ID">@context.IdQslayout<a id="editRow" style="position:relative; top: -80px" /></MudTd>
+                <MudTd DataLabel="Name">                
+                    <MudTextField Margin="Margin.Dense" @bind-Value="@context.Name" Required Immediate="false" spellcheck="false" />
+                </MudTd>
+                <MudTd DataLabel="QS param">                
+                    <MudTextField Margin="Margin.Dense" @bind-Value="@context.ParamString" Immediate="false" spellcheck="false" />
+                </MudTd>
+                <MudTd DataLabel="Priority">
+                    <MudNumericField Margin="Margin.Dense" @bind-Value="@context.Priority" Required Immediate="false" spellcheck="false" Step="1"/>
+                </MudTd>
+                <MudTd DataLabel="Public">
+                    <MudCheckBox @bind-Checked="@context.Public"></MudCheckBox>
+                    </MudTd>
+            </RowEditingTemplate>
+
+        </MudTable>
+    </MudContainer>
+}
+
+@code {
+
+    private List<Qslayout> qslayouts;
+
+    private string searchString = "";
+    private bool hideUnused = true;
+
+    private Qslayout beforeEditQS = null;
+    private Qslayout newQS = null;
+
+
+    MudTable<Qslayout> qsTable;
+
+    protected override async Task OnInitializedAsync()
+    {
+
+        await LoadData();
+    }
+
+    protected async Task LoadData()
+    {
+        qslayouts = await Http.GetFromJsonAsync<List<Qslayout>>($"api/qslayouts?hideUnused={hideUnused}");
+    }
+
+    private void Backup(object element)
+    {
+        Qslayout qs = element as Qslayout;
+
+        beforeEditQS  = new()
+            {
+                Name = qs.Name,
+                Description = qs.Description,
+                ParamString = qs.ParamString,
+                Priority = qs.Priority,
+                Public = qs.Public
+            };
+
+        StateHasChanged();
+    }
+
+    private void ResetEdit(object element)
+    {
+        if (beforeEditQS != null)
+        {
+            Qslayout qs = element as Qslayout;
+            qs.Name = beforeEditQS.Name;
+            qs.Description = beforeEditQS.Description;
+            qs.ParamString = beforeEditQS.ParamString;
+            qs.Priority = beforeEditQS.Priority;
+            qs.Public = beforeEditQS.Public;
+
+            beforeEditQS = null;
+            StateHasChanged();
+        }
+
+        if (newQS != null)
+        {
+            qslayouts.Remove(newQS);
+            newQS = null;
+            StateHasChanged();
+        }
+    }
+
+    private async void Committed(object element)
+    {
+        beforeEditQS = null;
+        newQS = null;
+
+        Qslayout qs = element as Qslayout;
+
+        if (qs.IdQslayout != 0)
+        {
+            await Http.PutAsJsonAsync($"api/qslayouts/{qs.IdQslayout}", qs);
+            snackBar.Add($"QS action  {qs.Name} saved", Severity.Success);
+        }
+        else
+        {
+            using var response = await Http.PostAsJsonAsync("api/qslayouts", qs);
+            var x = await response.Content.ReadFromJsonAsync<Qslayout>();
+            qs.IdQslayout = x.IdQslayout;
+            snackBar.Add($"QS action  {qs.Name} created", Severity.Success);
+        }
+
+        StateHasChanged();
+    }
+
+    private async void AddQS()
+    {
+        newQS = new Qslayout
+        {
+            Name = "",
+            Description = "",
+            ParamString = "",
+            Public = true,
+            Priority = 0
+        };
+
+        qslayouts.Add(newQS);
+
+        await Task.Delay(300);
+
+        await InvokeAsync(() =>
+        {
+            qsTable.SetEditingItem(newQS);
+            StateHasChanged();
+        });
+
+        await js.InvokeVoidAsync("scrollToElementId", "editRow");
+    }
+
+
+    async Task Delete(int idQslayout)
+    {
+        var l = qslayouts.First(x => x.IdQslayout == idQslayout);
+
+        if ((await DialogService.ShowMessageBox(
+            "Warning",
+            $"Do you want to delete QS action \"{l.Name} (id = {l.IdQslayout})\" ?",
+            yesText: "Delete!", cancelText: "Cancel") != null))
+        {
+            await Http.DeleteAsync($"api/qslayouts/{idQslayout}");
+            snackBar.Add($"QS action {idQslayout} deleted.", Severity.Success);
+            await LoadData();
+        }
+    }
+
+    private bool FilterFunc(Qslayout q)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+
+        if (q.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase) || q.ParamString.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if(q.IdQslayout.ToString() == searchString)
+            return true;
+
+        return false;
+    }
+
+    private async void RowClicked(TableRowClickEventArgs<Qslayout> p)
+    {
+        await Task.Delay(300);
+        await js.InvokeVoidAsync("focusAt", p.MouseEventArgs.ClientX, p.MouseEventArgs.ClientY + 5);
+    }
+}

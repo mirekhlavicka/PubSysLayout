@@ -22,9 +22,16 @@ namespace PubSysLayout.Server.Controllers
 
         // GET: api/Qslayouts
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Qslayout>>> GetQslayouts()
+        public async Task<ActionResult<IEnumerable<Qslayout>>> GetQslayouts(bool? hideUnused)
         {
-            return await _context.Qslayouts.ToListAsync();
+            var res = _context.Qslayouts.AsQueryable();
+
+            if (hideUnused.HasValue && hideUnused.Value)
+            {
+                res = res.Where(qs => qs.LayoutAssigns.Any());
+            }
+
+            return await res.ToListAsync();
         }
 
         // GET: api/Qslayouts/5

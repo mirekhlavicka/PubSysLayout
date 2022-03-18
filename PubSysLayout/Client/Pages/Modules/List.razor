@@ -15,69 +15,71 @@
 }
 else
 {
-    <MudTooltip Text="Add new module">
-        <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5" OnClick="AddModule" Disabled="@(newModule !=null || beforeEditModule != null)"/>
-    </MudTooltip>
-    <MudTable @ref="modulesTable" Items="modules" Hover="true" SortLabel="Sort By" AllowUnsorted="false" Elevation="5" RowsPerPage="25" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 300px)" Dense="true" Filter="FilterFunc" T="Module" Virtualize="false"
-        CommitEditTooltip="Commit Edit" CancelEditTooltip="Cancel Edit" RowEditPreview="Backup" RowEditCancel="ResetEdit" RowEditCommit="Committed" CanCancelEdit="true" IsEditRowSwitchingBlocked="true" OnRowClick="RowClicked">
-        <ToolBarContent>
-            <MudText Typo="Typo.h6">Modules</MudText>
-            <MudSpacer />
-            <MudSwitch Label="Hide unused" Color="Color.Info" Checked="@hideUnused" CheckedChanged="@(async (bool b) => {hideUnused = b; await LoadData();})" Disabled="@(newModule !=null || beforeEditModule != null)" />
-            <MudSpacer />
-            <MudTextField DebounceInterval="500" @bind-Value="searchString" Placeholder="Search by name, path or ID" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true" ></MudTextField>
-        </ToolBarContent>
-        <ColGroup>
-            <col style="width:100px;" />
-            <col style="width:20%;" />
-            <col />
-            <col style="width:150px;" />
-            <col style="width:20%;" />
-            <col style="width:120px;"/>
-            <col style="width:0px;"/>
-        </ColGroup>
-        <HeaderContent>
-            <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="(Module m) => m.IdModule == 0 ? 999999 :  m.IdModule" >ID</MudTableSortLabel></MudTh>
-            <MudTh><MudTableSortLabel SortBy='(Module m) => m.IdModule == 0 ? "ZZZZZ" :  m.Name' >Name</MudTableSortLabel></MudTh>
-            <MudTh>Path</MudTh>
-            <MudTh>Active</MudTh>
-            <MudTh>Cache key</MudTh>
-            <MudTh/>
-        </HeaderContent>
-        <RowTemplate>
-            <MudTd DataLabel="ID">@context.IdModule</MudTd>
-            <MudTd DataLabel="Name">@context.Name</MudTd>
-            <MudTd DataLabel="Path">@context.DesktopSrc</MudTd>
-            <MudTd DataLabel="Active"><MudIcon Icon="@(@context.Active ? Icons.Material.Filled.CheckBox : Icons.Material.Filled.CheckBoxOutlineBlank)" Size="Size.Small" Class="mr-3 mb-n1"/></MudTd>
-            <MudTd DataLabel="Cache key">@context.Qskey</MudTd>
-            <MudTd DataLabel="">
-                <MudTooltip Text="Module default settings">
-                    <MudIconButton Icon="@Icons.Material.Filled.Settings" @onclick="@(()=>OpenModuleSettingsDialog(@context))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text"></MudIconButton>
-                </MudTooltip>
-                <MudTooltip Text="Delete module">
-                    <MudIconButton Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>DeleteModule(@context))"Size="Size.Small" Variant="Variant.Text" />
-                </MudTooltip>
-            </MudTd>
-        </RowTemplate>
-        <RowEditingTemplate>
-            <MudTd DataLabel="ID">@context.IdModule<a id="editRow" style="position:relative; top: -80px" /></MudTd>
-            <MudTd DataLabel="Name">                
-                <MudTextField Margin="Margin.Dense" @bind-Value="@context.Name" Required Immediate="false" spellcheck="false" />
-            </MudTd>
-            <MudTd DataLabel="Path">                
-                <MudTextField Margin="Margin.Dense" @bind-Value="@context.DesktopSrc" Required Immediate="false" spellcheck="false" />
-            </MudTd>
-            <MudTd DataLabel="Active">
-                <MudCheckBox @bind-Checked="@context.Active"></MudCheckBox>
+    <MudContainer MaxWidth="MaxWidth.ExtraLarge">
+        <MudTooltip Text="Add new module">
+            <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5" OnClick="AddModule" Disabled="@(newModule !=null || beforeEditModule != null)"/>
+        </MudTooltip>
+        <MudTable @ref="modulesTable" Items="modules" Hover="true" SortLabel="Sort By" AllowUnsorted="false" Elevation="5" RowsPerPage="25" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 300px)" Dense="true" Filter="FilterFunc" T="Module" Virtualize="false"
+            CommitEditTooltip="Commit Edit" CancelEditTooltip="Cancel Edit" RowEditPreview="Backup" RowEditCancel="ResetEdit" RowEditCommit="Committed" CanCancelEdit="true" IsEditRowSwitchingBlocked="true" OnRowClick="RowClicked">
+            <ToolBarContent>
+                <MudText Typo="Typo.h6">Modules</MudText>
+                <MudSpacer />
+                <MudSwitch Label="Hide unused" Color="Color.Info" Checked="@hideUnused" CheckedChanged="@(async (bool b) => {hideUnused = b; await LoadData();})" Disabled="@(newModule !=null || beforeEditModule != null)" />
+                <MudSpacer />
+                <MudTextField DebounceInterval="500" @bind-Value="searchString" Placeholder="Search by name, path or ID" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true" ></MudTextField>
+            </ToolBarContent>
+            <ColGroup>
+                <col style="width:100px;" />
+                <col style="width:20%;" />
+                <col />
+                <col style="width:150px;" />
+                <col style="width:20%;" />
+                <col style="width:120px;"/>
+                <col style="width:0px;"/>
+            </ColGroup>
+            <HeaderContent>
+                <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="(Module m) => m.IdModule == 0 ? 999999 :  m.IdModule" >ID</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy='(Module m) => m.IdModule == 0 ? "ZZZZZ" :  m.Name' >Name</MudTableSortLabel></MudTh>
+                <MudTh>Path</MudTh>
+                <MudTh>Active</MudTh>
+                <MudTh>Cache key</MudTh>
+                <MudTh/>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="ID">@context.IdModule</MudTd>
+                <MudTd DataLabel="Name">@context.Name</MudTd>
+                <MudTd DataLabel="Path">@context.DesktopSrc</MudTd>
+                <MudTd DataLabel="Active"><MudIcon Icon="@(@context.Active ? Icons.Material.Filled.CheckBox : Icons.Material.Filled.CheckBoxOutlineBlank)" Size="Size.Small" Class="mr-3 mb-n1"/></MudTd>
+                <MudTd DataLabel="Cache key">@context.Qskey</MudTd>
+                <MudTd DataLabel="">
+                    <MudTooltip Text="Module default settings">
+                        <MudIconButton Icon="@Icons.Material.Filled.Settings" @onclick="@(()=>OpenModuleSettingsDialog(@context))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text"></MudIconButton>
+                    </MudTooltip>
+                    <MudTooltip Text="Delete module">
+                        <MudIconButton Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>DeleteModule(@context))"Size="Size.Small" Variant="Variant.Text" />
+                    </MudTooltip>
                 </MudTd>
-            <MudTd DataLabel="Cache key">                
-                <MudTextField Margin="Margin.Dense" @bind-Value="@context.Qskey"  spellcheck="false" />
-            </MudTd>
-        </RowEditingTemplate>
-        <PagerContent>
-            <MudTablePager PageSizeOptions="new int[]{25, 100, 1000}" />
-        </PagerContent>
-    </MudTable>}
+            </RowTemplate>
+            <RowEditingTemplate>
+                <MudTd DataLabel="ID">@context.IdModule<a id="editRow" style="position:relative; top: -80px" /></MudTd>
+                <MudTd DataLabel="Name">                
+                    <MudTextField Margin="Margin.Dense" @bind-Value="@context.Name" Required Immediate="false" spellcheck="false" />
+                </MudTd>
+                <MudTd DataLabel="Path">                
+                    <MudTextField Margin="Margin.Dense" @bind-Value="@context.DesktopSrc" Required Immediate="false" spellcheck="false" />
+                </MudTd>
+                <MudTd DataLabel="Active">
+                    <MudCheckBox @bind-Checked="@context.Active"></MudCheckBox>
+                    </MudTd>
+                <MudTd DataLabel="Cache key">                
+                    <MudTextField Margin="Margin.Dense" @bind-Value="@context.Qskey"  spellcheck="false" />
+                </MudTd>
+            </RowEditingTemplate>
+            <PagerContent>
+                <MudTablePager PageSizeOptions="new int[]{25, 100, 1000}" />
+            </PagerContent>
+        </MudTable>
+    </MudContainer>}
 
 @code {
     private List<Module> modules;
