@@ -4,7 +4,7 @@
 @inject MudBlazor.ISnackbar snackBar
 @inject NavigationManager uriHelper
 @inject IDialogService DialogService
-
+@inject CurrentDB currentDB
 @using PubSysLayout.Shared.Model
 
 <PageTitle>Layout definitions</PageTitle>
@@ -69,6 +69,11 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        if (currentDB.Current is null)
+        {
+            return;
+        }
+
         layouts = (await Http.GetFromJsonAsync<LayoutDefinition[]>("api/layouts")).ToDictionary(l => l.IdLayout, l => l.Name);
         styles = (await Http.GetFromJsonAsync<Style[]>("api/styles")).ToDictionary(s => s.IdStyle, s => s.Name);
 

@@ -4,6 +4,7 @@
 @inject MudBlazor.ISnackbar snackBar
 @inject NavigationManager uriHelper
 @inject IDialogService DialogService
+@inject CurrentDB currentDB
 
 @using PubSysLayout.Shared.Model
 
@@ -93,6 +94,11 @@ else
 
     protected override async Task OnInitializedAsync()
     {
+        if (currentDB.Current is null)
+        {
+            return;
+        }
+
         await LoadData();
     }
 

@@ -2,6 +2,7 @@
 @inject NavigationManager uriHelper;
 @inject HttpClient Http
 @inject LocalStorage localStorage
+@using Microsoft.AspNetCore.WebUtilities;
 
 <style>
     .dbselect input, .dbselect label, .dbselect .mud-icon-default {
@@ -13,11 +14,11 @@
     }
 </style>
 
-@if (conlist != null)
+@if (dblist != null)
 {
     <div class="dbselect">
         <MudSelect T="string" Label="Database" Variant="Variant.Text" AnchorOrigin="Origin.BottomCenter" Value="@currentDB.Current" ValueChanged="@SetCurrent" Margin="Margin.Dense">
-            @foreach (var constr in conlist)
+            @foreach (var constr in dblist)
             {
                 <MudSelectItem Value="@constr" />
             }
@@ -26,30 +27,51 @@
 }
 
 @code {
-    private string[] conlist = null;
+    private string[] dblist = null;
 
     protected override async Task OnInitializedAsync()
     {
-        conlist = await Http.GetFromJsonAsync<string[]>("api/dblist");
+        dblist = await Http.GetFromJsonAsync<string[]>("api/dblist");
 
         if (String.IsNullOrEmpty(currentDB.Current))
         {
-            var val = await localStorage.GetAsync<string>("currentDB");
+            string val = null;
+            bool returnFromDetail = true;
+
+            var uri = uriHelper.ToAbsoluteUri(uriHelper.Uri);
+            var queryStrings = QueryHelpers.ParseQuery(uri.Query);
+            if (queryStrings.TryGetValue("db", out var db))
+            {
+                val = db;
+                returnFromDetail = false;
+                await localStorage.SetAsync("currentDB", val);
+            }
 
             if (String.IsNullOrEmpty(val))
             {
-                val = conlist[0];
+                val = await localStorage.GetAsync<string>("currentDB");
+            }
+
+            if (String.IsNullOrEmpty(val) || !dblist.Any(s => String.Equals(s, val, StringComparison.OrdinalIgnoreCase)))
+            {
+                val = dblist[0];
                 await localStorage.SetAsync("currentDB", val);
             }
 
             currentDB.Current = val;
-            Reload();
+            Reload(returnFromDetail);
         }
     }
 
-    private void Reload()
+    private void Reload(bool returnFromDetail)
     {
-        var uri = uriHelper.ToAbsoluteUri(uriHelper.ToBaseRelativePath(uriHelper.Uri).Split('/').FirstOrDefault()).ToString();
+        string uri = uriHelper.Uri;
+
+        if (returnFromDetail)
+        {
+            uri = uriHelper.ToAbsoluteUri(uriHelper.ToBaseRelativePath(uri).Split('/').FirstOrDefault()).ToString();
+        }
+
         uriHelper.NavigateTo("/dummy", forceLoad: false);
         uriHelper.NavigateTo(uri, forceLoad: false);
 
@@ -59,6 +81,6 @@
     {
         currentDB.Current = s;
         await localStorage.SetAsync("currentDB", currentDB.Current);
-        Reload();
+        Reload(true);
     }
 }
