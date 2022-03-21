@@ -52,7 +52,7 @@
             @if (layoutDefinition.IdLayoutdefinition != 0)
             {
                 <MudPaper Class="mt-6" Elevation="0">
-                <PubSysLayout.Client.Pages.LayoutAssigns.List IdLayoutdefinition="layoutDefinition.IdLayoutdefinition" Title='@("Assign layout " + layoutDefinition.Name + " to actions")'></PubSysLayout.Client.Pages.LayoutAssigns.List>
+                <PubSysLayout.Client.Pages.LayoutAssigns.List IdLayoutdefinition="layoutDefinition.IdLayoutdefinition" Title='@("Assign layout definition " + layoutDefinition.Name + " to actions")'></PubSysLayout.Client.Pages.LayoutAssigns.List>
                 </MudPaper>
             }
         </MudItem>
@@ -67,7 +67,7 @@
                 RowEditPreview="BackupModuleUsage" RowEditCancel="ResetEditModuleUsage" RowEditCommit="ModuleUsageHasBeenCommitted" IsEditRowSwitchingBlocked="true" 
                 FixedHeader="true" FixedFooter="true" Height="calc(100vh - 250px)" OnRowClick="RowClicked" T="ModuleUsage">
                 <ToolBarContent>
-                    <MudText Typo="Typo.h6">Modules in layout @layoutDefinition.Name</MudText>
+                    <MudText Typo="Typo.h6">Modules in layout definition @layoutDefinition.Name</MudText>
                 </ToolBarContent>
                 <ColGroup>
                     <col style="width:80px;" />
@@ -89,7 +89,12 @@
                 <RowTemplate>
                     <MudTd DataLabel="ID">@context.IdModuleusage</MudTd>
                     <MudTd DataLabel="Spot">@(context.IdSpot == 0 ? "(not selected)" : spots[context.IdSpot]?.Name)</MudTd>
-                    <MudTd DataLabel="Module">@(context.IdModule == 0 ? "(not selected)" : modules[context.IdModule]?.Name)</MudTd>
+                    <MudTd DataLabel="Module">
+                        @(context.IdModule == 0 ? "(not selected)" : modules[context.IdModule]?.Name)
+                        <MudTooltip Text="Edit module">
+                            <MudIconButton Icon="@Icons.Material.Filled.ArrowRightAlt" Link='@($"modules/?id_module={context.IdModule}")' Color="Color.Primary" Size="Size.Small" Variant="Variant.Text" ></MudIconButton>
+                        </MudTooltip>
+                    </MudTd>
                     <MudTd DataLabel="Order">@context.Order</MudTd>
                     <MudTd DataLabel="CacheTime">@context.CacheTime</MudTd>
                     <MudTd DataLabel="">                            

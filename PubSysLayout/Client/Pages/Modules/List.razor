@@ -6,6 +6,18 @@
 @inject IDialogService DialogService
 @inject CurrentDB currentDB
 
+<style>
+    @@keyframes highlight {
+ 	    50% {
+ 		    background: #2096f3;
+ 	    }
+    }
+
+    .editRow {
+        animation: highlight 1s 2;
+    }
+</style>
+
 @using PubSysLayout.Shared.Model
 
 <PageTitle>Modules</PageTitle>
@@ -21,7 +33,7 @@ else
             <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5" OnClick="AddModule" Disabled="@(newModule !=null || beforeEditModule != null)"/>
         </MudTooltip>
         <MudTable @ref="modulesTable" Items="modules" Hover="true" SortLabel="Sort By" AllowUnsorted="false" Elevation="5" RowsPerPage="25" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 300px)" Dense="true" Filter="FilterFunc" T="Module" Virtualize="false"
-            CommitEditTooltip="Commit Edit" CancelEditTooltip="Cancel Edit" RowEditPreview="Backup" RowEditCancel="ResetEdit" RowEditCommit="Committed" CanCancelEdit="true" IsEditRowSwitchingBlocked="true" OnRowClick="RowClicked">
+            CommitEditTooltip="Commit Edit" CancelEditTooltip="Cancel Edit" RowEditPreview="Backup" RowEditCancel="ResetEdit" RowEditCommit="Committed" CanCancelEdit="true" IsEditRowSwitchingBlocked="true" OnRowClick="RowClicked" RowClassFunc="RowClassFunc">
             <ToolBarContent>
                 <MudText Typo="Typo.h6">Modules</MudText>
                 <MudSpacer />
@@ -83,6 +95,10 @@ else
     </MudContainer>}
 
 @code {
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "id_module")]
+    public int IdModuleEdit { get; set; } = 0;
+
     private List<Module> modules;
     private string searchString = "";
     private bool hideUnused = true;
@@ -100,6 +116,31 @@ else
         }
 
         await LoadData();
+
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+
+        if (IdModuleEdit != 0 && modules != null && modulesTable != null)
+        {
+            await InvokeAsync(() =>
+            {
+                modulesTable.NavigateTo((int)System.Math.Floor((double)(modules.OrderBy(m => m.IdModule).TakeWhile(m => m.IdModule != IdModuleEdit).Count()) / modulesTable.RowsPerPage));
+                var m = modules.SingleOrDefault(m => m.IdModule == IdModuleEdit);
+                modulesTable.SetEditingItem(m);
+                higlightEdit = true;
+                Backup(m);
+                higlightEdit = false;
+                IdModuleEdit = 0;
+
+                StateHasChanged();
+            });
+
+            await Task.Delay(300);
+            await js.InvokeVoidAsync("scrollToElementId", "editRow");
+        }
     }
 
     protected async Task LoadData()
@@ -139,12 +180,14 @@ else
         DialogService.Show<Modules.ModuleSettingsDialog>($"{m.Name} default settings", parameters, options);
     }
 
+    private bool higlightEdit = false; 
     private void Backup(object element)
     {
         Module m = element as Module;
 
         beforeEditModule  = new()
             {
+                IdModule = higlightEdit ? m.IdModule : 0,
                 Name = m.Name,
                 DesktopSrc = m.DesktopSrc,
                 Description = m.Description,
@@ -260,4 +303,17 @@ else
         await Task.Delay(300);
         await js.InvokeVoidAsync("focusAt", p.MouseEventArgs.ClientX, p.MouseEventArgs.ClientY + 5);
     }
+
+    private string RowClassFunc(Module m, int rowNumber)
+    {
+        if (m.IdModule == beforeEditModule?.IdModule)
+        {
+            return "editRow";
+        }
+        else
+        {
+            return string.Empty;
+        }
+    }
+
 }
