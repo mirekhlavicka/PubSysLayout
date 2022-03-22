@@ -12,6 +12,7 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 
 builder.Services.AddSingleton<CurrentDB>();
 builder.Services.AddSingleton<LocalStorage>();
+builder.Services.AddSingleton<Clipboard>();
 
 builder.Services.AddTransient/*Scoped*/(sp =>
 {

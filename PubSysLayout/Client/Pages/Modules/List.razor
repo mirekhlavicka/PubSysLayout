@@ -5,18 +5,7 @@
 @inject NavigationManager uriHelper
 @inject IDialogService DialogService
 @inject CurrentDB currentDB
-
-<style>
-    @@keyframes highlight {
- 	    50% {
- 		    background: #2096f3;
- 	    }
-    }
-
-    .editRow {
-        animation: highlight 1s 2;
-    }
-</style>
+@inject Clipboard clipboard
 
 @using PubSysLayout.Shared.Model
 
@@ -30,7 +19,10 @@ else
 {
     <MudContainer MaxWidth="MaxWidth.ExtraLarge">
         <MudTooltip Text="Add new module">
-            <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5" OnClick="AddModule" Disabled="@(newModule !=null || beforeEditModule != null)"/>
+            <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5" OnClick="@(()=> AddModule())" Disabled="@(newModule !=null || beforeEditModule != null)"/>
+        </MudTooltip>
+        <MudTooltip Text="Paste module">
+            <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.ContentPaste" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5 ml-3" OnClick="@(()=> {AddModule(clipboard.Content as Module); clipboard.Content = null; })" Disabled="@(!(clipboard.Content is Module) || newModule !=null || beforeEditModule != null)"/>
         </MudTooltip>
         <MudTable @ref="modulesTable" Items="modules" Hover="true" SortLabel="Sort By" AllowUnsorted="false" Elevation="5" RowsPerPage="25" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 300px)" Dense="true" Filter="FilterFunc" T="Module" Virtualize="false"
             CommitEditTooltip="Commit Edit" CancelEditTooltip="Cancel Edit" RowEditPreview="Backup" RowEditCancel="ResetEdit" RowEditCommit="Committed" CanCancelEdit="true" IsEditRowSwitchingBlocked="true" OnRowClick="RowClicked" RowClassFunc="RowClassFunc">
@@ -47,7 +39,7 @@ else
                 <col />
                 <col style="width:150px;" />
                 <col style="width:20%;" />
-                <col style="width:120px;"/>
+                <col style="width:150px;"/>
                 <col style="width:0px;"/>
             </ColGroup>
             <HeaderContent>
@@ -67,6 +59,9 @@ else
                 <MudTd DataLabel="">
                     <MudTooltip Text="Module default settings">
                         <MudIconButton Icon="@Icons.Material.Filled.Settings" @onclick="@(()=>OpenModuleSettingsDialog(@context))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text"></MudIconButton>
+                    </MudTooltip>
+                    <MudTooltip Text="Copy">
+                        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" @onclick="@(()=> clipboard.Content = context)" Color="Color.Default" Size="Size.Small" Variant="Variant.Text"></MudIconButton>
                     </MudTooltip>
                     <MudTooltip Text="Delete module">
                         <MudIconButton Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>DeleteModule(@context))"Size="Size.Small" Variant="Variant.Text" />
@@ -129,13 +124,15 @@ else
             {
                 modulesTable.NavigateTo((int)System.Math.Floor((double)(modules.OrderBy(m => m.IdModule).TakeWhile(m => m.IdModule != IdModuleEdit).Count()) / modulesTable.RowsPerPage));
                 var m = modules.SingleOrDefault(m => m.IdModule == IdModuleEdit);
-                modulesTable.SetEditingItem(m);
-                higlightEdit = true;
-                Backup(m);
-                higlightEdit = false;
+                if (m != null)
+                {
+                    modulesTable.SetEditingItem(m);
+                    higlightEdit = true;
+                    Backup(m);
+                    higlightEdit = false;
+                    StateHasChanged();
+                }
                 IdModuleEdit = 0;
-
-                StateHasChanged();
             });
 
             await Task.Delay(300);
@@ -262,15 +259,15 @@ else
         }
     }
 
-    private async void AddModule()
+    private async void AddModule(Module copy = null)
     {
         newModule = new Module
         {
-            Name = "",
-            DesktopSrc = "",
-            Description = "",
-            Qskey = "",
-            Active = true,
+            Name = copy?.Name ?? "",
+            DesktopSrc = copy?.DesktopSrc ?? "",
+            Description = copy?.Description ?? "",
+            Qskey = copy?.Qskey ?? "",
+            Active = copy?.Active ?? true,
             Admin = false,
             MobileSrc = "-"
         };
@@ -315,5 +312,4 @@ else
             return string.Empty;
         }
     }
-
 }

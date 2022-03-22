@@ -20,7 +20,7 @@
                         <MudText Typo="Typo.h6">Layout definition</MudText>
                     </CardHeaderContent>
                     <CardHeaderActions>
-                        <MudTooltip Text="Copy layout definition">
+                        <MudTooltip Text="Create copy of layout definition">
                             <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" Color="Color.Default" Disabled="@(layoutDefinition.IdLayoutdefinition == 0)" OnClick="CreateCopy" />
                         </MudTooltip>
                     </CardHeaderActions>
@@ -65,7 +65,7 @@
             </MudTooltip>
             <MudTable @ref="moduleUsageTable" Items="layoutDefinition.ModuleUsages" Hover="true" SortLabel="Sort By" AllowUnsorted="false" Elevation="5" Class="mt-4" Dense="true" CanCancelEdit="true" CommitEditTooltip="Commit Edit" CancelEditTooltip="Cancel Edit"
                 RowEditPreview="BackupModuleUsage" RowEditCancel="ResetEditModuleUsage" RowEditCommit="ModuleUsageHasBeenCommitted" IsEditRowSwitchingBlocked="true" 
-                FixedHeader="true" FixedFooter="true" Height="calc(100vh - 250px)" OnRowClick="RowClicked" T="ModuleUsage">
+                FixedHeader="true" FixedFooter="true" Height="calc(100vh - 250px)" OnRowClick="RowClicked" RowClassFunc="RowClassFunc" T="ModuleUsage">
                 <ToolBarContent>
                     <MudText Typo="Typo.h6">Modules in layout definition @layoutDefinition.Name</MudText>
                 </ToolBarContent>
@@ -141,6 +141,10 @@
 @code {
     [Parameter] public int idLayoutdefinition { get; set; }
 
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "id_moduleusage")]
+    public int IdModuleUsageEdit { get; set; } = 0;
+
     LayoutDefinition layoutDefinition;
     Layout[] layouts;
     Style[] styles;
@@ -181,6 +185,31 @@
         }
     }
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        await base.OnAfterRenderAsync(firstRender);
+
+        if (IdModuleUsageEdit != 0 && layoutDefinition != null && moduleUsageTable != null)
+        {
+            await InvokeAsync(() =>
+            {
+                var mu = layoutDefinition.ModuleUsages.SingleOrDefault(mu => mu.IdModuleusage == IdModuleUsageEdit);
+                if (mu != null)
+                {
+                    moduleUsageTable.SetEditingItem(mu);
+                    higlightEdit = true;
+                    BackupModuleUsage(mu);
+                    higlightEdit = false;
+                    StateHasChanged();
+                }
+                IdModuleUsageEdit = 0;
+            });
+
+            await Task.Delay(300);
+            await js.InvokeVoidAsync("scrollToElementId", "editRow");
+        }
+    }
+
     async Task Save()
     {
         await form.Validate();
@@ -211,12 +240,14 @@
         uriHelper.NavigateTo("layoutdefinitions");
     }
 
+    private bool higlightEdit = false; 
     private void BackupModuleUsage(object element)
     {
         ModuleUsage b = element as ModuleUsage;
 
         beforeEditModuleUsage = new()
             {
+                IdModuleusage = higlightEdit ? b.IdModuleusage : 0,
                 IdModule = b.IdModule,
                 IdSpot = b.IdSpot,
                 Order = b.Order,
@@ -358,5 +389,18 @@
         await Task.Delay(300);
         await js.InvokeVoidAsync("focusAt", p.MouseEventArgs.ClientX, p.MouseEventArgs.ClientY + 5);
     }
+
+    private string RowClassFunc(ModuleUsage mu, int rowNumber)
+    {
+        if (mu.IdModuleusage == beforeEditModuleUsage?.IdModuleusage)
+        {
+            return "editRow";
+        }
+        else
+        {
+            return string.Empty;
+        }
+    }
+
 }
     

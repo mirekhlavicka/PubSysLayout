@@ -5,6 +5,8 @@
 @inject NavigationManager uriHelper
 @inject IDialogService DialogService
 @inject CurrentDB currentDB
+@inject Clipboard clipboard
+
 
 @using PubSysLayout.Shared.Model
 
@@ -18,8 +20,12 @@ else
 {
     <MudContainer MaxWidth="MaxWidth.Large">
         <MudTooltip Text="Add new QS action">
-            <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5" OnClick="AddQS" Disabled="@(newQS !=null || beforeEditQS != null)"/>
+            <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5" OnClick="@(()=> AddQS())" Disabled="@(newQS !=null || beforeEditQS != null)"/>
         </MudTooltip>
+        <MudTooltip Text="Paste QS action">
+            <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.ContentPaste" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5 ml-3" OnClick="@(()=> {AddQS(clipboard.Content as Qslayout); clipboard.Content = null; })" Disabled="@(!(clipboard.Content is Qslayout) || newQS !=null || beforeEditQS != null)"/>
+        </MudTooltip>
+
         <MudTable @ref="qsTable" Items="qslayouts" Hover="true" SortLabel="Sort By" AllowUnsorted="false" Elevation="5" RowsPerPage="0" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 250px)"  Dense="true" 
             Filter="new Func<Qslayout,bool>(FilterFunc)" 
             CommitEditTooltip="Commit Edit" CancelEditTooltip="Cancel Edit" RowEditPreview="Backup" RowEditCancel="ResetEdit" RowEditCommit="Committed" CanCancelEdit="true" IsEditRowSwitchingBlocked="true" OnRowClick="RowClicked" Virtualize="false" T="Qslayout">
@@ -36,7 +42,7 @@ else
                 <col  />
                 <col style="width:100px;" />
                 <col style="width:100px;" />
-                <col style="width:100px;" />
+                <col style="width:130px;" />
                 <col style="width:0px;"/>
             </ColGroup>
             <HeaderContent>
@@ -56,6 +62,9 @@ else
                 <MudTd DataLabel="">
                     <MudTooltip Text="Assign action to layout">
                         <MudIconButton Icon="@Icons.Material.Filled.ElectricalServices" @onclick="@(()=>OpenLayoutAssignsDialog(@context))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text"></MudIconButton>
+                    </MudTooltip>
+                    <MudTooltip Text="Copy">
+                        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" @onclick="@(()=> clipboard.Content = context)" Color="Color.Default" Size="Size.Small" Variant="Variant.Text"></MudIconButton>
                     </MudTooltip>
                     <MudTooltip Text="Delete QS action">
                         <MudIconButton Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>Delete(@context.IdQslayout))"Size="Size.Small" Variant="Variant.Text" />
@@ -172,15 +181,15 @@ else
         StateHasChanged();
     }
 
-    private async void AddQS()
+    private async void AddQS(Qslayout copy = null)
     {
         newQS = new Qslayout
         {
-            Name = "",
-            Description = "",
-            ParamString = "",
-            Public = true,
-            Priority = 0
+            Name = copy?.Name ?? "",
+            Description = copy?.Description ?? "",
+            ParamString = copy?.ParamString ?? "",
+            Public = copy?.Public ?? true,
+            Priority = copy?.Priority ?? 0
         };
 
         qslayouts.Add(newQS);
