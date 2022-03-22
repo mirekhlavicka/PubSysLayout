@@ -4,12 +4,15 @@
 @inject CurrentDB currentDB
 @*@implements IDisposable*@
 
-<PageTitle>Index</PageTitle>
+<PageTitle>PubSysLayout</PageTitle>
 
 <MudText Typo="Typo.h3" GutterBottom="true">@server</MudText>
 <MudText Class="mb-8">@currentDB.Current</MudText>
 @*<MudAlert Severity="Severity.Normal">You can find documentation and examples on our website here: <MudLink Href="https://mudblazor.com" Typo="Typo.body2" Color="Color.Inherit"><b>www.mudblazor.com</b></MudLink></MudAlert>*@
 
+@*<MudNavLink Href="/?db=WWWMAT_Layout_1" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Power" ForceLoad="true" OnClick='() => Console.WriteLine("xxx")/*currentDB.Current = "WWWMAT_Layout_1"*/'>WWWMAT_Layout_1</MudNavLink>
+<MudButton Variant="Variant.Filled" OnClick='() => {currentDB.Current = "WWWMAT_Layout_1"; StateHasChanged();}'>Default</MudButton>
+*@
 @code {
     private string server = null;
     //private bool disposed = true;

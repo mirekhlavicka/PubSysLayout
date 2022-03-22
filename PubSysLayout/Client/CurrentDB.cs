@@ -14,8 +14,8 @@
             }
         }
 
-        public event Action OnChange;
+        public event Action CurrentChanged;
 
-        private void NotifyStateChanged() => OnChange?.Invoke();
+        private void NotifyStateChanged() => CurrentChanged?.Invoke();
     }
 }

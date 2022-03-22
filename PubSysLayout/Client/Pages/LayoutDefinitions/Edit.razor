@@ -7,7 +7,11 @@
 @inject CurrentDB currentDB
 @using PubSysLayout.Shared.Model
 
-@if (layoutDefinition != null)
+@if (layoutDefinition == null)
+{
+    <MudProgressCircular Color="Color.Default" Indeterminate="true" />
+}
+else
 {
     <MudGrid>
         <MudItem xs="5">

@@ -39,7 +39,7 @@ else
                 <col />
                 <col style="width:150px;" />
                 <col style="width:20%;" />
-                <col style="width:150px;"/>
+                <col style="width:180px;"/>
                 <col style="width:0px;"/>
             </ColGroup>
             <HeaderContent>
@@ -60,6 +60,10 @@ else
                     <MudTooltip Text="Module default settings">
                         <MudIconButton Icon="@Icons.Material.Filled.Settings" @onclick="@(()=>OpenModuleSettingsDialog(@context))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text"></MudIconButton>
                     </MudTooltip>
+                    <MudTooltip Text="Module usage">
+                        <MudIconButton Icon="@Icons.Material.Filled.DashboardCustomize" @onclick="@(()=>OpenModuleUsagesDialog(@context))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text"></MudIconButton>
+                    </MudTooltip>
+
                     <MudTooltip Text="Copy">
                         <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" @onclick="@(()=> clipboard.Content = context)" Color="Color.Default" Size="Size.Small" Variant="Variant.Text"></MudIconButton>
                     </MudTooltip>
@@ -175,6 +179,20 @@ else
         parameters.Add("IdModuleUsage", 0);
 
         DialogService.Show<Modules.ModuleSettingsDialog>($"{m.Name} default settings", parameters, options);
+    }
+
+    private void OpenModuleUsagesDialog(Module m)
+    {
+        var options = new DialogOptions { 
+            MaxWidth = MaxWidth.Small, 
+            CloseButton = true
+        };
+
+        var parameters = new DialogParameters();
+
+        parameters.Add("IdModule", m.IdModule);
+
+        DialogService.Show<Modules.ModuleUsagesDialog>($"{m.Name} usage in layout definitions", parameters, options);
     }
 
     private bool higlightEdit = false; 

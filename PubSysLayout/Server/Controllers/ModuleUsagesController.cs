@@ -22,9 +22,16 @@ namespace PubSysLayout.Server.Controllers
 
         // GET: api/ModuleUsages
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<ModuleUsage>>> GetModuleUsages()
+        public async Task<ActionResult<IEnumerable<ModuleUsage>>> GetModuleUsages(int? id_module)
         {
-            return await _context.ModuleUsages.ToListAsync();
+            var res = _context.ModuleUsages.AsQueryable();
+
+            if (id_module.HasValue && id_module != 0)
+            {
+                res = res.Where(mu => mu.IdModule == id_module);
+            }
+
+            return await res.Include(mu => mu.IdSpotNavigation).Include(mu => mu.IdLayoutdefinitionNavigation).ToListAsync();
         }
 
         // GET: api/ModuleUsages/5
