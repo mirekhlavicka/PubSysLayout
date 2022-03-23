@@ -7,7 +7,7 @@
 @inject CurrentDB currentDB
 @using PubSysLayout.Shared.Model
 
-<PageTitle>Layout definitions</PageTitle>
+<PageTitle>@currentDB.Current – Layout definitions</PageTitle>
 
 @if (layoutDefinitions == null)
 {

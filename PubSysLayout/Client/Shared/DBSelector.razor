@@ -1,7 +1,10 @@
 ﻿@inject CurrentDB currentDB
+@inject DBList dbListService
 @inject NavigationManager uriHelper;
 @inject HttpClient Http
 @inject LocalStorage localStorage
+@inject MudBlazor.ISnackbar snackBar
+@implements IDisposable
 @using Microsoft.AspNetCore.WebUtilities;
 
 <style>
@@ -28,10 +31,11 @@
 
 @code {
     private string[] dblist = null;
+    private bool disposed = false;
 
     protected override async Task OnInitializedAsync()
     {
-        dblist = await Http.GetFromJsonAsync<string[]>("api/dblist");
+        dblist = await dbListService.GetList();
 
         if (String.IsNullOrEmpty(currentDB.Current))
         {
@@ -61,6 +65,11 @@
             currentDB.Current = val;
             Reload(returnFromDetail);
         }
+
+        if (!disposed)
+        {
+            currentDB.CurrentChanged += CurrentDBChanged;
+        }
     }
 
     private void Reload(bool returnFromDetail)
@@ -77,10 +86,30 @@
 
     }
 
+    private bool changeFromMe = false;
     private async Task SetCurrent(string s)
     {
+        changeFromMe = true;
         currentDB.Current = s;
+        changeFromMe = false;
         await localStorage.SetAsync("currentDB", currentDB.Current);
         Reload(true);
+        snackBar.Add($"Layout database {s} selected.", Severity.Info);
+    }
+
+    private async void CurrentDBChanged()
+    {
+        if (!disposed && !changeFromMe)
+        {
+            StateHasChanged();
+            await localStorage.SetAsync("currentDB", currentDB.Current);
+            Reload(false);
+        }
+    }
+
+    public void Dispose()
+    {
+        currentDB.CurrentChanged -= CurrentDBChanged;
+        disposed = true;
     }
 }

@@ -2,46 +2,76 @@
 @inject HttpClient Http
 @inject NavigationManager uriHelper;
 @inject CurrentDB currentDB
-@*@implements IDisposable*@
+@inject DBList dbListService
+@inject MudBlazor.ISnackbar snackBar
 
-<PageTitle>PubSysLayout</PageTitle>
+<style>
+    .selectedDB {
+        background-color: #1E88E5 !important;
+    }
 
-<MudText Typo="Typo.h3" GutterBottom="true">@server</MudText>
-<MudText Class="mb-8">@currentDB.Current</MudText>
-@*<MudAlert Severity="Severity.Normal">You can find documentation and examples on our website here: <MudLink Href="https://mudblazor.com" Typo="Typo.body2" Color="Color.Inherit"><b>www.mudblazor.com</b></MudLink></MudAlert>*@
+        .selectedDB > td {
+            color: white !important;
+        }
+</style>
 
-@*<MudNavLink Href="/?db=WWWMAT_Layout_1" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Power" ForceLoad="true" OnClick='() => Console.WriteLine("xxx")/*currentDB.Current = "WWWMAT_Layout_1"*/'>WWWMAT_Layout_1</MudNavLink>
-<MudButton Variant="Variant.Filled" OnClick='() => {currentDB.Current = "WWWMAT_Layout_1"; StateHasChanged();}'>Default</MudButton>
-*@
+<PageTitle>@currentDB.Current – PubSysLayout</PageTitle>
+
+<MudText Typo="Typo.h4" GutterBottom="true">@server</MudText>
+<MudText Typo="Typo.h6" Class="mb-8" Color="Color.Primary">@currentDB.Current</MudText>
+
+@if (dblist != null)
+{
+    <MudContainer MaxWidth="MaxWidth.Small">
+        <MudTable Items="@GetFiltered()" T="String" 
+            OnRowClick='(p) => {currentDB.Current = p.Item; snackBar.Add($"Layout database {p.Item} selected.", Severity.Info);}' 
+            RowClassFunc="@SelectedRowClassFunc"
+            Hover="true" Elevation="5" RowsPerPage="0" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 300px)" Dense="true" RowClass="cursor-pointer">
+            <ToolBarContent>
+                <MudText Typo="Typo.h6">Select database</MudText>
+                <MudSpacer />
+                <MudTextField @bind-Value="searchTerm" Placeholder="Search" Adornment="Adornment.End" AdornmentIcon="@Icons.Filled.Search" IconSize="Size.Medium" Class="mt-0" Immediate="true"></MudTextField>
+            </ToolBarContent>
+            <HeaderContent>
+                <MudTh>Name</MudTh>
+                <MudTh></MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Name">
+                    <MudHighlighter Text="@context" HighlightedText="@searchTerm" />
+                </MudTd>
+                <MudTd></MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudContainer>
+}
+
 @code {
     private string server = null;
-    //private bool disposed = true;
+    private string[] dblist = null;
+    private string searchTerm = "";
 
     protected override async Task OnInitializedAsync()
     {
+        dblist = await dbListService.GetList();
+
         if (!String.IsNullOrEmpty(currentDB.Current))
         {
             server = await Http.GetStringAsync("api/dblist/server");
         }
-
-        //if (!disposed)
-        //{
-        //    currentDB.OnChange += CurrentDBChanged;
-        //}
     }
 
-    //private void CurrentDBChanged()
-    //{
-    //    if (!disposed)
-    //    {
-    //        uriHelper.NavigateTo("/dummy");
-    //        uriHelper.NavigateTo("/");
-    //    }
-    //}
+    private IEnumerable<String> GetFiltered() => dblist.Where(db => searchTerm == "" || db.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
 
-    //public void Dispose()
-    //{
-    //    currentDB.OnChange -= CurrentDBChanged;
-    //    disposed = true;
-    //}
+    private string SelectedRowClassFunc(string db, int rowNumber)
+    {
+        if (db == currentDB.Current)
+        {
+            return "selectedDB";
+        }
+        else
+        {
+            return string.Empty;
+        }
+    }
 }
