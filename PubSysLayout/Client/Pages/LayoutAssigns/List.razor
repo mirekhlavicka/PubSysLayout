@@ -280,7 +280,7 @@ else
             yesText: "Delete!", cancelText: "Cancel") != null))
         {
             await Http.DeleteAsync($"api/layoutassigns/{la.IdServer}/{la.IdSection}/{la.IdQslayout}");
-            snackBar.Add($"Layout assign deleted.", Severity.Success);
+            snackBar.Add($"Layout assign deleted", Severity.Success);
             await LoadData();
         }
     }

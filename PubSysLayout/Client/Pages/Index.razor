@@ -18,19 +18,19 @@
 <PageTitle>@currentDB.Current – PubSysLayout</PageTitle>
 
 <MudText Typo="Typo.h4" GutterBottom="true">@server</MudText>
-<MudText Typo="Typo.h6" Class="mb-8" Color="Color.Primary">@currentDB.Current</MudText>
+<MudText Typo="Typo.h6" Class="mb-8" Color="Color.Primary"><MudIcon Icon="@Icons.Material.Filled.ArrowRight" Title="Selected database" Style="margin-bottom: -4px;" />@currentDB.Current</MudText>
 
 @if (dblist != null)
 {
     <MudContainer MaxWidth="MaxWidth.Small">
         <MudTable Items="@GetFiltered()" T="String" 
-            OnRowClick='(p) => {currentDB.Current = p.Item; snackBar.Add($"Layout database {p.Item} selected.", Severity.Info);}' 
+            OnRowClick='(p) => {currentDB.Current = p.Item; snackBar.Add($"Layout database {p.Item} selected", Severity.Info);}' 
             RowClassFunc="@SelectedRowClassFunc"
             Hover="true" Elevation="5" RowsPerPage="0" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 300px)" Dense="true" RowClass="cursor-pointer">
             <ToolBarContent>
                 <MudText Typo="Typo.h6">Select database</MudText>
                 <MudSpacer />
-                <MudTextField @bind-Value="searchTerm" Placeholder="Search" Adornment="Adornment.End" AdornmentIcon="@Icons.Filled.Search" IconSize="Size.Medium" Class="mt-0" Immediate="true"></MudTextField>
+                <MudTextField @bind-Value="searchString" Placeholder="Search by name" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentIcon="@Icons.Filled.Search" IconSize="Size.Medium" AdornmentColor="Color.Info" Class="mt-0" Immediate="true" Clearable="true"></MudTextField>
             </ToolBarContent>
             <HeaderContent>
                 <MudTh>Name</MudTh>
@@ -38,7 +38,7 @@
             </HeaderContent>
             <RowTemplate>
                 <MudTd DataLabel="Name">
-                    <MudHighlighter Text="@context" HighlightedText="@searchTerm" />
+                    <MudHighlighter Text="@context" HighlightedText="@searchString" />
                 </MudTd>
                 <MudTd></MudTd>
             </RowTemplate>
@@ -49,7 +49,7 @@
 @code {
     private string server = null;
     private string[] dblist = null;
-    private string searchTerm = "";
+    private string searchString = "";
 
     protected override async Task OnInitializedAsync()
     {
@@ -61,7 +61,7 @@
         }
     }
 
-    private IEnumerable<String> GetFiltered() => dblist.Where(db => searchTerm == "" || db.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+    private IEnumerable<String> GetFiltered() => dblist.Where(db => searchString == "" || db.Contains(searchString, StringComparison.OrdinalIgnoreCase));
 
     private string SelectedRowClassFunc(string db, int rowNumber)
     {

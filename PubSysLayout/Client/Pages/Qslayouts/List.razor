@@ -55,8 +55,8 @@ else
             </HeaderContent>
             <RowTemplate>
                 <MudTd DataLabel="ID">@context.IdQslayout</MudTd>
-                <MudTd DataLabel="Name">@context.Name</MudTd>
-                <MudTd DataLabel="QS param">@context.ParamString</MudTd>
+                <MudTd DataLabel="Name"><MudHighlighter Text="@context.Name" HighlightedText="@searchString" /></MudTd>
+                <MudTd DataLabel="QS param"><MudHighlighter Text="@context.ParamString" HighlightedText="@searchString" /></MudTd>
                 <MudTd DataLabel="Priority">@context.Priority</MudTd>
                 <MudTd DataLabel="Public"><MudIcon Icon="@(@context.Public ? Icons.Material.Filled.CheckBox : Icons.Material.Filled.CheckBoxOutlineBlank)" Size="Size.Small" Class="mr-3 mb-n1"/></MudTd>
                 <MudTd DataLabel="">
@@ -216,7 +216,7 @@ else
             yesText: "Delete!", cancelText: "Cancel") != null))
         {
             await Http.DeleteAsync($"api/qslayouts/{idQslayout}");
-            snackBar.Add($"QS action {idQslayout} deleted.", Severity.Success);
+            snackBar.Add($"QS action {idQslayout} deleted", Severity.Success);
             await LoadData();
         }
     }

@@ -52,8 +52,8 @@ else
             </HeaderContent>
             <RowTemplate>
                 <MudTd DataLabel="ID">@context.IdModule</MudTd>
-                <MudTd DataLabel="Name">@context.Name</MudTd>
-                <MudTd DataLabel="Path">@context.DesktopSrc</MudTd>
+                <MudTd DataLabel="Name"><MudHighlighter Text="@context.Name" HighlightedText="@searchString" /></MudTd>
+                <MudTd DataLabel="Path"><MudHighlighter Text="@context.DesktopSrc" HighlightedText="@searchString" /></MudTd>
                 <MudTd DataLabel="Active"><MudIcon Icon="@(@context.Active ? Icons.Material.Filled.CheckBox : Icons.Material.Filled.CheckBoxOutlineBlank)" Size="Size.Small" Class="mr-3 mb-n1"/></MudTd>
                 <MudTd DataLabel="Cache key">@context.Qskey</MudTd>
                 <MudTd DataLabel="">
@@ -272,7 +272,7 @@ else
             yesText: "Delete!", cancelText: "Cancel") != null))
         {
             await Http.DeleteAsync($"api/modules/{m.IdModule}");
-            snackBar.Add($"Module {m.IdModule} deleted.", Severity.Success);
+            snackBar.Add($"Module {m.IdModule} deleted", Severity.Success);
             await LoadData();
         }
     }

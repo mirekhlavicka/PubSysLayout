@@ -94,7 +94,7 @@
         changeFromMe = false;
         await localStorage.SetAsync("currentDB", currentDB.Current);
         Reload(true);
-        snackBar.Add($"Layout database {s} selected.", Severity.Info);
+        snackBar.Add($"Layout database {s} selected", Severity.Info);
     }
 
     private async void CurrentDBChanged()

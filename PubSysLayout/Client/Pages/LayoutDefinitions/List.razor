@@ -44,7 +44,7 @@ else
             </HeaderContent>
             <RowTemplate>
                 <MudTd DataLabel="ID">@context.IdLayoutdefinition</MudTd>
-                <MudTd DataLabel="Name">@context.Name</MudTd>
+                <MudTd DataLabel="Name"><MudHighlighter Text="@context.Name" HighlightedText="@searchString" /></MudTd>
                 <MudTd DataLabel="Layout">@layouts[context.IdLayout]</MudTd>
                 <MudTd DataLabel="Layout">@(styles.ContainsKey(context.IdStyle)?styles[context.IdStyle]:"(not selected)")</MudTd>
                 <MudTd DataLabel="">
@@ -95,7 +95,7 @@ else
             yesText: "Delete!", cancelText: "Cancel") != null))
         {
             await Http.DeleteAsync($"api/layoutdefinitions/{idLayoutdefinition}");
-            snackBar.Add($"LayoutDefinition {idLayoutdefinition} deleted.", Severity.Success);
+            snackBar.Add($"LayoutDefinition {idLayoutdefinition} deleted", Severity.Success);
             await LoadData();
         }
     }

@@ -3,6 +3,7 @@
 @inject NavigationManager uriHelper
 @inject MudBlazor.ISnackbar snackBar
 @inject IDialogService DialogService
+@inject Clipboard clipboard
 @using PubSysLayout.Shared.Model
 
 <style>
@@ -36,9 +37,17 @@
             <MudTooltip Text="Add new setting">
                 <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-1" OnClick="AddSetting" Disabled="@(newSetting !=null || beforeEditSetting != null)" />
             </MudTooltip>
-            <MudTable @ref="settingsTable" Items="moduleSettings" Hover="true" SortLabel="Sort By" Elevation="0" Class="mt-4" RowsPerPage="0" FixedHeader="true" FixedFooter="true"  Dense="true" Height="500px" RowClassFunc="RowClassFunc"
+            <MudTooltip Text="Copy module settings">
+                <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-1 ml-3" OnClick="@(()=> {clipboard.Content = selectedItems; })" Disabled="@(selectedItems?.Count == 0 || newSetting !=null || beforeEditSetting != null)"/>
+            </MudTooltip>
+            <MudTooltip Text="Paste module settings">
+                <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.ContentPaste" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-1 ml-3" OnClick="@(()=> {PasteSettings(clipboard.Content as HashSet<ModuleSetting>); clipboard.Content = null; })" Disabled="@(!(clipboard.Content is HashSet<ModuleSetting>) || newSetting !=null || beforeEditSetting != null)"/>
+            </MudTooltip>
+            <MudTable @ref="settingsTable" Items="moduleSettings" Hover="true" SortLabel="Sort By" Elevation="0" Class="mt-4" RowsPerPage="0" FixedHeader="true" FixedFooter="true"  Dense="true" Height="500px" RowClassFunc="RowClassFunc" 
+                MultiSelection="true" @bind-SelectedItems="selectedItems" 
                 CommitEditTooltip="Commit Edit" CancelEditTooltip="Cancel Edit" RowEditPreview="Backup" RowEditCancel="ResetEdit" RowEditCommit="Committed" CanCancelEdit="true" IsEditRowSwitchingBlocked="true" OnRowClick="RowClicked" T="ModuleSetting">
                 <ColGroup>
+                    <col style="width:80px;" />
                     <col style="width:250px;" />
                     <col />
                     <col style="width:120px;" />
@@ -87,6 +96,8 @@
     private ModuleSetting newSetting = null;
 
     MudTable<ModuleSetting> settingsTable;
+
+    private HashSet<ModuleSetting> selectedItems = new HashSet<ModuleSetting>();
 
     protected async override Task OnInitializedAsync()
     {
@@ -184,7 +195,7 @@
             yesText: "Delete!", cancelText: "Cancel") != null))
         {
             await Http.DeleteAsync($"api/modulesettings/{ms.IdSetting}");
-            snackBar.Add($"Setting {ms.SettingName} deleted.", Severity.Success);
+            snackBar.Add($"Setting {ms.SettingName} deleted", Severity.Success);
             await LoadData();
         }
     }
@@ -225,5 +236,20 @@
     {
         await Task.Delay(300);
         await js.InvokeVoidAsync("focusAt", p.MouseEventArgs.ClientX, p.MouseEventArgs.ClientY + 5);
+    }
+
+    private void PasteSettings(HashSet<ModuleSetting> settings)
+    {
+        foreach (ModuleSetting ms in settings)
+        {
+            moduleSettings.Add(
+            new ModuleSetting
+            {
+                IdModule = IdModule,
+                IdModuleusage = IdModuleUsage,
+                SettingName = ms.SettingName,
+                SettingValue  = ms.SettingValue
+            });
+        }
     }
 }

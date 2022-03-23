@@ -236,7 +236,7 @@ else
             uriHelper.NavigateTo($"layoutdefinitions/edit/{ld.IdLayoutdefinition}");
         }
 
-        snackBar.Add($"LayoutDefinition {layoutDefinition.Name} saved.", Severity.Success);
+        snackBar.Add($"LayoutDefinition {layoutDefinition.Name} saved", Severity.Success);
         canSave = false;
     }
 
@@ -344,7 +344,7 @@ else
             //var mu = layoutDefinition.ModuleUsages.First(x => x.IdModuleusage == IdModuleusage);
             layoutDefinition.ModuleUsages.Remove(mu);
             await Http.DeleteAsync($"api/moduleusages/{mu.IdModuleusage}");
-            snackBar.Add($"ModuleUsage {mu.IdModuleusage} deleted.", Severity.Success);
+            snackBar.Add($"ModuleUsage {mu.IdModuleusage} deleted", Severity.Success);
         }
     }
 
