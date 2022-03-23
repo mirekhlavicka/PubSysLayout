@@ -309,8 +309,19 @@ else
     }
 
     private async Task<Section> GetSection(int id)
-    {        
-        return await Http.GetFromJsonAsync<Section>($"api/dblist/section/{id}");
+    {
+        try
+        {
+            return await Http.GetFromJsonAsync<Section>($"api/dblist/section/{id}");
+        }
+        catch
+        {
+            return new Section
+            {
+                IdSection = id,
+                Name = "!Invalid ID"
+            };
+        }
     }
 
     private async Task<IEnumerable<Section>> SearchSection(string value)
