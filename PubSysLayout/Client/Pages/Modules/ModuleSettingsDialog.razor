@@ -40,7 +40,7 @@
             <MudTooltip Text="Copy selected settings">
                 <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-1 ml-3" OnClick="@(()=> {clipboard.Content = selectedItems; })" Disabled="@(selectedItems?.Count == 0 || newSetting !=null || beforeEditSetting != null)"/>
             </MudTooltip>
-            <MudTooltip Text="Paste module settings">
+            <MudTooltip Text="Paste settings">
                 <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.ContentPaste" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-1 ml-3" OnClick="PasteSettings" Disabled="@(!(clipboard.Content is HashSet<ModuleSetting>) || newSetting !=null || beforeEditSetting != null)"/>
             </MudTooltip>
             <MudTooltip Text="Delete selected settings">
@@ -83,7 +83,7 @@
         }
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Close" Color="Color.Primary">Close</MudButton>
+        <MudButton OnClick="Close" Color="Color.Default" Variant="Variant.Filled">Close</MudButton>
     </DialogActions>
 </MudDialog>
 

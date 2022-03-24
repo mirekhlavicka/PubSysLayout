@@ -5,6 +5,7 @@
 @inject NavigationManager uriHelper
 @inject IDialogService DialogService
 @inject CurrentDB currentDB
+@inject Clipboard clipboard
 @using PubSysLayout.Shared.Model
 
 <PageTitle>@currentDB.Current – Layout definitions</PageTitle>
@@ -19,20 +20,26 @@ else
         <MudTooltip Text="Add new layout definition">
             <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Link="layoutdefinitions/edit/0" Class="mt-0 mb-5" />
         </MudTooltip>
+        <MudTooltip Text="Add module to selected layout definitions">
+            <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.LibraryAdd" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5 ml-3" OnClick="OpenAddModuleDialog" Disabled="@(selectedItems?.Count == 0)"/>
+        </MudTooltip>
         <MudTable Items="layoutDefinitions" Hover="true" SortLabel="Sort By" AllowUnsorted="false" Elevation="5" RowsPerPage="0" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 250px)"  Dense="true" 
+            MultiSelection="true" @bind-SelectedItems="selectedItems"
             Filter="new Func<LayoutDefinition,bool>(FilterFunc)" OnRowClick="RowClicked" RowClass="cursor-pointer" Virtualize="true" T="LayoutDefinition">
             <ToolBarContent>
                 <MudText Typo="Typo.h6">Layout definitions</MudText>
                 <MudSpacer />
-                <MudSwitch Label="Hide unused" Color="Color.Info" Checked="@hideUnused" CheckedChanged="@(async (bool b) => {hideUnused = b; await LoadData();})" />
+                <MudSwitch Label="Hide unassigned" Color="Color.Info" Checked="@hideUnused" CheckedChanged="@(async (bool b) => {hideUnused = b; await LoadData();})" />
                 <MudSpacer />
                 <MudTextField DebounceInterval="500" @bind-Value="searchString" Placeholder="Search by name or ID" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true" ></MudTextField>
             </ToolBarContent>
             <ColGroup>
+                <col style="width:80px;" />
                 <col style="width:100px;" />
                 <col />
-                <col style="width:30%;" />
-                <col style="width:30%;" />
+                <col style="width:20%;" />
+                <col style="width:20%;" />
+                <col style="width:100px;" />
                 <col style="width:100px;"/>
             </ColGroup>
             <HeaderContent>
@@ -40,13 +47,15 @@ else
                 <MudTh><MudTableSortLabel SortBy="new Func<LayoutDefinition, object>(x=>x.Name)">Name</MudTableSortLabel></MudTh>
                 <MudTh>Layout</MudTh>
                 <MudTh>Style</MudTh>
+                <MudTh>Assigned</MudTh>
                 <MudTh></MudTh>
             </HeaderContent>
             <RowTemplate>
                 <MudTd DataLabel="ID">@context.IdLayoutdefinition</MudTd>
                 <MudTd DataLabel="Name"><MudHighlighter Text="@context.Name" HighlightedText="@searchString" /></MudTd>
                 <MudTd DataLabel="Layout">@layouts[context.IdLayout]</MudTd>
-                <MudTd DataLabel="Layout">@(styles.ContainsKey(context.IdStyle)?styles[context.IdStyle]:"(not selected)")</MudTd>
+                <MudTd DataLabel="Style">@(styles.ContainsKey(context.IdStyle)?styles[context.IdStyle]:"(not selected)")</MudTd>
+                <MudTd DataLabel="Assigned"><MudIcon Icon="@(@context.LayoutAssigns.Count !=0 ? Icons.Material.Filled.CheckBox : Icons.Material.Filled.CheckBoxOutlineBlank)" Size="Size.Small" Class="mr-3 mb-n1"/></MudTd>
                 <MudTd DataLabel="">
                     <MudTooltip Text="Delete layout definition">
                         <MudIconButton Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>Delete(@context.IdLayoutdefinition))"Size="Size.Small" Variant="Variant.Text" />
@@ -58,14 +67,14 @@ else
 }
 
 @code {
-    //[Inject] private IDialogService DialogService { get; set; }
-
     private LayoutDefinition[] layoutDefinitions;
     private Dictionary<int, string> layouts;
     private Dictionary<int, string> styles;
 
     private string searchString = "";
     private bool hideUnused = true;
+
+    private HashSet<LayoutDefinition> selectedItems = new HashSet<LayoutDefinition>();
 
     protected override async Task OnInitializedAsync()
     {
@@ -97,6 +106,35 @@ else
             await Http.DeleteAsync($"api/layoutdefinitions/{idLayoutdefinition}");
             snackBar.Add($"LayoutDefinition {idLayoutdefinition} deleted", Severity.Success);
             await LoadData();
+        }
+    }
+
+    private async Task  OpenAddModuleDialog()
+    {
+        var options = new DialogOptions { 
+            MaxWidth = MaxWidth.Small, 
+            CloseButton = true
+        };
+
+        var parameters = new DialogParameters();
+        //var parameters = new DialogParameters { /*["server"] = null*/ };
+
+        var dialog = DialogService.Show<LayoutDefinitions.AddModuleDialog>("Add module to selected layout definitions", parameters, options);
+
+        var result = await dialog.Result;
+
+        if (!result.Cancelled)
+        {
+            ModuleUsage mu = result.Data as ModuleUsage;
+
+            foreach (var ld in selectedItems)
+            {
+                mu.IdLayoutdefinition = ld.IdLayoutdefinition;
+                using var response = await Http.PostAsJsonAsync("api/moduleusages", mu);
+                var xmu = await response.Content.ReadFromJsonAsync<ModuleUsage>();
+                //mu.IdModuleusage = xmu.IdModuleusage;
+                snackBar.Add($"Module usage {xmu.IdModuleusage} created", Severity.Success);
+            }
         }
     }
 

@@ -24,7 +24,7 @@ namespace PubSysLayout.Server.Controllers
         [HttpGet]
         public async Task<ActionResult<IEnumerable<LayoutDefinition>>> GetLayoutDefinitions(bool? hideUnused)
         {
-            var res = _context.LayoutDefinitions.AsQueryable();
+            var res = _context.LayoutDefinitions.Include(ld => ld.LayoutAssigns).AsQueryable();
 
             if (hideUnused.HasValue && hideUnused.Value)
             {

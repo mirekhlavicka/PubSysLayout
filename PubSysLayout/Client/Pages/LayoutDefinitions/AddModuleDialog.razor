@@ -1,0 +1,97 @@
+﻿@inject HttpClient Http
+@inject IJSRuntime js
+@inject NavigationManager uriHelper
+@inject MudBlazor.ISnackbar snackBar
+@inject IDialogService DialogService
+@using PubSysLayout.Shared.Model
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.LibraryAdd" Class="mr-3 mb-n1" />
+            @MudDialog.Title
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        @if (modules != null)
+        {
+            <MudForm @ref="form" @bind-IsValid="@canSave">
+                <MudSelect Label="Spot" Dense="true" @bind-Value="@mu.IdSpot" Validation='(int x) => x == 0 ? "Select spot" : null' Required="true" ToStringFunc='(id) => spots.ContainsKey(id) ? spots[id].Name : "(not selected)"' T="int">
+                    <MudSelectItem Value="0">(not selected)</MudSelectItem>
+                    @foreach (var s in spots.Values.OrderBy(s => s.Name))
+                    {
+                        <MudSelectItem Value="@s.IdSpot">@s.Name</MudSelectItem>
+                    }
+                </MudSelect>
+
+                <MudAutocomplete Label="Module" Dense="true" T="Module" SearchFunc="@SearchModule"
+                                 ResetValueOnEmptyText="true" CoerceText="true" CoerceValue="false"
+                                 ToStringFunc='m => $"{m.Name} ({m.IdModule})"' @bind-Value="@mu.IdModuleNavigation" MaxItems="100"
+                                 Validation='(Module x) => x == null ? "Type module name or ID" : null' Required="true" Placeholder="(not selected)"
+                                 AdornmentIcon="@Icons.Material.Filled.Search" AdornmentColor="Color.Default" Clearable="true" spellcheck="false" />
+
+                <MudNumericField Label="Order" Margin="Margin.Dense" @bind-Value="@mu.Order" Required Step="1" />
+
+                <MudNumericField Label="Cache time" Margin="Margin.Dense" @bind-Value="@mu.CacheTime" Required Step="100" />
+            </MudForm>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Filled">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Add" Disabled="@(!canSave)" Variant="Variant.Filled">Add module</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+
+    ModuleUsage mu = new ModuleUsage { };
+
+    Dictionary<int, Spot> spots;
+    Dictionary<int, Module> modules;
+
+    MudForm form;
+    bool canSave = false;
+
+    protected async override Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    protected async Task LoadData()
+    {
+        spots = (await Http.GetFromJsonAsync<Spot[]>("api/spots")).ToDictionary(s => s.IdSpot);
+        modules = (await Http.GetFromJsonAsync<Module[]>("api/modules")).ToDictionary(m => m.IdModule);
+    }
+
+    private async Task<IEnumerable<Module>> SearchModule(string value)
+    {
+        // In real life use an asynchronous function for fetching data from an api.
+        await Task.Delay(5);
+
+        if (string.IsNullOrEmpty(value))
+            return modules.Values.OrderByDescending(m => m.IdModule).Take(10);
+
+        return modules.Values.Where(m => m.Name.Contains(value, StringComparison.OrdinalIgnoreCase) || m.IdModule.ToString() == value).OrderBy(m => m.Name);
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private async void Add()
+    {
+        await form.Validate();
+
+        if (!form.IsValid)
+        {
+            return;
+        }
+
+        mu.IdModule = mu.IdModuleNavigation.IdModule;
+        mu.IdModuleNavigation = null;
+
+        MudDialog.Close(mu);
+    }
+}
