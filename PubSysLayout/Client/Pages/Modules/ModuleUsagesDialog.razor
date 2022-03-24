@@ -23,7 +23,7 @@
             <MudList Clickable="true" SelectedItem="null">
                 @foreach (var mu in moduleUsages)
                 {
-                    <MudListItem Text='@($"({mu.IdModuleusage}) {mu.IdLayoutdefinitionNavigation.Name} - {mu.IdSpotNavigation.Name}")' Icon="@Icons.Material.Filled.ArrowRightAlt" OnClick='() => uriHelper.NavigateTo($"layoutdefinitions/edit/{mu.IdLayoutdefinition}?id_moduleusage={mu.IdModuleusage}")' />
+                    <MudListItem Text='@($"({mu.IdModuleusage}) {mu.IdLayoutdefinitionNavigation.Name}/{mu.IdSpotNavigation.Name}")' Icon="@Icons.Material.Filled.ArrowRightAlt" OnClick='() => uriHelper.NavigateTo($"layoutdefinitions/edit/{mu.IdLayoutdefinition}?id_moduleusage={mu.IdModuleusage}")' />
                 }
             </MudList>
         }

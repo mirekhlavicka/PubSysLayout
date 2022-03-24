@@ -9,7 +9,6 @@
     .selectedDB {
         background-color: #1E88E5 !important;
     }
-
         .selectedDB > td {
             color: white !important;
         }
@@ -17,34 +16,39 @@
 
 <PageTitle>@currentDB.Current – PubSysLayout</PageTitle>
 
-<MudText Typo="Typo.h4" GutterBottom="true">@server</MudText>
-<MudText Typo="Typo.h6" Class="mb-8" Color="Color.Primary"><MudIcon Icon="@Icons.Material.Filled.ArrowRight" Title="Selected database" Style="margin-bottom: -4px;" />@currentDB.Current</MudText>
+<MudGrid>
+    <MudItem xs="3">
 
-@if (dblist != null)
-{
-    <MudContainer MaxWidth="MaxWidth.Small">
-        <MudTable Items="@GetFiltered()" T="String" 
-            OnRowClick='(p) => {currentDB.Current = p.Item; snackBar.Add($"Layout database {p.Item} selected", Severity.Info);}' 
-            RowClassFunc="@SelectedRowClassFunc"
-            Hover="true" Elevation="5" RowsPerPage="0" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 300px)" Dense="true" RowClass="cursor-pointer">
-            <ToolBarContent>
-                <MudText Typo="Typo.h6">Select database</MudText>
-                <MudSpacer />
-                <MudTextField @bind-Value="searchString" Placeholder="Search by name" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentIcon="@Icons.Filled.Search" IconSize="Size.Medium" AdornmentColor="Color.Info" Class="mt-0" Immediate="true" Clearable="true"></MudTextField>
-            </ToolBarContent>
-            <HeaderContent>
-                <MudTh>Name</MudTh>
-                <MudTh></MudTh>
-            </HeaderContent>
-            <RowTemplate>
-                <MudTd DataLabel="Name">
-                    <MudHighlighter Text="@context" HighlightedText="@searchString" />
-                </MudTd>
-                <MudTd></MudTd>
-            </RowTemplate>
-        </MudTable>
-    </MudContainer>
-}
+        <MudText Typo="Typo.h4" GutterBottom="true">@server</MudText>
+        <MudText Typo="Typo.h6" Class="mb-8" Color="Color.Primary"><MudIcon Icon="@Icons.Material.Filled.ArrowRight" Title="Selected database" Style="margin-bottom: -4px;" />@currentDB.Current</MudText>
+    </MudItem>
+    <MudItem xs="9">
+        @if (dblist != null)
+        {
+            <MudTable Items="@GetFiltered()" T="String"
+                  OnRowClick='(p) => {currentDB.Current = p.Item; snackBar.Add($"Layout database {p.Item} selected", Severity.Info);}'
+                  RowClassFunc="@SelectedRowClassFunc"
+                  Hover="true" Elevation="5" RowsPerPage="0" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 220px)" Dense="true" RowClass="cursor-pointer" Class="mt-5" Style="max-width: 500px;">
+                <ToolBarContent>
+                    <MudText Typo="Typo.h6">Select database</MudText>
+                    <MudSpacer />
+                    <MudTextField @bind-Value="searchString" Placeholder="Search by name" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentIcon="@Icons.Filled.Search" IconSize="Size.Medium" AdornmentColor="Color.Info" Class="mt-0" Immediate="true" Clearable="true"></MudTextField>
+                </ToolBarContent>
+                <HeaderContent>
+                    <MudTh>Name</MudTh>
+                    <MudTh></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Name">
+                        <MudHighlighter Text="@context" HighlightedText="@searchString" />
+                    </MudTd>
+                    <MudTd></MudTd>
+                </RowTemplate>
+            </MudTable>
+        }
+    </MudItem>
+</MudGrid>
+
 
 @code {
     private string server = null;

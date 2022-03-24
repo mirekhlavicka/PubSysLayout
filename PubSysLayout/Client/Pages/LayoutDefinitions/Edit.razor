@@ -356,7 +356,7 @@ else
         if (string.IsNullOrEmpty(value))
             return modules.Values.OrderByDescending(m => m.IdModule).Take(10);
 
-        return modules.Values.Where(m => m.Name.Contains(value, StringComparison.InvariantCultureIgnoreCase) || m.IdModule.ToString() == value).OrderBy(m => m.Name);
+        return modules.Values.Where(m => m.Name.Contains(value, StringComparison.OrdinalIgnoreCase) || m.IdModule.ToString() == value).OrderBy(m => m.Name);
     }
 
     private async void CreateCopy()

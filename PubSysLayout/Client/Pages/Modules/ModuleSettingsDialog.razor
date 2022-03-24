@@ -37,11 +37,14 @@
             <MudTooltip Text="Add new setting">
                 <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-1" OnClick="AddSetting" Disabled="@(newSetting !=null || beforeEditSetting != null)" />
             </MudTooltip>
-            <MudTooltip Text="Copy module settings">
+            <MudTooltip Text="Copy selected settings">
                 <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-1 ml-3" OnClick="@(()=> {clipboard.Content = selectedItems; })" Disabled="@(selectedItems?.Count == 0 || newSetting !=null || beforeEditSetting != null)"/>
             </MudTooltip>
             <MudTooltip Text="Paste module settings">
-                <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.ContentPaste" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-1 ml-3" OnClick="@(()=> {PasteSettings(clipboard.Content as HashSet<ModuleSetting>); clipboard.Content = null; })" Disabled="@(!(clipboard.Content is HashSet<ModuleSetting>) || newSetting !=null || beforeEditSetting != null)"/>
+                <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.ContentPaste" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-1 ml-3" OnClick="PasteSettings" Disabled="@(!(clipboard.Content is HashSet<ModuleSetting>) || newSetting !=null || beforeEditSetting != null)"/>
+            </MudTooltip>
+            <MudTooltip Text="Delete selected settings">
+                <MudFab Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-1 ml-3" OnClick="@(()=> DeleteSelectedModuleSetting())" Disabled="@(selectedItems?.Count == 0 || newSetting !=null || beforeEditSetting != null)"/>
             </MudTooltip>
             <MudTable @ref="settingsTable" Items="moduleSettings" Hover="true" SortLabel="Sort By" Elevation="0" Class="mt-4" RowsPerPage="0" FixedHeader="true" FixedFooter="true"  Dense="true" Height="500px" RowClassFunc="RowClassFunc" 
                 MultiSelection="true" @bind-SelectedItems="selectedItems" 
@@ -62,7 +65,7 @@
                     <MudTd DataLabel="Name">@context.SettingName</MudTd>
                     <MudTd DataLabel="Value">@context.SettingValue</MudTd>
                     <MudTd DataLabel="">                            
-                        <MudTooltip Text="Delete setting">
+                        <MudTooltip Text='@(IdModuleUsage != context.IdModuleusage ? "Default setting can't be deleted here" : "Delete setting")'>
                             <MudIconButton Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>DeleteModuleSetting(context))" Color="Color.Secondary" Size="Size.Small" Variant="Variant.Text" Disabled="@(IdModuleUsage != context.IdModuleusage)"></MudIconButton>
                         </MudTooltip>
                     </MudTd>
@@ -200,6 +203,29 @@
         }
     }
 
+    private async Task DeleteSelectedModuleSetting()
+    {
+        if ((await DialogService.ShowMessageBox(
+            "Warning",
+            $"Do you want to delete selected settings  ?",
+            yesText: "Delete!", cancelText: "Cancel") != null))
+        {
+            foreach (var ms in selectedItems)
+            {
+                if (ms.IdModuleusage != IdModuleUsage)
+                {
+                    continue;
+                }
+                await Http.DeleteAsync($"api/modulesettings/{ms.IdSetting}");
+                snackBar.Add($"Setting {ms.SettingName} deleted", Severity.Success);                
+            }
+            selectedItems.Clear();
+            await LoadData();
+            await Task.Delay(300);
+            clipboard.Content = null;
+        }
+    }
+
     private async void AddSetting()
     {
         newSetting = new ModuleSetting
@@ -224,7 +250,7 @@
 
     private string CheckName(string name, ModuleSetting current)
     {
-        if (moduleSettings.Where(ms => ms != current).Any(ms =>  string.Equals(ms.SettingName,name, StringComparison.InvariantCultureIgnoreCase)))
+        if (moduleSettings.Where(ms => ms != current).Any(ms =>  string.Equals(ms.SettingName,name, StringComparison.OrdinalIgnoreCase)))
         {
             return "Setting name already exists";
         }
@@ -238,18 +264,47 @@
         await js.InvokeVoidAsync("focusAt", p.MouseEventArgs.ClientX, p.MouseEventArgs.ClientY + 5);
     }
 
-    private void PasteSettings(HashSet<ModuleSetting> settings)
+    private async void PasteSettings( )
     {
-        foreach (ModuleSetting ms in settings)
+        var settings = clipboard.Content as HashSet<ModuleSetting>;
+
+        if (settings is null || beforeEditSetting != null || newSetting != null)
         {
-            moduleSettings.Add(
-            new ModuleSetting
-            {
-                IdModule = IdModule,
-                IdModuleusage = IdModuleUsage,
-                SettingName = ms.SettingName,
-                SettingValue  = ms.SettingValue
-            });
+            return;
         }
+
+        foreach (ModuleSetting msPaste in settings)
+        {
+            var msEdit = moduleSettings.FirstOrDefault(ms => String.Equals(ms.SettingName, msPaste.SettingName, StringComparison.OrdinalIgnoreCase));
+
+            if (msEdit != null)
+            {
+                if ((await DialogService.ShowMessageBox(
+                    "Warning",
+                    $"Do you want to rewrite setting {msEdit.SettingName} ?",
+                    yesText: "Rewrite!", cancelText: "Cancel") != null))
+                {
+                    msEdit.SettingValue = msPaste.SettingValue;
+                    Committed(msEdit);
+                }
+            }
+            else
+            {
+                var msNew = new ModuleSetting
+                {
+                    IdModule = IdModule,
+                    IdModuleusage = IdModuleUsage,
+                    SettingName = msPaste.SettingName,
+                    SettingValue = msPaste.SettingValue
+                };
+
+                moduleSettings.Add(msNew);
+
+                Committed(msNew);
+            }
+        }
+
+        await Task.Delay(300);
+        clipboard.Content = null;
     }
 }
