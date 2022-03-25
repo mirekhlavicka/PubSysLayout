@@ -33,7 +33,9 @@ else
             <ToolBarContent>
                 <MudText Typo="Typo.h6">Layout definitions</MudText>
                 <MudSpacer />
-                <MudSwitch Label="Hide unassigned" Color="Color.Info" Checked="@hideUnused" CheckedChanged="@(async (bool b) => {hideUnused = b; await LoadData();})" />
+                <MudSwitch Label="Hide unassigned" Color="Color.Info" @bind-Checked="hideUnassigned" />
+                <MudSwitch Label="Hide assigned" Color="Color.Info" @bind-Checked="hideAssigned" />
+                @*Checked="@hideUnused" CheckedChanged="@(async (bool b) => {hideUnused = b; await LoadData();})"*@
                 <MudSpacer />
                 <MudTextField DebounceInterval="500" @bind-Value="searchString" Placeholder="Search by name or ID" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true" ></MudTextField>
             </ToolBarContent>
@@ -77,7 +79,8 @@ else
     private HashSet<int> assignedLayoutDefinitions;
 
     private string searchString = "";
-    private bool hideUnused = true;
+    private bool hideUnassigned = true;
+    private bool hideAssigned = false;
 
     private HashSet<LayoutDefinition> selectedItems = new HashSet<LayoutDefinition>();
 
@@ -99,7 +102,8 @@ else
 
     protected async Task LoadData()
     {
-        layoutDefinitions = await Http.GetFromJsonAsync<LayoutDefinition[]>($"api/layoutdefinitions?hideUnused={hideUnused}");
+        mudTable?.Context?.Rows?.Clear();
+        layoutDefinitions = await Http.GetFromJsonAsync<LayoutDefinition[]>($"api/layoutdefinitions?hideUnused={/*hideUnused*/false}");
         selectedItems.Clear();
     }
 
@@ -149,6 +153,16 @@ else
 
     private bool FilterFunc(LayoutDefinition ld)
     {
+        if (hideUnassigned && !assignedLayoutDefinitions.Contains(ld.IdLayoutdefinition))
+        {
+            return false;
+        }
+
+        if (hideAssigned && assignedLayoutDefinitions.Contains(ld.IdLayoutdefinition))
+        {
+            return false;
+        }
+
         if (string.IsNullOrWhiteSpace(searchString))
             return true;
 

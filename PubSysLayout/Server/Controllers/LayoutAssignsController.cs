@@ -171,5 +171,13 @@ namespace PubSysLayout.Server.Controllers
 
             return res;
         }
+
+        [HttpGet("qslayouts")]
+        public async Task<ActionResult<int[]>> GetQSLayous()
+        {
+            var res = await _context.LayoutAssigns.Select(la => la.IdQslayout).Distinct().ToArrayAsync();
+
+            return res;
+        }
     }
 }

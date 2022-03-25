@@ -32,7 +32,11 @@ else
             <ToolBarContent>
                 <MudText Typo="Typo.h6">QS actions</MudText>
                 <MudSpacer />
-                <MudSwitch Label="Hide unused" Color="Color.Info" Checked="@hideUnused" CheckedChanged="@(async (bool b) => {hideUnused = b; await LoadData();})" Disabled="@(newQS !=null || beforeEditQS != null)" />
+@*                <MudSwitch Label="Hide unused" Color="Color.Info" Checked="@hideUnassigned" CheckedChanged="@(async (bool b) => {hideUnassigned = b; await LoadData();})" Disabled="@(newQS !=null || beforeEditQS != null)" />
+*@
+                <MudSwitch Label="Hide unassigned" Color="Color.Info" @bind-Checked="hideUnassigned" Disabled="@(newQS !=null || beforeEditQS != null)"/>
+                <MudSwitch Label="Hide assigned" Color="Color.Info" @bind-Checked="hideAssigned" Disabled="@(newQS !=null || beforeEditQS != null)"/>
+
                 <MudSpacer />
                 <MudTextField DebounceInterval="500" @bind-Value="searchString" Placeholder="Search by name, QS param or ID" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true" ></MudTextField>
             </ToolBarContent>
@@ -40,6 +44,7 @@ else
                 <col style="width:100px;" />
                 <col style="width:30%;" />
                 <col  />
+                <col style="width:100px;" />
                 <col style="width:100px;" />
                 <col style="width:100px;" />
                 <col style="width:130px;" />
@@ -51,6 +56,7 @@ else
                 <MudTh>QS param</MudTh>
                 <MudTh><MudTableSortLabel SortBy='new Func<Qslayout, object>(x => x.Priority)'>Priority</MudTableSortLabel></MudTh>
                 <MudTh>Public</MudTh>
+                <MudTh>Assigned</MudTh>
                 <MudTh></MudTh>
             </HeaderContent>
             <RowTemplate>
@@ -59,6 +65,7 @@ else
                 <MudTd DataLabel="QS param"><MudHighlighter Text="@context.ParamString" HighlightedText="@searchString" /></MudTd>
                 <MudTd DataLabel="Priority">@context.Priority</MudTd>
                 <MudTd DataLabel="Public"><MudIcon Icon="@(@context.Public ? Icons.Material.Filled.CheckBox : Icons.Material.Filled.CheckBoxOutlineBlank)" Size="Size.Small" Class="mr-3 mb-n1"/></MudTd>
+                <MudTd DataLabel="Assigned"><MudIcon Icon="@(assignedQSLayouts.Contains(context.IdQslayout) ? Icons.Material.Filled.CheckBox : Icons.Material.Filled.CheckBoxOutlineBlank)" Size="Size.Small" Class="mr-3 mb-n1"/></MudTd>
                 <MudTd DataLabel="">
                     <MudTooltip Text="Assign action to layout">
                         <MudIconButton Icon="@Icons.Material.Filled.ElectricalServices" @onclick="@(()=>OpenLayoutAssignsDialog(@context))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text"></MudIconButton>
@@ -84,7 +91,8 @@ else
                 </MudTd>
                 <MudTd DataLabel="Public">
                     <MudCheckBox @bind-Checked="@context.Public"></MudCheckBox>
-                    </MudTd>
+                </MudTd>
+                <MudTd />
             </RowEditingTemplate>
 
         </MudTable>
@@ -94,9 +102,11 @@ else
 @code {
 
     private List<Qslayout> qslayouts;
+    private HashSet<int> assignedQSLayouts;
 
     private string searchString = "";
-    private bool hideUnused = true;
+    private bool hideUnassigned = true;
+    private bool hideAssigned = false;
 
     private Qslayout beforeEditQS = null;
     private Qslayout newQS = null;
@@ -116,7 +126,8 @@ else
 
     protected async Task LoadData()
     {
-        qslayouts = await Http.GetFromJsonAsync<List<Qslayout>>($"api/qslayouts?hideUnused={hideUnused}");
+        assignedQSLayouts = (await Http.GetFromJsonAsync<int[]>("api/layoutassigns/qslayouts")).ToHashSet();
+        qslayouts = await Http.GetFromJsonAsync<List<Qslayout>>($"api/qslayouts?hideUnused={/*hideUnassigned*/false}");
     }
 
     private void Backup(object element)
@@ -223,6 +234,16 @@ else
 
     private bool FilterFunc(Qslayout q)
     {
+        if (hideUnassigned && !assignedQSLayouts.Contains(q.IdQslayout))
+        {
+            return false;
+        }
+
+        if (hideAssigned && assignedQSLayouts.Contains(q.IdQslayout))
+        {
+            return false;
+        }
+
         if (string.IsNullOrWhiteSpace(searchString))
             return true;
 
@@ -241,7 +262,7 @@ else
         await js.InvokeVoidAsync("focusAt", p.MouseEventArgs.ClientX, p.MouseEventArgs.ClientY + 5);
     }
 
-    private void OpenLayoutAssignsDialog(Qslayout qs)
+    private async void OpenLayoutAssignsDialog(Qslayout qs)
     {
         var options = new DialogOptions { 
             MaxWidth = MaxWidth.Medium, 
@@ -252,6 +273,15 @@ else
 
         parameters.Add("IdQslayout", qs.IdQslayout);
 
-        DialogService.Show<LayoutAssigns.LayoutAssignsDialog>($"Assign action {qs.Name} to layout definitions", parameters, options);
+        var dialog = DialogService.Show<LayoutAssigns.LayoutAssignsDialog>($"Assign action {qs.Name} to layout definitions", parameters, options);
+
+        var result = await dialog.Result;
+
+        assignedQSLayouts = (await Http.GetFromJsonAsync<int[]>("api/layoutassigns/qslayouts")).ToHashSet();
+
+        await InvokeAsync(() =>
+        {
+            StateHasChanged();
+        });
     }
 }
