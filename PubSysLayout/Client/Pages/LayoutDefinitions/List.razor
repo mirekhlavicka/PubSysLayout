@@ -22,8 +22,12 @@ else
         </MudTooltip>
         <MudTooltip Text="Add module to selected layout definitions">
             <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.LibraryAdd" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5 ml-3" OnClick="OpenAddModuleDialog" Disabled="@(selectedItems?.Count == 0)"/>
+@*
+            @selectedItems.Count
+            @mudTable?.Context?.Rows.Count
+*@
         </MudTooltip>
-        <MudTable Items="layoutDefinitions" Hover="true" SortLabel="Sort By" AllowUnsorted="false" Elevation="5" RowsPerPage="0" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 250px)"  Dense="true" 
+        <MudTable @ref="mudTable" Items="layoutDefinitions" Hover="true" SortLabel="Sort By" AllowUnsorted="false" Elevation="5" RowsPerPage="0" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 250px)"  Dense="true" 
             MultiSelection="true" @bind-SelectedItems="selectedItems"
             Filter="new Func<LayoutDefinition,bool>(FilterFunc)" OnRowClick="RowClicked" RowClass="cursor-pointer" Virtualize="true" T="LayoutDefinition">
             <ToolBarContent>
@@ -55,7 +59,7 @@ else
                 <MudTd DataLabel="Name"><MudHighlighter Text="@context.Name" HighlightedText="@searchString" /></MudTd>
                 <MudTd DataLabel="Layout">@layouts[context.IdLayout]</MudTd>
                 <MudTd DataLabel="Style">@(styles.ContainsKey(context.IdStyle)?styles[context.IdStyle]:"(not selected)")</MudTd>
-                <MudTd DataLabel="Assigned"><MudIcon Icon="@(@context.LayoutAssigns.Count !=0 ? Icons.Material.Filled.CheckBox : Icons.Material.Filled.CheckBoxOutlineBlank)" Size="Size.Small" Class="mr-3 mb-n1"/></MudTd>
+                <MudTd DataLabel="Assigned"><MudIcon Icon="@(assignedLayoutDefinitions.Contains(context.IdLayoutdefinition) ? Icons.Material.Filled.CheckBox : Icons.Material.Filled.CheckBoxOutlineBlank)" Size="Size.Small" Class="mr-3 mb-n1"/></MudTd>
                 <MudTd DataLabel="">
                     <MudTooltip Text="Delete layout definition">
                         <MudIconButton Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>Delete(@context.IdLayoutdefinition))"Size="Size.Small" Variant="Variant.Text" />
@@ -70,11 +74,14 @@ else
     private LayoutDefinition[] layoutDefinitions;
     private Dictionary<int, string> layouts;
     private Dictionary<int, string> styles;
+    private HashSet<int> assignedLayoutDefinitions;
 
     private string searchString = "";
     private bool hideUnused = true;
 
     private HashSet<LayoutDefinition> selectedItems = new HashSet<LayoutDefinition>();
+
+    MudTable<LayoutDefinition> mudTable;
 
     protected override async Task OnInitializedAsync()
     {
@@ -85,6 +92,7 @@ else
 
         layouts = (await Http.GetFromJsonAsync<LayoutDefinition[]>("api/layouts")).ToDictionary(l => l.IdLayout, l => l.Name);
         styles = (await Http.GetFromJsonAsync<Style[]>("api/styles")).ToDictionary(s => s.IdStyle, s => s.Name);
+        assignedLayoutDefinitions = (await Http.GetFromJsonAsync<int[]>("api/layoutassigns/layoutdefinitions")).ToHashSet();
 
         await LoadData();
     }
@@ -92,6 +100,7 @@ else
     protected async Task LoadData()
     {
         layoutDefinitions = await Http.GetFromJsonAsync<LayoutDefinition[]>($"api/layoutdefinitions?hideUnused={hideUnused}");
+        selectedItems.Clear();
     }
 
     async Task Delete(int idLayoutdefinition)
@@ -149,7 +158,7 @@ else
         if(ld.IdLayoutdefinition.ToString() == searchString)
             return true;
 
-        return false;
+        return false;        
     }
 
     private void RowClicked(TableRowClickEventArgs<LayoutDefinition> p)

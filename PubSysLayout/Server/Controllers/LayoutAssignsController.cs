@@ -163,5 +163,13 @@ namespace PubSysLayout.Server.Controllers
         {
             return _context.LayoutAssigns.Any(e => e.IdServer == id_server && e.IdSection == id_section && e.IdQslayout == id_qslayout);
         }
+
+        [HttpGet("layoutdefinitions")]
+        public async Task<ActionResult<int[]>> GetLayoutDefinitions()
+        {
+            var res = await _context.LayoutAssigns.Select(la => la.IdLayoutdefinition).Distinct().ToArrayAsync();
+
+            return res;
+        }
     }
 }

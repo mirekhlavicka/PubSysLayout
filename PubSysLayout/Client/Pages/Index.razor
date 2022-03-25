@@ -18,9 +18,15 @@
 
 <MudGrid>
     <MudItem xs="3">
-
-        <MudText Typo="Typo.h4" GutterBottom="true">@server</MudText>
-        <MudText Typo="Typo.h6" Class="mb-8" Color="Color.Primary"><MudIcon Icon="@Icons.Material.Filled.ArrowRight" Title="Selected database" Style="margin-bottom: -4px;" />@currentDB.Current</MudText>
+        @if (String.IsNullOrEmpty(server))
+        {
+            <MudProgressCircular Color="Color.Default" Indeterminate="true" />
+        }
+        else
+        {
+            <MudText Typo="Typo.h4" GutterBottom="true">@server</MudText>
+            <MudText Typo="Typo.h6" Class="mb-8" Color="Color.Primary"><MudIcon Icon="@Icons.Material.Filled.ArrowRight" Title="Selected database" Style="margin-bottom: -4px;" />@currentDB.Current</MudText>
+        }
     </MudItem>
     <MudItem xs="9">
         @if (dblist != null)
