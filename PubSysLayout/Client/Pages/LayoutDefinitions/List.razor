@@ -16,11 +16,11 @@
 }
 else
 {
-    @selectedItems.Count
+@*    @selectedItems.Count
     <br />
     @mudTable?.Context?.Rows.Count
     <br />
-    @backupRows?.Count<br />
+    @backupRows?.Count<br />*@
     <MudContainer MaxWidth="MaxWidth.Large">
         <MudTooltip Text="Add new layout definition">
             <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Link="layoutdefinitions/edit/0" Class="mt-0 mb-5" />
@@ -28,7 +28,7 @@ else
         <MudTooltip Text="Add module to selected layout definitions">
             <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.LibraryAdd" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5 ml-3" OnClick="OpenAddModuleDialog" Disabled="@(selectedItems?.Count == 0)"/>
         </MudTooltip>
-        <MudTable @ref="mudTable" Items="layoutDefinitions" Hover="true" SortLabel="Sort By" AllowUnsorted="false" Elevation="5" RowsPerPage="0" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 250px)"  Dense="true" 
+        <MudTableFix @ref="mudTable" Items="layoutDefinitions" Hover="true" SortLabel="Sort By" AllowUnsorted="false" Elevation="5" RowsPerPage="0" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 250px)"  Dense="true" 
             MultiSelection="true" @bind-SelectedItems="selectedItems"
             Filter="new Func<LayoutDefinition,bool>(FilterFunc)" OnRowClick="RowClicked" RowClass="cursor-pointer" Virtualize="true" T="LayoutDefinition">
             <ToolBarContent>
@@ -69,7 +69,7 @@ else
                     </MudTooltip>
                 </MudTd>
             </RowTemplate>
-        </MudTable>
+        </MudTableFix>
     </MudContainer>
 }
 
@@ -101,46 +101,46 @@ else
         await LoadData();
     }
 
-    Dictionary<LayoutDefinition, MudTr> backupRows = new Dictionary<LayoutDefinition, MudTr>();
-    //protected override void OnAfterRender(bool firstRender)
-    protected override async Task OnAfterRenderAsync(bool firstRender)
-    {
-        await base.OnAfterRenderAsync(firstRender);
+    //Dictionary<LayoutDefinition, MudTr> backupRows = new Dictionary<LayoutDefinition, MudTr>();
+    ////protected override void OnAfterRender(bool firstRender)
+    //protected override async Task OnAfterRenderAsync(bool firstRender)
+    //{
+    //    await base.OnAfterRenderAsync(firstRender);
 
-        await Task.Delay(300);
+    //    await Task.Delay(300);
 
-        if (mudTable?.Context?.Rows != null)
-        {
-            foreach (var k in mudTable?.Context?.Rows?.Keys)
-            {
-                /*if (!backupRows.ContainsKey(k) && mudTable.Context.Rows[k] != null)
-                    {
-                    backupRows.Add(k, mudTable.Context.Rows[k]);
-                }*/
-                if (mudTable.Context.Rows[k] != null)
-                {
-                    backupRows[k] = mudTable.Context.Rows[k];
-                }                
-            }
-            Console.WriteLine(backupRows.Count);
+    //    if (mudTable?.Context?.Rows != null)
+    //    {
+    //        foreach (var k in mudTable?.Context?.Rows?.Keys)
+    //        {
+    //            /*if (!backupRows.ContainsKey(k) && mudTable.Context.Rows[k] != null)
+    //                {
+    //                backupRows.Add(k, mudTable.Context.Rows[k]);
+    //            }*/
+    //            if (mudTable.Context.Rows[k] != null)
+    //            {
+    //                backupRows[k] = mudTable.Context.Rows[k];
+    //            }                
+    //        }
+    //        Console.WriteLine(backupRows.Count);
 
-            bool added = false;
-            foreach (var k in backupRows.Keys)
-            {
-                if (!mudTable.Context.Rows.ContainsKey(k))
-                {
-                    mudTable.Context.Rows.Add(k, backupRows[k]);
-                    added = true;
-                    Console.WriteLine(backupRows[k].IsChecked);
-                }
-            }
-            if (added)
-            {
-                await InvokeAsync(() =>
-               mudTable.Context.UpdateRowCheckBoxes());
-            }
-        }
-    }    
+    //        bool added = false;
+    //        foreach (var k in backupRows.Keys)
+    //        {
+    //            if (!mudTable.Context.Rows.ContainsKey(k))
+    //            {
+    //                mudTable.Context.Rows.Add(k, backupRows[k]);
+    //                added = true;
+    //                Console.WriteLine(backupRows[k].IsChecked);
+    //            }
+    //        }
+    //        if (added)
+    //        {
+    //            await InvokeAsync(() =>
+    //           mudTable.Context.UpdateRowCheckBoxes());
+    //        }
+    //    }
+    //}    
 
     protected async Task LoadData()
     {
