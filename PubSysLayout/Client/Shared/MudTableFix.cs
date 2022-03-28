@@ -11,40 +11,23 @@ using MudBlazor.Extensions;
 namespace MudBlazor
 {
     public class MudTableFix<T> : MudTable<T>
-    {       
-        public override TableContext TableContext
+    {
+        public MudTableFix()
         {
-            get
-            {
-                if (ContextFix == null)
-                {
-                    ContextFix = new TableContextFix<T>();
-                    _getBackingField(this, "Context").SetValue(this, ContextFix);
-                }
-
-                Context.Table = this;
-                Context.TableStateHasChanged = this.StateHasChanged;
-
-                return ContextFix;
-            }
-        }
-
-        private TableContextFix<T> ContextFix  = null; // new TableContextFix<T>();
-
-        private string _getBackingFieldName(string propertyName)
-        {
-            return string.Format("<{0}>k__BackingField", propertyName);
-        }
-
-        private FieldInfo _getBackingField(object obj, string propertyName)
-        {
-
-            return obj.GetType().BaseType.GetField(_getBackingFieldName(propertyName), BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+            this.GetType().BaseType
+                .GetField("<Context>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic )
+                .SetValue(this, new TableContextFix<T>());
         }
     }
 
     public class TableContextFix<T> : TableContext<T>
     {        
-        public override void Remove(MudTr row, object item) {  }
+        public override void Remove(MudTr row, object item) 
+        {
+            if (this.Table != null && this.Table is MudTable<T> && !(this.Table as MudTable<T>).Items.Contains(item.As<T>()))
+            {
+                base.Remove(row, item);
+            }
+        }
     }
 }

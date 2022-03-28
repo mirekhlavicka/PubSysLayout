@@ -106,6 +106,14 @@ namespace PubSysLayout.Server.Controllers
             return NoContent();
         }
 
+        [HttpGet("modules")]
+        public async Task<ActionResult<int[]>> GetModules()
+        {
+            var res = await _context.ModuleUsages.Select(mu => mu.IdModule).Distinct().ToArrayAsync();
+
+            return res;
+        }
+
         private bool ModuleUsageExists(int id)
         {
             return _context.ModuleUsages.Any(e => e.IdModuleusage == id);

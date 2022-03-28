@@ -29,9 +29,11 @@ else
             <ToolBarContent>
                 <MudText Typo="Typo.h6">Modules</MudText>
                 <MudSpacer />
-                <MudSwitch Label="Hide unused" Color="Color.Info" Checked="@hideUnused" CheckedChanged="@(async (bool b) => {hideUnused = b; await LoadData();})" Disabled="@(newModule !=null || beforeEditModule != null)" />
+                    @*<MudSwitch Label="Hide unused" Color="Color.Info" Checked="@hideUnused" CheckedChanged="@(async (bool b) => {hideUnused = b; await LoadData();})" Disabled="@(newModule !=null || beforeEditModule != null)" />*@                
+                    <MudSwitch Label="Hide unused" Color="Color.Info" @bind-Checked="hideUnused" Disabled="@(newModule !=null || beforeEditModule != null)"/>
+                    <MudSwitch Label="Hide used" Color="Color.Info" @bind-Checked="hideUsed" Disabled="@(newModule !=null || beforeEditModule != null)"/>
                 <MudSpacer />
-                <MudTextField DebounceInterval="500" @bind-Value="searchString" Placeholder="Search by name, path or ID" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true" ></MudTextField>
+                <MudTextField DebounceInterval="300" @bind-Value="searchString" Placeholder="Search by name, path or ID" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true" ></MudTextField>
             </ToolBarContent>
             <ColGroup>
                 <col style="width:100px;" />
@@ -39,6 +41,7 @@ else
                 <col />
                 <col style="width:150px;" />
                 <col style="width:20%;" />
+                <col style="width:100px;" />
                 <col style="width:180px;"/>
                 <col style="width:0px;"/>
             </ColGroup>
@@ -48,6 +51,7 @@ else
                 <MudTh>Path</MudTh>
                 <MudTh>Active</MudTh>
                 <MudTh>Cache key</MudTh>
+                <MudTh>Used</MudTh>
                 <MudTh/>
             </HeaderContent>
             <RowTemplate>
@@ -56,6 +60,7 @@ else
                 <MudTd DataLabel="Path"><MudHighlighter Text="@context.DesktopSrc" HighlightedText="@searchString" /></MudTd>
                 <MudTd DataLabel="Active"><MudIcon Icon="@(@context.Active ? Icons.Material.Filled.CheckBox : Icons.Material.Filled.CheckBoxOutlineBlank)" Size="Size.Small" Class="mr-3 mb-n1"/></MudTd>
                 <MudTd DataLabel="Cache key">@context.Qskey</MudTd>
+                <MudTd DataLabel="Used"><MudIcon Icon="@(usedModules.Contains(context.IdModule ) ? Icons.Material.Outlined.CheckCircle : Icons.Material.Outlined.Circle)" Size="Size.Small" Class="mr-3 mb-n1" /></MudTd>
                 <MudTd DataLabel="">
                     <MudTooltip Text="Module default settings">
                         <MudIconButton Icon="@Icons.Material.Filled.Settings" @onclick="@(()=>OpenModuleSettingsDialog(@context))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text"></MudIconButton>
@@ -86,6 +91,7 @@ else
                 <MudTd DataLabel="Cache key">                
                     <MudTextField Margin="Margin.Dense" @bind-Value="@context.Qskey"  spellcheck="false" />
                 </MudTd>
+                <MudTd DataLabel="Used"><MudIcon Icon="@(usedModules.Contains(context.IdModule ) ? Icons.Material.Outlined.CheckCircle : Icons.Material.Outlined.Circle)" Size="Size.Small" Class="mr-3 mb-n1" /></MudTd>
             </RowEditingTemplate>
             <PagerContent>
                 <MudTablePager PageSizeOptions="new int[]{25, 100, 1000}" />
@@ -99,8 +105,12 @@ else
     public int IdModuleEdit { get; set; } = 0;
 
     private List<Module> modules;
+    private HashSet<int> usedModules;
     private string searchString = "";
+
     private bool hideUnused = true;
+    private bool hideUsed = false;
+
 
     private Module beforeEditModule = null;
     private Module newModule = null;
@@ -146,12 +156,28 @@ else
 
     protected async Task LoadData()
     {
-        modules = await Http.GetFromJsonAsync<List<Module>>($"api/modules?hideUnused={hideUnused}");
+        usedModules = (await Http.GetFromJsonAsync<int[]>("api/moduleusages/modules")).ToHashSet();
+        modules = await Http.GetFromJsonAsync<List<Module>>($"api/modules?hideUnused={false/*hideUnused*/}");
     }
 
     private bool FilterFunc(Module m)
     {
-        if (string.IsNullOrWhiteSpace(searchString) || m.IdModule == 0)
+        if (m.IdModule == 0)
+        {
+            return true;       
+        }
+
+        if (hideUnused && !usedModules.Contains(m.IdModule))
+        {
+            return false;
+        }
+
+        if (hideUsed && usedModules.Contains(m.IdModule))
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(searchString))
             return true;
 
         if (m.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase))

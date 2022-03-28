@@ -25,9 +25,12 @@ else
         <MudTooltip Text="Paste QS action">
             <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.ContentPaste" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5 ml-3" OnClick="@(()=> {AddQS(clipboard.Content as Qslayout); clipboard.Content = null; })" Disabled="@(!(clipboard.Content is Qslayout) || newQS !=null || beforeEditQS != null)"/>
         </MudTooltip>
-
-        <MudTable @ref="qsTable" Items="qslayouts" Hover="true" SortLabel="Sort By" AllowUnsorted="false" Elevation="5" RowsPerPage="0" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 250px)"  Dense="true" 
+        <MudTooltip Text="Delete selected QS actions">
+            <MudFab Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5 ml-3" OnClick="DeleteSelected" Disabled="@(selectedItems?.Count == 0 || newQS !=null || beforeEditQS != null)"/>
+        </MudTooltip>
+        <MudTableFix @ref="qsTable" Items="qslayouts" Hover="true" SortLabel="Sort By" AllowUnsorted="false" Elevation="5" RowsPerPage="0" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 250px)"  Dense="true" 
             Filter="new Func<Qslayout,bool>(FilterFunc)" 
+            MultiSelection="true" @bind-SelectedItems="selectedItems"
             CommitEditTooltip="Commit Edit" CancelEditTooltip="Cancel Edit" RowEditPreview="Backup" RowEditCancel="ResetEdit" RowEditCommit="Committed" CanCancelEdit="true" IsEditRowSwitchingBlocked="true" OnRowClick="RowClicked" Virtualize="false" T="Qslayout">
             <ToolBarContent>
                 <MudText Typo="Typo.h6">QS actions</MudText>
@@ -38,9 +41,10 @@ else
                 <MudSwitch Label="Hide assigned" Color="Color.Info" @bind-Checked="hideAssigned" Disabled="@(newQS !=null || beforeEditQS != null)"/>
 
                 <MudSpacer />
-                <MudTextField DebounceInterval="500" @bind-Value="searchString" Placeholder="Search by name, QS param or ID" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true" ></MudTextField>
+                <MudTextField DebounceInterval="300" @bind-Value="searchString" Placeholder="Search by name, QS param or ID" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true" ></MudTextField>
             </ToolBarContent>
             <ColGroup>
+                <col style="width:80px;" />
                 <col style="width:100px;" />
                 <col style="width:30%;" />
                 <col  />
@@ -65,7 +69,7 @@ else
                 <MudTd DataLabel="QS param"><MudHighlighter Text="@context.ParamString" HighlightedText="@searchString" /></MudTd>
                 <MudTd DataLabel="Priority">@context.Priority</MudTd>
                 <MudTd DataLabel="Public"><MudIcon Icon="@(@context.Public ? Icons.Material.Filled.CheckBox : Icons.Material.Filled.CheckBoxOutlineBlank)" Size="Size.Small" Class="mr-3 mb-n1"/></MudTd>
-                <MudTd DataLabel="Assigned"><MudIcon Icon="@(assignedQSLayouts.Contains(context.IdQslayout) ? Icons.Material.Filled.CheckBox : Icons.Material.Filled.CheckBoxOutlineBlank)" Size="Size.Small" Class="mr-3 mb-n1"/></MudTd>
+                <MudTd DataLabel="Assigned"><MudIcon Icon="@(assignedQSLayouts.Contains(context.IdQslayout) ? Icons.Material.Outlined.CheckCircle : Icons.Material.Outlined.Circle)" Size="Size.Small" Class="mr-3 mb-n1" /></MudTd>
                 <MudTd DataLabel="">
                     <MudTooltip Text="Assign action to layout">
                         <MudIconButton Icon="@Icons.Material.Filled.ElectricalServices" @onclick="@(()=>OpenLayoutAssignsDialog(@context))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text"></MudIconButton>
@@ -92,10 +96,10 @@ else
                 <MudTd DataLabel="Public">
                     <MudCheckBox @bind-Checked="@context.Public"></MudCheckBox>
                 </MudTd>
-                <MudTd />
+                <MudTd DataLabel="Assigned"><MudIcon Icon="@(assignedQSLayouts.Contains(context.IdQslayout) ? Icons.Material.Outlined.CheckCircle : Icons.Material.Outlined.Circle)" Size="Size.Small" Class="mr-3 mb-n1" /></MudTd>
             </RowEditingTemplate>
 
-        </MudTable>
+        </MudTableFix>
     </MudContainer>
 }
 
@@ -111,8 +115,10 @@ else
     private Qslayout beforeEditQS = null;
     private Qslayout newQS = null;
 
-
     MudTable<Qslayout> qsTable;
+
+    private HashSet<Qslayout> selectedItems = new HashSet<Qslayout>();
+
 
     protected override async Task OnInitializedAsync()
     {
@@ -232,8 +238,31 @@ else
         }
     }
 
+    async Task DeleteSelected()
+    {
+
+        if ((await DialogService.ShowMessageBox(
+            "Warning",
+            $"Do you want to delete selected QS actions ?",
+            yesText: "Delete!", cancelText: "Cancel") != null))
+        {
+            foreach (var qs in selectedItems)
+            {
+                await Http.DeleteAsync($"api/qslayouts/{qs.IdQslayout}");
+                snackBar.Add($"QS action {qs.IdQslayout} deleted", Severity.Success);
+            }
+
+            await LoadData();
+        }
+    }
+
     private bool FilterFunc(Qslayout q)
     {
+        if (q.IdQslayout == 0)
+        {
+            return true;       
+        }
+
         if (hideUnassigned && !assignedQSLayouts.Contains(q.IdQslayout))
         {
             return false;
