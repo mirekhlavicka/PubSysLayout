@@ -56,15 +56,11 @@ else
         {
             <MudTd DataLabel="Value">
                 @(layoutDefinitions.ContainsKey(context.IdLayoutdefinition) ? layoutDefinitions[context.IdLayoutdefinition].Name : "(not selected)")                
-                <MudTooltip Text="Edit layout definition">
-                    <MudIconButton Icon="@Icons.Material.Filled.ArrowRightAlt" Link='@($"layoutdefinitions/edit/{context.IdLayoutdefinition}")' Color="Color.Primary" Size="Size.Small" Variant="Variant.Text" ></MudIconButton>
-                </MudTooltip>
+                <MudIconButton Icon="@Icons.Material.Filled.ArrowRightAlt" Link='@($"layoutdefinitions/edit/{context.IdLayoutdefinition}")' Color="Color.Primary" Size="Size.Small" Variant="Variant.Text" Title="Edit layout definition"/>
             </MudTd>
         }
         <MudTd DataLabel="">                            
-            <MudTooltip Text="Delete assign">
-                <MudIconButton Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>DeleteAssign(context))" Color="Color.Secondary" Size="Size.Small" Variant="Variant.Text" ></MudIconButton>
-            </MudTooltip>
+            <MudIconButton Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>DeleteAssign(context))" Color="Color.Secondary" Size="Size.Small" Variant="Variant.Text" Title="Delete assign"/>
         </MudTd>
     </RowTemplate>
     <RowEditingTemplate>

@@ -65,9 +65,7 @@
                     <MudTd DataLabel="Name">@context.SettingName</MudTd>
                     <MudTd DataLabel="Value">@context.SettingValue</MudTd>
                     <MudTd DataLabel="">                            
-                        <MudTooltip Text='@(IdModuleUsage != context.IdModuleusage ? "Default setting can't be deleted here" : "Delete setting")'>
-                            <MudIconButton Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>DeleteModuleSetting(context))" Color="Color.Secondary" Size="Size.Small" Variant="Variant.Text" Disabled="@(IdModuleUsage != context.IdModuleusage)"></MudIconButton>
-                        </MudTooltip>
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>DeleteModuleSetting(context))" Color="Color.Secondary" Size="Size.Small" Variant="Variant.Text" Disabled="@(IdModuleUsage != context.IdModuleusage)" Title='@(IdModuleUsage != context.IdModuleusage ? "Default setting can't be deleted here" : "Delete setting")'/>
                     </MudTd>
                 </RowTemplate>
                 <RowEditingTemplate>
@@ -207,7 +205,7 @@
     {
         if ((await DialogService.ShowMessageBox(
             "Warning",
-            $"Do you want to delete selected settings  ?",
+            $"Do you want to delete selected  {selectedItems.Count}  settings  ?",
             yesText: "Delete!", cancelText: "Cancel") != null))
         {
             foreach (var ms in selectedItems)

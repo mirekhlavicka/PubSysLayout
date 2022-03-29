@@ -10,7 +10,7 @@
 
 @using PubSysLayout.Shared.Model
 
-<PageTitle>@currentDB.Current – QS actions</PageTitle>
+<PageTitle>@currentDB.Current – Actions</PageTitle>
 
 @if (qslayouts == null)
 {
@@ -19,13 +19,13 @@
 else
 {
     <MudContainer MaxWidth="MaxWidth.Large">
-        <MudTooltip Text="Add new QS action">
+        <MudTooltip Text="Add new action">
             <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5" OnClick="@(()=> AddQS())" Disabled="@(newQS !=null || beforeEditQS != null)"/>
         </MudTooltip>
-        <MudTooltip Text="Paste QS action">
+        <MudTooltip Text="Paste action">
             <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.ContentPaste" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5 ml-3" OnClick="@(()=> {AddQS(clipboard.Content as Qslayout); clipboard.Content = null; })" Disabled="@(!(clipboard.Content is Qslayout) || newQS !=null || beforeEditQS != null)"/>
         </MudTooltip>
-        <MudTooltip Text="Delete selected QS actions">
+        <MudTooltip Text="Delete selected actions">
             <MudFab Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5 ml-3" OnClick="DeleteSelected" Disabled="@(selectedItems?.Count == 0 || newQS !=null || beforeEditQS != null)"/>
         </MudTooltip>
         <MudTableFix @ref="qsTable" Items="qslayouts" Hover="true" SortLabel="Sort By" AllowUnsorted="false" Elevation="5" RowsPerPage="0" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 250px)"  Dense="true" 
@@ -33,7 +33,7 @@ else
             MultiSelection="true" @bind-SelectedItems="selectedItems"
             CommitEditTooltip="Commit Edit" CancelEditTooltip="Cancel Edit" RowEditPreview="Backup" RowEditCancel="ResetEdit" RowEditCommit="Committed" CanCancelEdit="true" IsEditRowSwitchingBlocked="true" OnRowClick="RowClicked" Virtualize="false" T="Qslayout">
             <ToolBarContent>
-                <MudText Typo="Typo.h6">QS actions</MudText>
+                <MudText Typo="Typo.h6">Actions</MudText>
                 <MudSpacer />
 @*                <MudSwitch Label="Hide unused" Color="Color.Info" Checked="@hideUnassigned" CheckedChanged="@(async (bool b) => {hideUnassigned = b; await LoadData();})" Disabled="@(newQS !=null || beforeEditQS != null)" />
 *@
@@ -72,20 +72,9 @@ else
                 <MudTd DataLabel="Assigned"><MudIcon Icon="@(assignedQSLayouts.Contains(context.IdQslayout) ? Icons.Material.Outlined.CheckCircle : Icons.Material.Outlined.Circle)" Size="Size.Small" Class="mr-3 mb-n1" /></MudTd>
                 <MudTd DataLabel="">
                     <div style="width:130px;">
-@*                    <MudTooltip Text="Assign action to layout">
-                        <MudIconButton Icon="@Icons.Material.Filled.ElectricalServices" @onclick="@(()=>OpenLayoutAssignsDialog(@context))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text"></MudIconButton>
-                    </MudTooltip>
-                    <MudTooltip Text="Copy">
-                        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" @onclick="@(()=> clipboard.Content = context)" Color="Color.Default" Size="Size.Small" Variant="Variant.Text"></MudIconButton>
-                    </MudTooltip>
-                    <MudTooltip Text="Delete QS action">
-                        <MudIconButton Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>Delete(@context.IdQslayout))"Size="Size.Small" Variant="Variant.Text" />
-                    </MudTooltip>
-*@
-                        <MudIconButton Icon="@Icons.Material.Filled.ElectricalServices" @onclick="@(()=>OpenLayoutAssignsDialog(@context))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text" Title="Assign action to layout"></MudIconButton>
-                        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" @onclick="@(()=> clipboard.Content = context)" Color="Color.Default" Size="Size.Small" Variant="Variant.Text" Title="Copy"></MudIconButton>
-                        <MudIconButton Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>Delete(@context.IdQslayout))"Size="Size.Small" Variant="Variant.Text" Title="Delete QS action"/>
-
+                        <MudIconButton Icon="@Icons.Material.Filled.ElectricalServices" @onclick="@(()=>OpenLayoutAssignsDialog(@context))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text" Title="Assign action to layout" />
+                        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" @onclick="@(()=> clipboard.Content = context)" Color="Color.Default" Size="Size.Small" Variant="Variant.Text" Title="Copy" />
+                        <MudIconButton Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>Delete(@context.IdQslayout))"Size="Size.Small" Variant="Variant.Text" Title="Delete action"/>
                     </div>
                 </MudTd>
             </RowTemplate>
@@ -193,7 +182,7 @@ else
         if (qs.IdQslayout != 0)
         {
             await Http.PutAsJsonAsync($"api/qslayouts/{qs.IdQslayout}", qs);
-            snackBar.Add($"QS action  {qs.Name} saved", Severity.Success);
+            snackBar.Add($"Action  {qs.Name} saved", Severity.Success);
         }
         else
         {
@@ -201,7 +190,7 @@ else
             var x = await response.Content.ReadFromJsonAsync<Qslayout>();
             qs.IdQslayout = x.IdQslayout;
             justAddedID = qs.IdQslayout;
-            snackBar.Add($"QS action  {qs.Name} created", Severity.Success);
+            snackBar.Add($"Action  {qs.Name} created", Severity.Success);
         }
 
         StateHasChanged();
@@ -238,11 +227,11 @@ else
 
         if ((await DialogService.ShowMessageBox(
             "Warning",
-            $"Do you want to delete QS action \"{l.Name} (id = {l.IdQslayout})\" ?",
+            $"Do you want to delete action \"{l.Name} (id = {l.IdQslayout})\" ?",
             yesText: "Delete!", cancelText: "Cancel") != null))
         {
             await Http.DeleteAsync($"api/qslayouts/{idQslayout}");
-            snackBar.Add($"QS action {idQslayout} deleted", Severity.Success);
+            snackBar.Add($"Action {idQslayout} deleted", Severity.Success);
             await LoadData();
         }
     }
@@ -252,13 +241,13 @@ else
 
         if ((await DialogService.ShowMessageBox(
             "Warning",
-            $"Do you want to delete selected QS actions ?",
+            $"Do you want to delete selected {selectedItems.Count} actions ?",
             yesText: "Delete!", cancelText: "Cancel") != null))
         {
             foreach (var qs in selectedItems)
             {
                 await Http.DeleteAsync($"api/qslayouts/{qs.IdQslayout}");
-                snackBar.Add($"QS action {qs.IdQslayout} deleted", Severity.Success);
+                snackBar.Add($"Action {qs.IdQslayout} deleted", Severity.Success);
             }
 
             await LoadData();

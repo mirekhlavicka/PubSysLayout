@@ -1,0 +1,266 @@
+﻿@page "/layouts"
+@inject HttpClient Http
+@inject IJSRuntime js
+@inject MudBlazor.ISnackbar snackBar
+@inject NavigationManager uriHelper
+@inject IDialogService DialogService
+@inject CurrentDB currentDB
+@inject Clipboard clipboard
+
+
+@using PubSysLayout.Shared.Model
+
+<PageTitle>@currentDB.Current – Layouts</PageTitle>
+
+@if (items == null)
+{
+    <MudProgressCircular Color="Color.Default" Indeterminate="true" />
+}
+else
+{
+    <MudContainer MaxWidth="MaxWidth.Large">
+        <MudTooltip Text="Add new layout">
+            <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5" OnClick="@(()=> Addtem())" Disabled="@(newItem != null || beforeEditItem != null)"/>
+        </MudTooltip>
+        <MudTooltip Text="Paste layout">
+            <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.ContentPaste" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5 ml-3" OnClick="@(()=> {Addtem(clipboard.Content as Layout); clipboard.Content = null; })" Disabled="@(!(clipboard.Content is Layout) || newItem !=null || beforeEditItem != null)"/>
+        </MudTooltip>
+        <MudTooltip Text="Delete selected layouts">
+            <MudFab Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5 ml-3" OnClick="DeleteSelected" Disabled="@(selectedItems?.Count == 0 || newItem !=null || beforeEditItem != null)"/>
+        </MudTooltip>
+        <MudTableFix @ref="mudTable" Items="items" Hover="true" SortLabel="Sort By" AllowUnsorted="false" Elevation="5" RowsPerPage="0" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 250px)"  Dense="true" 
+            Filter="new Func<Layout,bool>(FilterFunc)" 
+            MultiSelection="true" @bind-SelectedItems="selectedItems"
+            CommitEditTooltip="Commit Edit" CancelEditTooltip="Cancel Edit" RowEditPreview="Backup" RowEditCancel="ResetEdit" RowEditCommit="Committed" CanCancelEdit="true" IsEditRowSwitchingBlocked="true" OnRowClick="RowClicked" Virtualize="false" T="Layout">
+            <ToolBarContent>
+                <MudText Typo="Typo.h6">Layouts</MudText>
+                <MudSpacer />
+                <MudSwitch Label="Hide unused" Color="Color.Info" @bind-Checked="hideUnused" Disabled="@(newItem !=null || beforeEditItem != null)"/>
+                <MudSwitch Label="Hide used" Color="Color.Info" @bind-Checked="hideUsed" Disabled="@(newItem !=null || beforeEditItem != null)"/>
+                <MudSpacer />
+                <MudTextField DebounceInterval="300" @bind-Value="searchString" Placeholder="Search by name, path or ID" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true" ></MudTextField>
+            </ToolBarContent>
+            <ColGroup>
+                <col style="width:80px;" />
+                <col style="width:100px;" />
+                <col style="width:30%;" />
+                <col  />
+                <col style="width:100px;" />
+                <col style="width:100px;" />
+                <col style="width:0px;"/>
+            </ColGroup>
+            <HeaderContent>
+                <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy="new Func<Layout, object>(x => x.IdLayout == 0 ? 999999 :  x.IdLayout)">ID</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy='new Func<Layout, object>(x => x.IdLayout == 0 ? "ZZZZZ" :  x.Name)'>Name</MudTableSortLabel></MudTh>
+                <MudTh>Path</MudTh>
+                <MudTh>Used</MudTh>
+                <MudTh></MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="ID">@context.IdLayout</MudTd>
+                <MudTd DataLabel="Name"><MudHighlighter Text="@context.Name" HighlightedText="@searchString" /></MudTd>
+                <MudTd DataLabel="Path"><MudHighlighter Text="@context.DesktopSrc" HighlightedText="@searchString" /></MudTd>
+                <MudTd DataLabel="Used"><MudIcon Icon="@(usedItems.Contains(context.IdLayout) ? Icons.Material.Outlined.CheckCircle : Icons.Material.Outlined.Circle)" Size="Size.Small" Class="mr-3 mb-n1" /></MudTd>
+                <MudTd DataLabel="">
+                    <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" @onclick="@(()=> clipboard.Content = context)" Color="Color.Default" Size="Size.Small" Variant="Variant.Text" Title="Copy" />
+                    <MudIconButton Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>Delete(@context.IdLayout))"Size="Size.Small" Variant="Variant.Text" Title="Delete layout"/>
+                </MudTd>
+            </RowTemplate>
+            <RowEditingTemplate>
+                <MudTd DataLabel="ID">@context.IdLayout<a id="editRow" style="position:relative; top: -80px" /></MudTd>
+                <MudTd DataLabel="Name">                
+                    <MudTextField Margin="Margin.Dense" @bind-Value="@context.Name" Required Immediate="false" spellcheck="false" />
+                </MudTd>
+                <MudTd DataLabel="Path">                
+                    <MudTextField Margin="Margin.Dense" @bind-Value="@context.DesktopSrc" Required Immediate="false" spellcheck="false" />
+                </MudTd>
+                <MudTd DataLabel="USed"><MudIcon Icon="@(usedItems.Contains(context.IdLayout) ? Icons.Material.Outlined.CheckCircle : Icons.Material.Outlined.Circle)" Size="Size.Small" Class="mr-3 mb-n1" /></MudTd>
+            </RowEditingTemplate>
+        </MudTableFix>
+    </MudContainer>
+}
+
+@code {
+
+    private List<Layout> items;
+    private HashSet<int> usedItems;
+
+    private string searchString = "";
+    private bool hideUnused = true;
+    private bool hideUsed = false;
+
+    private Layout beforeEditItem = null;
+    private Layout newItem= null;
+    private int justAddedID = 0;
+
+    MudTable<Layout> mudTable;
+
+    private HashSet<Layout> selectedItems = new HashSet<Layout>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (currentDB.Current is null)
+        {
+            return;
+        }
+
+        await LoadData();
+    }
+
+    protected async Task LoadData()
+    {
+        usedItems = (await Http.GetFromJsonAsync<int[]>("api/layoutdefinitions/layouts")).ToHashSet();
+        items = await Http.GetFromJsonAsync<List<Layout>>($"api/layouts");
+    }
+
+    private void Backup(object element)
+    {
+        Layout it = element as Layout;
+
+        beforeEditItem  = new()
+            {
+                Name = it.Name,
+                Description = it.Description,
+                DesktopSrc = it.DesktopSrc,
+                MobileSrc =it.MobileSrc
+            };
+
+        StateHasChanged();
+    }
+
+    private void ResetEdit(object element)
+    {
+        if (beforeEditItem != null)
+        {
+            Layout it = element as Layout;
+            it.Name = beforeEditItem.Name;
+            it.Description = beforeEditItem.Description;
+            it.DesktopSrc = beforeEditItem.DesktopSrc;
+            it.MobileSrc = beforeEditItem.MobileSrc;
+
+            beforeEditItem = null;
+            StateHasChanged();
+        }
+
+        if (newItem != null)
+        {
+            items.Remove(newItem);
+            newItem = null;
+            StateHasChanged();
+        }
+    }
+
+    private async void Committed(object element)
+    {
+        beforeEditItem = null;
+        newItem = null;
+
+        Layout it = element as Layout;
+
+        if (it.IdLayout != 0)
+        {
+            await Http.PutAsJsonAsync($"api/layouts/{it.IdLayout}", it);
+            snackBar.Add($"Layout  {it.Name} saved", Severity.Success);
+        }
+        else
+        {
+            using var response = await Http.PostAsJsonAsync("api/layouts", it);
+            var x = await response.Content.ReadFromJsonAsync<Layout>();
+            it.IdLayout = x.IdLayout;
+            justAddedID = it.IdLayout;
+            snackBar.Add($"Layout  {it.Name} created", Severity.Success);
+        }
+
+        StateHasChanged();
+    }
+
+    private async void Addtem(Layout copy = null)
+    {
+        newItem = new Layout
+        {
+            Name = copy?.Name ?? "",
+            Description = copy?.Description ?? "",
+            DesktopSrc = copy?.DesktopSrc ?? "",
+            MobileSrc = copy?.MobileSrc ?? ""
+        };
+
+        items.Add(newItem);
+
+        await Task.Delay(300);
+
+        await InvokeAsync(() =>
+        {
+            mudTable.SetEditingItem(newItem);
+            StateHasChanged();
+        });
+
+        await js.InvokeVoidAsync("scrollToElementId", "editRow");
+    }
+
+
+    async Task Delete(int id)
+    {
+        var it = items.First(x => x.IdLayout == id);
+
+        if ((await DialogService.ShowMessageBox(
+            "Warning",
+            $"Do you want to delete layout \"{it.Name} (id = {it.IdLayout})\" ?",
+            yesText: "Delete!", cancelText: "Cancel") != null))
+        {
+            await Http.DeleteAsync($"api/layouts/{id}");
+            snackBar.Add($"Layout {id} deleted", Severity.Success);
+            await LoadData();
+        }
+    }
+
+    async Task DeleteSelected()
+    {
+        if ((await DialogService.ShowMessageBox(
+            "Warning",
+            $"Do you want to delete selected {selectedItems.Count} layouts ?",
+            yesText: "Delete!", cancelText: "Cancel") != null))
+        {
+            foreach (var it in selectedItems)
+            {
+                await Http.DeleteAsync($"api/layouts/{it.IdLayout}");
+                snackBar.Add($"Layout {it.IdLayout} deleted", Severity.Success);
+            }
+            await LoadData();
+        }
+    }
+
+    private bool FilterFunc(Layout i)
+    {
+        if (i.IdLayout == 0 || i.IdLayout == justAddedID)
+        {
+            return true;       
+        }
+
+        if (hideUnused && !usedItems.Contains(i.IdLayout))
+        {
+            return false;
+        }
+
+        if (hideUsed && usedItems.Contains(i.IdLayout))
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+
+        if (i.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase) || i.DesktopSrc.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        if(i.IdLayout.ToString() == searchString)
+            return true;
+
+        return false;
+    }
+
+    private async void RowClicked(TableRowClickEventArgs<Layout> p)
+    {
+        await Task.Delay(300);
+        await js.InvokeVoidAsync("focusAt", p.MouseEventArgs.ClientX, p.MouseEventArgs.ClientY + 5);
+    }
+}

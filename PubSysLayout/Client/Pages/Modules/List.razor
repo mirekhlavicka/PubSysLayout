@@ -69,19 +69,10 @@ else
                 <MudTd DataLabel="Used"><MudIcon Icon="@(usedModules.Contains(context.IdModule ) ? Icons.Material.Outlined.CheckCircle : Icons.Material.Outlined.Circle)" Size="Size.Small" Class="mr-3 mb-n1" /></MudTd>
                 <MudTd DataLabel="">
                     <div style="width:180px;">
-                    <MudTooltip Text="Module default settings">
-                        <MudIconButton Icon="@Icons.Material.Filled.Settings" @onclick="@(()=>OpenModuleSettingsDialog(@context))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text"></MudIconButton>
-                    </MudTooltip>
-                    <MudTooltip Text="Module usage">
-                        <MudIconButton Icon="@Icons.Material.Filled.DashboardCustomize" @onclick="@(()=>OpenModuleUsagesDialog(@context))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text"></MudIconButton>
-                    </MudTooltip>
-
-                    <MudTooltip Text="Copy">
-                        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" @onclick="@(()=> clipboard.Content = context)" Color="Color.Default" Size="Size.Small" Variant="Variant.Text"></MudIconButton>
-                    </MudTooltip>
-                    <MudTooltip Text="Delete module">
-                        <MudIconButton Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>DeleteModule(@context))"Size="Size.Small" Variant="Variant.Text" />
-                    </MudTooltip>
+                        <MudIconButton Icon="@Icons.Material.Filled.Settings" @onclick="@(()=>OpenModuleSettingsDialog(@context))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text" Title="Module default settings"/>
+                        <MudIconButton Icon="@Icons.Material.Filled.DashboardCustomize" @onclick="@(()=>OpenModuleUsagesDialog(@context))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text" Title="Module usage"/>
+                        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" @onclick="@(()=> clipboard.Content = context)" Color="Color.Default" Size="Size.Small" Variant="Variant.Text" Title="Copy"/>
+                        <MudIconButton Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>DeleteModule(@context))"Size="Size.Small" Variant="Variant.Text" Title="Delete module"/>
                     </div>
                 </MudTd>
             </RowTemplate>
@@ -320,7 +311,7 @@ else
 
         if ((await DialogService.ShowMessageBox(
             "Warning",
-            $"Do you want to delete selected moduless ?",
+            $"Do you want to delete selected {selectedItems.Count} moduless ?",
             yesText: "Delete!", cancelText: "Cancel") != null))
         {
             foreach (var m in selectedItems)

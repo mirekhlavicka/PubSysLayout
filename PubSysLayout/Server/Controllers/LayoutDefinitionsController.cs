@@ -154,5 +154,13 @@ namespace PubSysLayout.Server.Controllers
         {
             return _context.LayoutDefinitions.Any(e => e.IdLayoutdefinition == id);
         }
+
+        [HttpGet("layouts")]
+        public async Task<ActionResult<int[]>> GetLayouts()
+        {
+            var res = await _context.LayoutDefinitions.Select(ld => ld.IdLayout).Distinct().ToArrayAsync();
+
+            return res;
+        }
     }
 }

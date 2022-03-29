@@ -97,19 +97,13 @@ else
                     <MudTd DataLabel="Spot">@(context.IdSpot == 0 ? "(not selected)" : spots[context.IdSpot]?.Name)</MudTd>
                     <MudTd DataLabel="Module">
                         @(context.IdModule == 0 ? "(not selected)" : modules[context.IdModule]?.Name)
-                        <MudTooltip Text="Edit module">
-                            <MudIconButton Icon="@Icons.Material.Filled.ArrowRightAlt" Link='@($"modules/?id_module={context.IdModule}")' Color="Color.Primary" Size="Size.Small" Variant="Variant.Text" ></MudIconButton>
-                        </MudTooltip>
+                        <MudIconButton Icon="@Icons.Material.Filled.ArrowRightAlt" Link='@($"modules/?id_module={context.IdModule}")' Color="Color.Primary" Size="Size.Small" Variant="Variant.Text" Title="Edit module"/>
                     </MudTd>
                     <MudTd DataLabel="Order">@context.Order</MudTd>
                     <MudTd DataLabel="CacheTime">@context.CacheTime</MudTd>
                     <MudTd DataLabel="">                            
-                        <MudTooltip Text="Edit module usage settings">
-                            <MudIconButton Icon="@Icons.Material.Filled.Settings" @onclick="@(()=>OpenModuleSettingsDialog(context))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text"></MudIconButton>
-                        </MudTooltip>
-                        <MudTooltip Text="Delete module usage">
-                            <MudIconButton Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>DeleteModuleUsage(context))" Color="Color.Secondary" Size="Size.Small" Variant="Variant.Text"></MudIconButton>
-                        </MudTooltip>
+                        <MudIconButton Icon="@Icons.Material.Filled.Settings" @onclick="@(()=>OpenModuleSettingsDialog(context))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text" Title="Edit module usage settings"/>
+                        <MudIconButton Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>DeleteModuleUsage(context))" Color="Color.Secondary" Size="Size.Small" Variant="Variant.Text" Title="Delete module usage"/>
                     </MudTd>
                 </RowTemplate>
                 <RowEditingTemplate>

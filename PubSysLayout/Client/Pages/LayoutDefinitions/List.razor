@@ -62,9 +62,7 @@ else
                 <MudTd DataLabel="Style">@(styles.ContainsKey(context.IdStyle)?styles[context.IdStyle]:"(not selected)")</MudTd>
                 <MudTd DataLabel="Assigned"><MudIcon Icon="@(assignedLayoutDefinitions.Contains(context.IdLayoutdefinition) ? Icons.Material.Outlined.CheckCircle: Icons.Material.Outlined.Circle)" Size="Size.Small" Class="mr-3 mb-n1"/></MudTd>
                 <MudTd DataLabel="">
-                    @*<MudTooltip Text="Delete layout definition">*@
-                        <MudIconButton Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>Delete(@context.IdLayoutdefinition))"Size="Size.Small" Variant="Variant.Text" Title="Delete layout definition" />
-                    @*</MudTooltip>*@
+                    <MudIconButton Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>Delete(@context.IdLayoutdefinition))"Size="Size.Small" Variant="Variant.Text" Title="Delete layout definition" />
                 </MudTd>
             </RowTemplate>
         </MudTableFix>
@@ -123,7 +121,7 @@ else
 
         if ((await DialogService.ShowMessageBox(
             "Warning",
-            $"Do you want to delete selected layout definitions ?",
+            $"Do you want to delete selected {selectedItems.Count} layout definitions ?",
             yesText: "Delete!", cancelText: "Cancel") != null))
         {
             foreach (var ld in selectedItems)
