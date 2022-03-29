@@ -68,10 +68,11 @@ else
                 <MudTd DataLabel="Name"><MudHighlighter Text="@context.Name" HighlightedText="@searchString" /></MudTd>
                 <MudTd DataLabel="QS param"><MudHighlighter Text="@context.ParamString" HighlightedText="@searchString" /></MudTd>
                 <MudTd DataLabel="Priority">@context.Priority</MudTd>
-                <MudTd DataLabel="Public"><MudIcon Icon="@(@context.Public ? Icons.Material.Filled.CheckBox : Icons.Material.Filled.CheckBoxOutlineBlank)" Size="Size.Small" Class="mr-3 mb-n1"/></MudTd>
+                <MudTd DataLabel="Public"><MudIcon Icon="@(context.Public ? Icons.Material.Filled.CheckBox : Icons.Material.Filled.CheckBoxOutlineBlank)" Size="Size.Small" Class="mr-3 mb-n1"/></MudTd>
                 <MudTd DataLabel="Assigned"><MudIcon Icon="@(assignedQSLayouts.Contains(context.IdQslayout) ? Icons.Material.Outlined.CheckCircle : Icons.Material.Outlined.Circle)" Size="Size.Small" Class="mr-3 mb-n1" /></MudTd>
                 <MudTd DataLabel="">
-                    <MudTooltip Text="Assign action to layout">
+                    <div style="width:130px;">
+@*                    <MudTooltip Text="Assign action to layout">
                         <MudIconButton Icon="@Icons.Material.Filled.ElectricalServices" @onclick="@(()=>OpenLayoutAssignsDialog(@context))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text"></MudIconButton>
                     </MudTooltip>
                     <MudTooltip Text="Copy">
@@ -80,6 +81,12 @@ else
                     <MudTooltip Text="Delete QS action">
                         <MudIconButton Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>Delete(@context.IdQslayout))"Size="Size.Small" Variant="Variant.Text" />
                     </MudTooltip>
+*@
+                        <MudIconButton Icon="@Icons.Material.Filled.ElectricalServices" @onclick="@(()=>OpenLayoutAssignsDialog(@context))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text" Title="Assign action to layout"></MudIconButton>
+                        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" @onclick="@(()=> clipboard.Content = context)" Color="Color.Default" Size="Size.Small" Variant="Variant.Text" Title="Copy"></MudIconButton>
+                        <MudIconButton Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>Delete(@context.IdQslayout))"Size="Size.Small" Variant="Variant.Text" Title="Delete QS action"/>
+
+                    </div>
                 </MudTd>
             </RowTemplate>
             <RowEditingTemplate>
@@ -114,6 +121,7 @@ else
 
     private Qslayout beforeEditQS = null;
     private Qslayout newQS = null;
+    private int justAddedID = 0;
 
     MudTable<Qslayout> qsTable;
 
@@ -192,6 +200,7 @@ else
             using var response = await Http.PostAsJsonAsync("api/qslayouts", qs);
             var x = await response.Content.ReadFromJsonAsync<Qslayout>();
             qs.IdQslayout = x.IdQslayout;
+            justAddedID = qs.IdQslayout;
             snackBar.Add($"QS action  {qs.Name} created", Severity.Success);
         }
 
@@ -258,7 +267,7 @@ else
 
     private bool FilterFunc(Qslayout q)
     {
-        if (q.IdQslayout == 0)
+        if (q.IdQslayout == 0 || q.IdQslayout == justAddedID)
         {
             return true;       
         }

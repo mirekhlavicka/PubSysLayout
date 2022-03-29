@@ -28,7 +28,7 @@ else
         </MudTooltip>
         <MudTableFix Items="layoutDefinitions" Hover="true" SortLabel="Sort By" AllowUnsorted="false" Elevation="5" RowsPerPage="0" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 250px)"  Dense="true" 
             MultiSelection="true" @bind-SelectedItems="selectedItems"
-            Filter="new Func<LayoutDefinition,bool>(FilterFunc)" OnRowClick="RowClicked" RowClass="cursor-pointer" Virtualize="true" T="LayoutDefinition">
+            Filter="new Func<LayoutDefinition,bool>(FilterFunc)" OnRowClick="RowClicked" RowClass="cursor-pointer" Virtualize="false" T="LayoutDefinition">
             <ToolBarContent>
                 <MudText Typo="Typo.h6">Layout definitions</MudText>
                 <MudSpacer />
@@ -62,9 +62,9 @@ else
                 <MudTd DataLabel="Style">@(styles.ContainsKey(context.IdStyle)?styles[context.IdStyle]:"(not selected)")</MudTd>
                 <MudTd DataLabel="Assigned"><MudIcon Icon="@(assignedLayoutDefinitions.Contains(context.IdLayoutdefinition) ? Icons.Material.Outlined.CheckCircle: Icons.Material.Outlined.Circle)" Size="Size.Small" Class="mr-3 mb-n1"/></MudTd>
                 <MudTd DataLabel="">
-                    <MudTooltip Text="Delete layout definition">
-                        <MudIconButton Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>Delete(@context.IdLayoutdefinition))"Size="Size.Small" Variant="Variant.Text" />
-                    </MudTooltip>
+                    @*<MudTooltip Text="Delete layout definition">*@
+                        <MudIconButton Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>Delete(@context.IdLayoutdefinition))"Size="Size.Small" Variant="Variant.Text" Title="Delete layout definition" />
+                    @*</MudTooltip>*@
                 </MudTd>
             </RowTemplate>
         </MudTableFix>

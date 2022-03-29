@@ -24,7 +24,12 @@ else
         <MudTooltip Text="Paste module">
             <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.ContentPaste" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5 ml-3" OnClick="@(()=> {AddModule(clipboard.Content as Module); clipboard.Content = null; })" Disabled="@(!(clipboard.Content is Module) || newModule !=null || beforeEditModule != null)"/>
         </MudTooltip>
-        <MudTable @ref="modulesTable" Items="modules" Hover="true" SortLabel="Sort By" AllowUnsorted="false" Elevation="5" RowsPerPage="25" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 300px)" Dense="true" Filter="FilterFunc" T="Module" Virtualize="false"
+        <MudTooltip Text="Delete selected modules">
+            <MudFab Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5 ml-3" OnClick="DeleteSelected" Disabled="@(selectedItems?.Count == 0 || newModule !=null || beforeEditModule != null)"/>
+        </MudTooltip>
+
+        <MudTableFix @ref="modulesTable" Items="modules" Hover="true" SortLabel="Sort By" AllowUnsorted="false" Elevation="5" RowsPerPage="25" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 300px)" Dense="true" Filter="FilterFunc" T="Module" Virtualize="false"
+            MultiSelection="true" @bind-SelectedItems="selectedItems"
             CommitEditTooltip="Commit Edit" CancelEditTooltip="Cancel Edit" RowEditPreview="Backup" RowEditCancel="ResetEdit" RowEditCommit="Committed" CanCancelEdit="true" IsEditRowSwitchingBlocked="true" OnRowClick="RowClicked" RowClassFunc="RowClassFunc">
             <ToolBarContent>
                 <MudText Typo="Typo.h6">Modules</MudText>
@@ -36,8 +41,9 @@ else
                 <MudTextField DebounceInterval="300" @bind-Value="searchString" Placeholder="Search by name, path or ID" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true" ></MudTextField>
             </ToolBarContent>
             <ColGroup>
+                <col style="width:80px;" />
                 <col style="width:100px;" />
-                <col style="width:20%;" />
+                <col style="width:15%;" />
                 <col />
                 <col style="width:150px;" />
                 <col style="width:20%;" />
@@ -62,6 +68,7 @@ else
                 <MudTd DataLabel="Cache key">@context.Qskey</MudTd>
                 <MudTd DataLabel="Used"><MudIcon Icon="@(usedModules.Contains(context.IdModule ) ? Icons.Material.Outlined.CheckCircle : Icons.Material.Outlined.Circle)" Size="Size.Small" Class="mr-3 mb-n1" /></MudTd>
                 <MudTd DataLabel="">
+                    <div style="width:180px;">
                     <MudTooltip Text="Module default settings">
                         <MudIconButton Icon="@Icons.Material.Filled.Settings" @onclick="@(()=>OpenModuleSettingsDialog(@context))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text"></MudIconButton>
                     </MudTooltip>
@@ -75,6 +82,7 @@ else
                     <MudTooltip Text="Delete module">
                         <MudIconButton Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>DeleteModule(@context))"Size="Size.Small" Variant="Variant.Text" />
                     </MudTooltip>
+                    </div>
                 </MudTd>
             </RowTemplate>
             <RowEditingTemplate>
@@ -96,7 +104,7 @@ else
             <PagerContent>
                 <MudTablePager PageSizeOptions="new int[]{25, 100, 1000}" />
             </PagerContent>
-        </MudTable>
+        </MudTableFix>
     </MudContainer>}
 
 @code {
@@ -114,8 +122,11 @@ else
 
     private Module beforeEditModule = null;
     private Module newModule = null;
+    private int justAddedID = 0;
 
     MudTable<Module> modulesTable;
+
+    private HashSet<Module> selectedItems = new HashSet<Module>();
 
     protected override async Task OnInitializedAsync()
     {
@@ -162,7 +173,7 @@ else
 
     private bool FilterFunc(Module m)
     {
-        if (m.IdModule == 0)
+        if (m.IdModule == 0 || m.IdModule == justAddedID)
         {
             return true;       
         }
@@ -283,6 +294,7 @@ else
             using var response = await Http.PostAsJsonAsync("api/modules", m);
             var xm = await response.Content.ReadFromJsonAsync<Module>();
             m.IdModule = xm.IdModule;
+            justAddedID = m.IdModule;
             snackBar.Add($"Module  {m.Name} created", Severity.Success);
         }
 
@@ -302,6 +314,25 @@ else
             await LoadData();
         }
     }
+
+    async Task DeleteSelected()
+    {
+
+        if ((await DialogService.ShowMessageBox(
+            "Warning",
+            $"Do you want to delete selected moduless ?",
+            yesText: "Delete!", cancelText: "Cancel") != null))
+        {
+            foreach (var m in selectedItems)
+            {
+                await Http.DeleteAsync($"api/modules/{m.IdModule}");
+                snackBar.Add($"Module {m.IdModule} deleted", Severity.Success);
+            }
+
+            await LoadData();
+        }
+    }
+
 
     private async void AddModule(Module copy = null)
     {
