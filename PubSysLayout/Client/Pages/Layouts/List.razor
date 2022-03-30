@@ -210,9 +210,16 @@ else
             $"Do you want to delete layout \"{it.Name} (id = {it.IdLayout})\" ?",
             yesText: "Delete!", cancelText: "Cancel") != null))
         {
-            await Http.DeleteAsync($"api/layouts/{id}");
-            snackBar.Add($"Layout {id} deleted", Severity.Success);
-            await LoadData();
+            if ((await Http.DeleteAsync($"api/layouts/{id}")).IsSuccessStatusCode)
+            {
+                snackBar.Add($"Layout {id} deleted", Severity.Success);
+                await LoadData();
+            }
+            else
+            {
+
+                await DialogService.ShowMessageBox("Error", "Used layout can't be deleted");
+            }
         }
     }
 
@@ -225,8 +232,14 @@ else
         {
             foreach (var it in selectedItems)
             {
-                await Http.DeleteAsync($"api/layouts/{it.IdLayout}");
-                snackBar.Add($"Layout {it.IdLayout} deleted", Severity.Success);
+                if ((await Http.DeleteAsync($"api/layouts/{it.IdLayout}")).IsSuccessStatusCode)
+                {
+                    snackBar.Add($"Layout {it.IdLayout} deleted", Severity.Success);
+                }
+                else
+                {
+                    await DialogService.ShowMessageBox("Error", "Used layout can't be deleted");
+                }
             }
             await LoadData();
         }

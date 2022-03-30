@@ -198,9 +198,15 @@ else
             $"Do you want to delete spot \"{it.Name} (id = {it.IdSpot})\" ?",
             yesText: "Delete!", cancelText: "Cancel") != null))
         {
-            await Http.DeleteAsync($"api/spots/{id}");
-            snackBar.Add($"Spot {id} deleted", Severity.Success);
-            await LoadData();
+            if ((await Http.DeleteAsync($"api/spots/{id}")).IsSuccessStatusCode)
+            {
+                snackBar.Add($"Spot {id} deleted", Severity.Success);
+                await LoadData();
+            }
+            else
+            {
+                await DialogService.ShowMessageBox("Error", "Used spot can't be deleted");                
+            }
         }
     }
 
@@ -213,8 +219,14 @@ else
         {
             foreach (var it in selectedItems)
             {
-                await Http.DeleteAsync($"api/spots/{it.IdSpot}");
-                snackBar.Add($"Spot {it.IdSpot} deleted", Severity.Success);
+                if ((await Http.DeleteAsync($"api/spots/{it.IdSpot}")).IsSuccessStatusCode)
+                {
+                    snackBar.Add($"Spot {it.IdSpot} deleted", Severity.Success);
+                }
+                else
+                {
+                    await DialogService.ShowMessageBox("Error", "Used spot can't be deleted");
+                }
             }
             await LoadData();
         }
