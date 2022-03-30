@@ -5,7 +5,9 @@
     <MudNavLink Href="/modules" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Extension">Modules</MudNavLink>
     <MudNavLink Href="/qslayouts" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.Power">Actions</MudNavLink>
     <MudDivider Class="my-2"/>
-    <MudNavLink Href="/layouts" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.List">Layouts</MudNavLink>
-    <MudNavLink Href="/spots" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.List">Spots</MudNavLink>
-    <MudNavLink Href="/styles" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.List">Styles</MudNavLink>
+    <MudNavGroup Icon="@Icons.Material.Filled.List" Title="Lists" Expanded="true">
+    <MudNavLink Href="/layouts" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.ArrowRight">Layouts</MudNavLink>
+    <MudNavLink Href="/spots" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.ArrowRight">Spots</MudNavLink>
+    <MudNavLink Href="/styles" Match="NavLinkMatch.Prefix" Icon="@Icons.Material.Filled.ArrowRight">Styles</MudNavLink>
+    </MudNavGroup>
 </MudNavMenu>
