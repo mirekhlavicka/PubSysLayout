@@ -71,7 +71,7 @@
                 <RowEditingTemplate>
                     <MudTd DataLabel="Name">
                         <a id="editRow"/>
-                        <MudTextField Margin="Margin.Dense" @bind-Value="@context.SettingName" Required Validation="@((string s) => CheckName(s, context))" Immediate="true" spellcheck="false" />
+                        <MudTextField Margin="Margin.Dense" @bind-Value="@context.SettingName" Required Validation="@((string s) => CheckName(s, context))" DebounceInterval="200" spellcheck="false" />
                     </MudTd>
                     <MudTd DataLabel="Value">
                         <MudTextField Margin="Margin.Dense" @bind-Value="@context.SettingValue" spellcheck="false"/>

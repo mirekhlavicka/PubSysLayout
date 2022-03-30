@@ -48,17 +48,21 @@
             opacity: 0.3;
         }
 
-        tr:hover .mud-icon-button {
+        tr:hover .mud-icon-button, tr .mud-tooltip-root .mud-icon-button, tr .mud-checkbox .mud-icon-button {
             opacity: 1;
         }
 
-        @keyframes highlight {
-            50% {
-                background: #90CAF9;
-            }
+        tr .mud-icon-button:disabled {
+            color: red!important;
         }
 
-        .editRow {
+            @keyframes highlight {
+                50% {
+                    background: #90CAF9;
+                }
+            }
+
+            .editRow {
             animation: highlight 1s 2;
         }        
     </style>

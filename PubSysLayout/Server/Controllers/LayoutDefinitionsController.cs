@@ -162,5 +162,13 @@ namespace PubSysLayout.Server.Controllers
 
             return res;
         }
+
+        [HttpGet("styles")]
+        public async Task<ActionResult<int[]>> GetStyles()
+        {
+            var res = await _context.LayoutDefinitions.Select(ld => ld.IdStyle).Distinct().ToArrayAsync();
+
+            return res;
+        }
     }
 }

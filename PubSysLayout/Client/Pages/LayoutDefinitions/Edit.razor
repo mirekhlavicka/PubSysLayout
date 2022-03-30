@@ -33,7 +33,7 @@ else
                 </MudCardHeader>
                 <MudCardContent>
                     <MudForm @ref="form" @bind-IsValid="@canSave">
-                        <MudTextField @bind-Value="layoutDefinition.Name" Label="Name" Required="true" RequiredError="Name is required!" Immediate="true" spellcheck="false"/>
+                        <MudTextField @bind-Value="layoutDefinition.Name" Label="Name" Required="true" RequiredError="Name is required!" DebounceInterval="200" spellcheck="false"/>
                         <MudSelect @bind-Value="@layoutDefinition.IdLayout" Label="Layout" Validation='(int x) => x == 0 ? "Select layout" : null' Required="true" ToStringFunc='(id) => layouts.FirstOrDefault(l => l.IdLayout == id)?.Name ?? "(not selected)"'>
                             <MudSelectItem Value="0">(not selected)</MudSelectItem>
                             @foreach (var l in layouts.OrderBy(l => l.Name))

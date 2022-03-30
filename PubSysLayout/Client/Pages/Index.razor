@@ -38,7 +38,7 @@
                 <ToolBarContent>
                     <MudText Typo="Typo.h6">Select database</MudText>
                     <MudSpacer />
-                    <MudTextField @bind-Value="searchString" Placeholder="Search by name" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentIcon="@Icons.Filled.Search" IconSize="Size.Medium" AdornmentColor="Color.Info" Class="mt-0" Immediate="true" Clearable="true"></MudTextField>
+                    <MudTextField @bind-Value="searchString" Placeholder="Search by name" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentIcon="@Icons.Filled.Search" IconSize="Size.Medium" AdornmentColor="Color.Info" Class="mt-0" DebounceInterval="200" Clearable="true"></MudTextField>
                 </ToolBarContent>
                 <HeaderContent>
                     <MudTh>Name</MudTh>

@@ -114,6 +114,14 @@ namespace PubSysLayout.Server.Controllers
             return res;
         }
 
+        [HttpGet("spots")]
+        public async Task<ActionResult<int[]>> GetSpots()
+        {
+            var res = await _context.ModuleUsages.Select(mu => mu.IdSpot).Distinct().ToArrayAsync();
+
+            return res;
+        }
+
         private bool ModuleUsageExists(int id)
         {
             return _context.ModuleUsages.Any(e => e.IdModuleusage == id);

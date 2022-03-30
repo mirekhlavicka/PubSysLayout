@@ -33,7 +33,9 @@ else
             MultiSelection="true" @bind-SelectedItems="selectedItems"
             CommitEditTooltip="Commit Edit" CancelEditTooltip="Cancel Edit" RowEditPreview="Backup" RowEditCancel="ResetEdit" RowEditCommit="Committed" CanCancelEdit="true" IsEditRowSwitchingBlocked="true" OnRowClick="RowClicked" Virtualize="false" T="Qslayout">
             <ToolBarContent>
-                <MudText Typo="Typo.h6">Actions</MudText>
+                <MudBadge Content='@($"{selectedItems.Count} / {qsTable?.GetFilteredItemsCount()}")' Color="Color.Info" Overlap="false" Class="mt-3">
+                    <MudText Typo="Typo.h6">Actions</MudText>
+                </MudBadge>               
                 <MudSpacer />
 @*                <MudSwitch Label="Hide unused" Color="Color.Info" Checked="@hideUnassigned" CheckedChanged="@(async (bool b) => {hideUnassigned = b; await LoadData();})" Disabled="@(newQS !=null || beforeEditQS != null)" />
 *@
@@ -81,20 +83,19 @@ else
             <RowEditingTemplate>
                 <MudTd DataLabel="ID">@context.IdQslayout<a id="editRow" style="position:relative; top: -80px" /></MudTd>
                 <MudTd DataLabel="Name">                
-                    <MudTextField Margin="Margin.Dense" @bind-Value="@context.Name" Required Immediate="false" spellcheck="false" />
+                    <MudTextField Margin="Margin.Dense" @bind-Value="@context.Name" Required Immediate="false" DebounceInterval="200" spellcheck="false" />
                 </MudTd>
                 <MudTd DataLabel="QS param">                
-                    <MudTextField Margin="Margin.Dense" @bind-Value="@context.ParamString" Immediate="false" spellcheck="false" />
+                    <MudTextField Margin="Margin.Dense" @bind-Value="@context.ParamString" Immediate="false" DebounceInterval="200" spellcheck="false" />
                 </MudTd>
                 <MudTd DataLabel="Priority">
-                    <MudNumericField Margin="Margin.Dense" @bind-Value="@context.Priority" Required Immediate="false" spellcheck="false" Step="1"/>
+                    <MudNumericField Margin="Margin.Dense" @bind-Value="@context.Priority" Required  spellcheck="false" Step="1"/>
                 </MudTd>
                 <MudTd DataLabel="Public">
                     <MudCheckBox @bind-Checked="@context.Public"></MudCheckBox>
                 </MudTd>
                 <MudTd DataLabel="Assigned"><MudIcon Icon="@(assignedQSLayouts.Contains(context.IdQslayout) ? Icons.Material.Outlined.CheckCircle : Icons.Material.Outlined.Circle)" Size="Size.Small" Class="mr-3 mb-n1" /></MudTd>
             </RowEditingTemplate>
-
         </MudTableFix>
     </MudContainer>
 }
@@ -131,6 +132,7 @@ else
     {
         assignedQSLayouts = (await Http.GetFromJsonAsync<int[]>("api/layoutassigns/qslayouts")).ToHashSet();
         qslayouts = await Http.GetFromJsonAsync<List<Qslayout>>($"api/qslayouts?hideUnused={/*hideUnassigned*/false}");
+        selectedItems.Clear();
     }
 
     private void Backup(object element)
