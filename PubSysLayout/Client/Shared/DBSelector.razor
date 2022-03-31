@@ -70,9 +70,12 @@
             var queryStrings = QueryHelpers.ParseQuery(uri.Query);
             if (queryStrings.TryGetValue("db", out var db))
             {
-                val = db;
-                returnFromDetail = false;
-                await SaveCurrent(val);
+                val = dblist.FirstOrDefault(s => String.Equals(s, db, StringComparison.OrdinalIgnoreCase));
+                if (val != null)
+                {
+                    returnFromDetail = false;
+                    await SaveCurrent(val);
+                }
             }
 
             if (String.IsNullOrEmpty(val))
@@ -88,7 +91,7 @@
 
             currentDB.Current = val;
 
-            recent = (new string[] {val}).Union((await localStorage.GetAsync<string[]>("recentList")) ?? new string[] {val}).Where(db => dblist.Contains(db)).ToArray();
+            recent = (new string[] {val}).Union((await localStorage.GetAsync<string[]>("recentList")) ?? new string[] {val}).Where(db => dblist.Any(s => String.Equals(s, db, StringComparison.OrdinalIgnoreCase))).ToArray();
 
             Reload(returnFromDetail);
         }
