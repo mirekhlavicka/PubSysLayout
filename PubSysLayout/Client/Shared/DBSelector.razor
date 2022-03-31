@@ -8,29 +8,53 @@
 @using Microsoft.AspNetCore.WebUtilities;
 
 <style>
+    .dbswitch {
+        display: flex;
+    }
+
+    .dbchips {
+        margin-right:50px;
+        padding-top:5px;
+    }
+
+    .dbselect {
+        width: 300px;
+    }
+
     .dbselect input, .dbselect label, .dbselect .mud-icon-default {
         color: white !important;
     }
 
-    .dbselect {
-        width:300px;
-    }
 </style>
 
 @if (dblist != null)
 {
-    <div class="dbselect">
-        <MudSelect T="string" Label="Database" Variant="Variant.Text" AnchorOrigin="Origin.BottomCenter" Value="@currentDB.Current" ValueChanged="@SetCurrent" Margin="Margin.Dense">
-            @foreach (var constr in dblist)
-            {
-                <MudSelectItem Value="@constr" />
-            }
-        </MudSelect>
+    <div class="dbswitch">
+        <div class="dbchips">
+        @if (currentDB.Current != null && recent != null && recent.Length > 1)
+        {
+            <MudChipSet Filter="true" Mandatory="true" MultiSelection="false" SelectedChipChanged="@(async (e) =>{ if(e?.Value != null) /*currentDB.Current =*/ await SetCurrent(e.Value.ToString()); })" SelectedValues="@(new string[]{ currentDB.Current})">
+                @foreach (var db in recent)
+                {
+                    <MudChip Text="@db" Color="Color.Info" Value="@db" @key="@db">@db</MudChip>@*Default="@(db == currentDB.Current)"*@
+                }
+            </MudChipSet>
+        }
+        </div>
+        <div class="dbselect">
+            <MudSelect T="string" Label="Database" Variant="Variant.Text" AnchorOrigin="Origin.BottomCenter" Value="@currentDB.Current" ValueChanged="@SetCurrent" Margin="Margin.Dense">
+                @foreach (var constr in dblist)
+                {
+                    <MudSelectItem Value="@constr" />
+                }
+            </MudSelect>
+        </div>
     </div>
 }
 
 @code {
     private string[] dblist = null;
+    private string[] recent = null;
     private bool disposed = false;
 
     protected override async Task OnInitializedAsync()
@@ -48,7 +72,7 @@
             {
                 val = db;
                 returnFromDetail = false;
-                await localStorage.SetAsync("currentDB", val);
+                await SaveCurrent(val);
             }
 
             if (String.IsNullOrEmpty(val))
@@ -59,10 +83,13 @@
             if (String.IsNullOrEmpty(val) || !dblist.Any(s => String.Equals(s, val, StringComparison.OrdinalIgnoreCase)))
             {
                 val = dblist[0];
-                await localStorage.SetAsync("currentDB", val);
+                await SaveCurrent(val);
             }
 
             currentDB.Current = val;
+
+            recent = (new string[] {val}).Union((await localStorage.GetAsync<string[]>("recentList")) ?? new string[] {val}).Where(db => dblist.Contains(db)).ToArray();
+
             Reload(returnFromDetail);
         }
 
@@ -92,7 +119,7 @@
         changeFromMe = true;
         currentDB.Current = s;
         changeFromMe = false;
-        await localStorage.SetAsync("currentDB", currentDB.Current);
+        await SaveCurrent(currentDB.Current);
         Reload(true);
         snackBar.Add($"Layout database {s} selected", Severity.Info);
     }
@@ -102,8 +129,19 @@
         if (!disposed && !changeFromMe)
         {
             StateHasChanged();
-            await localStorage.SetAsync("currentDB", currentDB.Current);
+            await SaveCurrent(currentDB.Current);
             Reload(false);
+        }
+    }
+
+    private async Task SaveCurrent(string db)
+    {
+        await localStorage.SetAsync("currentDB", db);
+        if (recent != null && !recent.Contains(db))
+        {
+            recent = recent.Take(3).Prepend(db).ToArray();
+            StateHasChanged();
+            await localStorage.SetAsync("recentList", recent);
         }
     }
 
