@@ -21,7 +21,10 @@ else
             <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Link="layoutdefinitions/edit/0" Class="mt-0 mb-5" />
         </MudTooltip>
         <MudTooltip Text="Add module to selected layout definitions">
-            <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.LibraryAdd" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5 ml-3" OnClick="OpenAddModuleDialog" Disabled="@(selectedItems?.Count == 0)"/>
+            <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.AddShoppingCart" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5 ml-3" OnClick="@(_ => OpenAddModuleDialog(false))" Disabled="@(selectedItems?.Count == 0)"/>
+        </MudTooltip>
+        <MudTooltip Text="Remove module from selected layout definitions">
+            <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.RemoveShoppingCart" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5 ml-3" OnClick="@(_ => OpenAddModuleDialog(true))" Disabled="@(selectedItems?.Count == 0)"/>
         </MudTooltip>
         <MudTooltip Text="Delete selected layout definitions">
             <MudFab Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5 ml-3" OnClick="DeleteSelected" Disabled="@(selectedItems?.Count == 0)"/>
@@ -138,7 +141,7 @@ else
         }
     }
 
-    private async Task  OpenAddModuleDialog()
+    private async Task  OpenAddModuleDialog(bool remove)
     {
         var options = new DialogOptions { 
             MaxWidth = MaxWidth.Small, 
@@ -146,8 +149,9 @@ else
         };
 
         var parameters = new DialogParameters();
+        parameters.Add("Remove", remove);
 
-        var dialog = DialogService.Show<LayoutDefinitions.AddModuleDialog>("Add module to selected layout definitions", parameters, options);
+        var dialog = DialogService.Show<LayoutDefinitions.AddModuleDialog>(remove ? "Remove module from selected layout definitions" : "Add module to selected layout definitions", parameters, options);
 
         var result = await dialog.Result;
 
@@ -155,12 +159,28 @@ else
         {
             ModuleUsage mu = result.Data as ModuleUsage;
 
-            foreach (var ld in selectedItems)
+            if (!remove)
             {
-                mu.IdLayoutdefinition = ld.IdLayoutdefinition;
-                using var response = await Http.PostAsJsonAsync("api/moduleusages", mu);
-                var xmu = await response.Content.ReadFromJsonAsync<ModuleUsage>();
-                snackBar.Add($"Module usage {xmu.IdModuleusage} created", Severity.Success);
+                foreach (var ld in selectedItems)
+                {
+                    mu.IdLayoutdefinition = ld.IdLayoutdefinition;
+                    using var response = await Http.PostAsJsonAsync("api/moduleusages", mu);
+                    var xmu = await response.Content.ReadFromJsonAsync<ModuleUsage>();
+                    snackBar.Add($"Module usage {xmu.IdModuleusage} created", Severity.Success);
+                }
+            }
+            else
+            {
+                var moduleUsages = await Http.GetFromJsonAsync<ModuleUsage[]>($"api/moduleusages?id_module={mu.IdModule}");
+
+                foreach (var ld in selectedItems)
+                {
+                    foreach (var mud in moduleUsages.Where(x => x.IdLayoutdefinition == ld.IdLayoutdefinition && (mu.IdSpot == -1 || x.IdSpot == mu.IdSpot)))
+                    {
+                        await Http.DeleteAsync($"api/moduleusages/{mud.IdModuleusage}");
+                        snackBar.Add($"ModuleUsage {mud.IdModuleusage} deleted", Severity.Success);
+                    }
+                }
             }
         }
     }

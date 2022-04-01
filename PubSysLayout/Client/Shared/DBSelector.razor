@@ -33,10 +33,10 @@
         <div class="dbchips">
         @if (currentDB.Current != null && recent != null && recent.Length > 1)
         {
-            <MudChipSet Filter="true" Mandatory="true" MultiSelection="false" SelectedChipChanged="@(async (e) =>{ if(e?.Value != null) /*currentDB.Current =*/ await SetCurrent(e.Value.ToString()); })" SelectedValues="@(new string[]{ currentDB.Current})">
+            <MudChipSet Filter="true" Mandatory="true" MultiSelection="false" SelectedChipChanged="@(async (e) =>{ if(e?.Value != null) await SetCurrent(e.Value.ToString()); })" SelectedValues="@(new string[]{ currentDB.Current})">
                 @foreach (var db in recent)
                 {
-                    <MudChip Text="@db" Color="Color.Info" Value="@db" @key="@db">@db</MudChip>@*Default="@(db == currentDB.Current)"*@
+                    <MudChip Text="@db" Color="Color.Info" Value="@db" @key="@db">@db</MudChip>
                 }
             </MudChipSet>
         }
@@ -74,7 +74,6 @@
                 if (val != null)
                 {
                     returnFromDetail = false;
-                    await SaveCurrent(val);
                 }
             }
 
@@ -86,12 +85,13 @@
             if (String.IsNullOrEmpty(val) || !dblist.Any(s => String.Equals(s, val, StringComparison.OrdinalIgnoreCase)))
             {
                 val = dblist[0];
-                await SaveCurrent(val);
             }
 
             currentDB.Current = val;
 
-            recent = (new string[] {val}).Union((await localStorage.GetAsync<string[]>("recentList")) ?? new string[] {val}).Where(db => dblist.Any(s => String.Equals(s, db, StringComparison.OrdinalIgnoreCase))).ToArray();
+            recent = (new string[] {currentDB.Current}).Union((await localStorage.GetAsync<string[]>("recentList")) ?? new string[0]).Where(db => dblist.Any(s => String.Equals(s, db, StringComparison.OrdinalIgnoreCase))).Take(4).ToArray();
+
+            await SaveCurrent();
 
             Reload(returnFromDetail);
         }
@@ -122,7 +122,7 @@
         changeFromMe = true;
         currentDB.Current = s;
         changeFromMe = false;
-        await SaveCurrent(currentDB.Current);
+        await SaveCurrent();
         Reload(true);
         snackBar.Add($"Layout database {s} selected", Severity.Info);
     }
@@ -132,17 +132,24 @@
         if (!disposed && !changeFromMe)
         {
             StateHasChanged();
-            await SaveCurrent(currentDB.Current);
+            await SaveCurrent();
             Reload(false);
         }
     }
 
-    private async Task SaveCurrent(string db)
+    private async Task SaveCurrent()
     {
-        await localStorage.SetAsync("currentDB", db);
-        if (recent != null && !recent.Contains(db))
+        await localStorage.SetAsync("currentDB", currentDB.Current);
+        if (recent != null )
         {
-            recent = recent.Take(3).Prepend(db).ToArray();
+            if (!recent.Contains(currentDB.Current))
+            {
+                recent = recent.Take(3).Prepend(currentDB.Current).ToArray();
+            }
+            else
+            {
+                recent = recent.Where(db => db != currentDB.Current).Prepend(currentDB.Current).ToArray();
+            }
             StateHasChanged();
             await localStorage.SetAsync("recentList", recent);
         }
