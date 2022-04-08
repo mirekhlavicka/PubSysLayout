@@ -6,11 +6,13 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PubSysLayout.Shared.Model;
+using Microsoft.AspNetCore.Authorization;
 
 namespace PubSysLayout.Server.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class ModuleUsagesController : ControllerBase
     {
         private readonly LayoutDBContext _context;

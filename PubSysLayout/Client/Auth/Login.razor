@@ -16,8 +16,8 @@
         <MudOverlay Visible="true" DarkBackground="true" AutoClose="false" ZIndex="1350">
             <MudPaper Class="pa-4" Width="500px">
                 <MudForm @ref="form" @bind-IsValid="@success">
-                    <MudTextField T="string" Label="Username" Required="true" RequiredError="User name is required!" Immediate="true" @bind-Value="userName"/>
-                    <MudTextField T="string" Label="Password" InputType="InputType.Password" Required="true" RequiredError="Password is required!" Immediate="true" @bind-Value="password"  @onkeyup="KeyUp"/>
+                    <MudTextField T="string" Label="Username" Required="true" RequiredError="User name is required!" Immediate="true" @bind-Value="userName" @onkeyup="KeyUp"/>
+                    <MudTextField T="string" Label="Password" InputType="InputType.Password" Required="true" RequiredError="Password is required!" Immediate="true" @bind-Value="password" @onkeyup="KeyUp"/>
                     <div class="d-flex align-center justify-space-between mt-6">
                         <MudCheckBox T="bool" Class="ml-n2" Label="Remember me" @bind-Checked="rememberMe"/>
                         <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!success)" Class="ml-8" @onclick="DoLogin">Login</MudButton>
@@ -38,10 +38,17 @@
 
     string userName = "";
     string password = "";
-    bool rememberMe = false;
+    bool rememberMe = true;
+
+    bool messageBoxShown = false;
 
     private async void DoLogin()
     {
+        if (messageBoxShown)
+        {
+            return;
+        }
+
         if ((await Http.PostAsJsonAsync("api/auth/login", new
         {
             userName = userName,
@@ -59,7 +66,9 @@
         }
         else
         {
-            await DialogService.ShowMessageBox("Login", "Invalid username or password");   
+            messageBoxShown = true;
+            await DialogService.ShowMessageBox("Login", "Invalid username or password", options : new DialogOptions { CloseOnEscapeKey = true });
+            messageBoxShown = false;
         }
     }
 
