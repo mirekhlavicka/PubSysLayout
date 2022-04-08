@@ -1,6 +1,19 @@
-﻿<Router AppAssembly="@typeof(App).Assembly">
+﻿@using PubSysLayout.Client.Auth
+
+<CascadingAuthenticationState>
+<Router AppAssembly="@typeof(App).Assembly">
     <Found Context="routeData">
-        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+        <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" >
+            <Authorizing>
+                <text> Please wait, we are authorizing the user. </text>
+            </Authorizing>
+@*            <NotAuthorized>
+                <text> You are not authorized to access this page. </text>
+            </NotAuthorized>
+*@            <NotAuthorized>
+                <LoginRedirect />
+            </NotAuthorized>
+        </AuthorizeRouteView>
     </Found>
     <NotFound>
         <PageTitle>Not found</PageTitle>
@@ -9,3 +22,4 @@
         </LayoutView>
     </NotFound>
 </Router>
+</CascadingAuthenticationState>

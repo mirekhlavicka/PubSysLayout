@@ -1,8 +1,10 @@
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Components.Web;
 using Microsoft.AspNetCore.Components.WebAssembly.Hosting;
 using MudBlazor;
 using MudBlazor.Services;
 using PubSysLayout.Client;
+using PubSysLayout.Client.AuthProviders;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -39,5 +41,11 @@ builder.Services.AddMudServices(config =>
     //config.SnackbarConfiguration.ShowTransitionDuration = 500;
     //config.SnackbarConfiguration.SnackbarVariant = Variant.Filled;
 });
+
+//builder.Services.AddOptions();
+builder.Services.AddAuthorizationCore();
+
+builder.Services.AddScoped<AuthStateProvider>();
+builder.Services.AddScoped<AuthenticationStateProvider>(provider => provider.GetRequiredService<AuthStateProvider>());
 
 await builder.Build().RunAsync();

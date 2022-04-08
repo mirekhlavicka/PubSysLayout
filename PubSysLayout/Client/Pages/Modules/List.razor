@@ -1,4 +1,7 @@
 ﻿@page "/modules"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
+
 @inject HttpClient Http
 @inject IJSRuntime js
 @inject MudBlazor.ISnackbar snackBar

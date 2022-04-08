@@ -1,0 +1,18 @@
+﻿@inject NavigationManager uriHelper
+@using Microsoft.AspNetCore.WebUtilities;
+
+@code {
+    protected override void OnInitialized()
+    {
+        var loginUri = $"/login?returnUrl={Uri.EscapeDataString(uriHelper.Uri)}";
+
+        var uri = uriHelper.ToAbsoluteUri(uriHelper.Uri);
+        var queryStrings = QueryHelpers.ParseQuery(uri.Query);
+        if (queryStrings.TryGetValue("db", out var db))
+        {
+            loginUri += $"&db={db}";
+        }
+
+         uriHelper.NavigateTo(loginUri);
+     }
+ } 

@@ -1,0 +1,81 @@
+﻿@page "/login"
+@inject HttpClient Http
+@inject NavigationManager _navigation
+@inject IDialogService DialogService
+@inject PubSysLayout.Client.AuthProviders.AuthStateProvider authState
+
+<PageTitle>Login</PageTitle>
+
+<AuthorizeView>
+    <Authorized>
+        <h1>Hello @context.User.Claims.First().Value</h1>
+        <br />
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" @onclick="Logout">Logout</MudButton>
+    </Authorized>
+    <NotAuthorized>
+        <MudOverlay Visible="true" DarkBackground="true" AutoClose="false" ZIndex="1350">
+            <MudPaper Class="pa-4" Width="500px">
+                <MudForm @ref="form" @bind-IsValid="@success">
+                    <MudTextField T="string" Label="Username" Required="true" RequiredError="User name is required!" Immediate="true" @bind-Value="userName"/>
+                    <MudTextField T="string" Label="Password" InputType="InputType.Password" Required="true" RequiredError="Password is required!" Immediate="true" @bind-Value="password"  @onkeyup="KeyUp"/>
+                    <div class="d-flex align-center justify-space-between mt-6">
+                        <MudCheckBox T="bool" Class="ml-n2" Label="Remember me" @bind-Checked="rememberMe"/>
+                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!success)" Class="ml-8" @onclick="DoLogin">Login</MudButton>
+                    </div>
+                </MudForm>
+            </MudPaper>
+        </MudOverlay>
+    </NotAuthorized>
+</AuthorizeView>
+
+@code {
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "returnUrl")]
+    public string returnUrl { get; set; }
+
+    bool success;
+    MudForm form;
+
+    string userName = "";
+    string password = "";
+    bool rememberMe = false;
+
+    private async void DoLogin()
+    {
+        if ((await Http.PostAsJsonAsync("api/auth/login", new
+        {
+            userName = userName,
+            password = password,
+            rememberMe = rememberMe
+        })).IsSuccessStatusCode)
+        {
+            //_navigation.NavigateTo("/", true);
+            authState.StateChanged();
+
+            if (!String.IsNullOrEmpty(returnUrl))
+            {
+                _navigation.NavigateTo(returnUrl, false);
+            }
+        }
+        else
+        {
+            await DialogService.ShowMessageBox("Login", "Invalid username or password");   
+        }
+    }
+
+    private void KeyUp(KeyboardEventArgs  e)
+    {
+        if (e.Key == "Enter")
+        {
+            DoLogin();
+        }
+    }
+
+    private async void Logout()
+    {
+        await Http.PostAsync("api/auth/logout", null);
+
+        //_navigation.NavigateTo("/", true);
+        authState.StateChanged();
+    }
+}
