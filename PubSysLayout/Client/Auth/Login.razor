@@ -8,16 +8,17 @@
 
 <AuthorizeView>
     <Authorized>
-        <h1>Hello @context.User.Claims.First().Value</h1>
+@*        <h1>Hello @context.User.Claims.First().Value</h1>
         <br />
-        <MudButton Color="Color.Primary" Variant="Variant.Filled" @onclick="Logout">Logout</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" @onclick="Logout">Logout</MudButton>*@
+        <MudProgressCircular Color="Color.Default" Indeterminate="true" />
     </Authorized>
     <NotAuthorized>
         <MudOverlay Visible="true" DarkBackground="true" AutoClose="false" ZIndex="1350">
             <MudPaper Class="pa-4" Width="500px">
                 <MudForm @ref="form" @bind-IsValid="@success">
-                    <MudTextField T="string" Label="Username" Required="true" RequiredError="User name is required!" Immediate="true" @bind-Value="userName" @onkeyup="KeyUp"/>
-                    <MudTextField T="string" Label="Password" InputType="InputType.Password" Required="true" RequiredError="Password is required!" Immediate="true" @bind-Value="password" @onkeyup="KeyUp"/>
+                    <MudTextField T="string" Required="true" RequiredError="User name is required!" Immediate="true" @bind-Value="userName" @onkeyup="KeyUp" spellcheck="false" Placeholder="Username" Label="Username" AutoFocus="true"/>
+                    <MudTextField T="string" InputType="InputType.Password" Required="true" RequiredError="Password is required!" Immediate="true" @bind-Value="password" @onkeyup="KeyUp" Placeholder="Password" Label="Password"/>
                     <div class="d-flex align-center justify-space-between mt-6">
                         <MudCheckBox T="bool" Class="ml-n2" Label="Remember me" @bind-Checked="rememberMe"/>
                         <MudButton Variant="Variant.Filled" Color="Color.Primary" Disabled="@(!success)" Class="ml-8" @onclick="DoLogin">Login</MudButton>
@@ -59,9 +60,15 @@
             //_navigation.NavigateTo("/", true);
             authState.StateChanged();
 
+            await Task.Delay(500);
+
             if (!String.IsNullOrEmpty(returnUrl))
             {
                 _navigation.NavigateTo(returnUrl, false);
+            }
+            else
+            {
+                _navigation.NavigateTo("/", false);
             }
         }
         else

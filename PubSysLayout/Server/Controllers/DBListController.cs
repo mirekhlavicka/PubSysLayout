@@ -6,11 +6,13 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using PubSysLayout.Shared.Model;
+using Microsoft.AspNetCore.Authorization;
 
 namespace PubSysLayout.Server.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
+    [Authorize]
     public class DBListController : ControllerBase
     {
         private readonly LayoutDBContext _context;
@@ -25,25 +27,34 @@ namespace PubSysLayout.Server.Controllers
         [HttpGet]
         public async Task<ActionResult<string[]>> GetConList()
         {
-            using (var command = _context.Database.GetDbConnection().CreateCommand())
+            string dbList = _configuration["SELECT_databases_" + User.Identity.Name.ToLower()];
+
+            if (!dbList.ToUpper().StartsWith("SELECT"))
             {
-                command.CommandText = _configuration["SELECT_databases"];
-
-                command.CommandType = System.Data.CommandType.Text;
-
-                _context.Database.OpenConnection();
-
-                using (var result = await command.ExecuteReaderAsync())
+                return dbList.Split(',');
+            }
+            else
+            {
+                using (var command = _context.Database.GetDbConnection().CreateCommand())
                 {
-                    var entities = new List<string>();
+                    command.CommandText = dbList;
 
-                    while (result.Read())
+                    command.CommandType = System.Data.CommandType.Text;
+
+                    _context.Database.OpenConnection();
+
+                    using (var result = await command.ExecuteReaderAsync())
                     {
-                        entities.Add(result[0].ToString());
-                    }
-                    _context.Database.CloseConnection();
+                        var entities = new List<string>();
 
-                    return entities.ToArray();
+                        while (result.Read())
+                        {
+                            entities.Add(result[0].ToString());
+                        }
+                        _context.Database.CloseConnection();
+
+                        return entities.ToArray();
+                    }
                 }
             }
         }

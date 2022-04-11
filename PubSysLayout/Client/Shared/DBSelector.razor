@@ -61,42 +61,39 @@
     {
         dblist = await dbListService.GetList();
 
-        //if (String.IsNullOrEmpty(currentDB.Current))
+        string val = null;
+        bool returnFromDetail = true;
+
+        var uri = uriHelper.ToAbsoluteUri(uriHelper.Uri);
+        var queryStrings = QueryHelpers.ParseQuery(uri.Query);
+        if (queryStrings.TryGetValue("db", out var db))
         {
-            string val = null;
-            bool returnFromDetail = true;
-
-            var uri = uriHelper.ToAbsoluteUri(uriHelper.Uri);
-            var queryStrings = QueryHelpers.ParseQuery(uri.Query);
-            if (queryStrings.TryGetValue("db", out var db))
+            val = dblist.FirstOrDefault(s => String.Equals(s, db, StringComparison.OrdinalIgnoreCase));
+            if (val != null)
             {
-                val = dblist.FirstOrDefault(s => String.Equals(s, db, StringComparison.OrdinalIgnoreCase));
-                if (val != null)
-                {
-                    returnFromDetail = false;
-                }
+                returnFromDetail = false;
             }
+        }
 
-            if (String.IsNullOrEmpty(val))
-            {
-                val = await localStorage.GetAsync<string>("currentDB");
-            }
+        if (String.IsNullOrEmpty(val))
+        {
+            val = await localStorage.GetAsync<string>("currentDB");
+        }
 
-            if (String.IsNullOrEmpty(val) || !dblist.Any(s => String.Equals(s, val, StringComparison.OrdinalIgnoreCase)))
-            {
-                val = dblist[0];
-            }            
+        if (String.IsNullOrEmpty(val) || !dblist.Any(s => String.Equals(s, val, StringComparison.OrdinalIgnoreCase)))
+        {
+            val = dblist[0];
+        }            
 
-            recent = (new string[] {val}).Union((await localStorage.GetAsync<string[]>("recentList")) ?? new string[0]).Where(db => dblist.Any(s => String.Equals(s, db, StringComparison.OrdinalIgnoreCase))).Take(4).ToArray();
+        recent = (new string[] {val}).Union((await localStorage.GetAsync<string[]>("recentList")) ?? new string[0]).Where(db => dblist.Any(s => String.Equals(s, db, StringComparison.OrdinalIgnoreCase))).Take(4).ToArray();
 
-            if (currentDB.Current != val)
-            {
-                currentDB.Current = val;
+        if (currentDB.Current != val)
+        {
+            currentDB.Current = val;
 
-                await SaveCurrent();
+            await SaveCurrent();
 
-                Reload(returnFromDetail);
-            }
+            Reload(returnFromDetail);
         }
 
         if (!disposed)

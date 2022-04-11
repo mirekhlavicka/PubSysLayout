@@ -27,7 +27,7 @@ builder.Services.AddTransient/*Scoped*/(sp =>
     return http;
 });
 
-builder.Services.AddSingleton<DBList>();
+builder.Services.AddScoped<DBList>();
 
 builder.Services.AddMudServices(config =>
 {

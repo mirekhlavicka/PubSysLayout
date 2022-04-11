@@ -20,13 +20,20 @@ namespace PubSysLayout.Server.Controllers
             public bool rememberMe { get; set; }
         }
 
+        private readonly IConfiguration _configuration;
+
+        public AuthController(IConfiguration configuration)
+        {
+            _configuration = configuration;
+        }
+
+
         [HttpPost]
         //[Route("login")]
         public async Task<IActionResult> Login(/*[FromBody]*/ loginRequest lr)
         {
-            //var user = _context.Users.SingleOrDefault(u => u.LoginName == lr.userName);
 
-            if (String.IsNullOrEmpty(lr.userName) || String.IsNullOrEmpty(lr.password) || lr.password != lr.userName + "123" /*|| user == null || user.Password != lr.password*/)
+            if (String.IsNullOrEmpty(lr.userName) || String.IsNullOrEmpty(lr.password) || lr.password != _configuration[lr.userName.ToLower() + "_pwd"] )
             {
                 return BadRequest();
             }

@@ -1,4 +1,5 @@
-﻿using System.Net.Http.Json;
+﻿using PubSysLayout.Client.AuthProviders;
+using System.Net.Http.Json;
 
 namespace PubSysLayout.Client
 {
@@ -7,9 +8,15 @@ namespace PubSysLayout.Client
         private string[] dblist = null;
         private HttpClient httpClient;
 
-        public DBList(HttpClient httpClient)
+        public DBList(HttpClient httpClient, AuthStateProvider authStateProvider)
         { 
             this.httpClient = httpClient;
+            authStateProvider.AuthenticationStateChanged += AuthStateProvider_AuthenticationStateChanged;
+        }
+
+        private void AuthStateProvider_AuthenticationStateChanged(Task<Microsoft.AspNetCore.Components.Authorization.AuthenticationState> task)
+        {
+            dblist = null;
         }
 
         public async Task<string[]>  GetList()
