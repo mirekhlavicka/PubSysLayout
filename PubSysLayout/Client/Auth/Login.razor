@@ -4,6 +4,12 @@
 @inject IDialogService DialogService
 @inject PubSysLayout.Client.AuthProviders.AuthStateProvider authState
 
+<style>
+.mud-input.mud-input-underline:before {
+    z-index:10;
+}
+</style>
+
 <PageTitle>Login</PageTitle>
 
 <AuthorizeView>

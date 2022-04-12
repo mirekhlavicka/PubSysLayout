@@ -124,6 +124,8 @@ namespace PubSysLayout.Server.Controllers
                 return BadRequest();
             }
 
+            Dictionary<ModuleUsage, ModuleUsage> mapMU = new Dictionary<ModuleUsage, ModuleUsage>();
+
             LayoutDefinition nld = new LayoutDefinition
             {
                 IdLayout = layoutDefinition.IdLayout,
@@ -134,17 +136,39 @@ namespace PubSysLayout.Server.Controllers
 
             foreach (ModuleUsage mu in layoutDefinition.ModuleUsages)
             {
-                nld.ModuleUsages.Add(new ModuleUsage
+                var nmu = new ModuleUsage
                 {
                     IdModule = mu.IdModule,
                     IdSpot = mu.IdSpot,
                     Order = mu.Order,
                     CacheTime = mu.CacheTime,
                     ShowMobile = mu.ShowMobile
-                });
+                };
+
+                nld.ModuleUsages.Add(nmu);
+
+                mapMU.Add(mu, nmu);
             }
 
             _context.LayoutDefinitions.Add(nld);
+
+            _context.SaveChanges();
+
+            foreach (ModuleUsage mu in mapMU.Keys)
+            {
+                foreach (var ms in _context.ModuleSettings.Where(x => x.IdModuleusage == mu.IdModuleusage))
+                {
+                    _context.ModuleSettings.Add(new ModuleSetting
+                    {
+                        IdModule = ms.IdModule,
+                        IdModuleusage = mapMU[mu].IdModuleusage,
+                        IdServer = ms.IdServer,
+                        SettingName = ms.SettingName,
+                        SettingValue = ms.SettingValue
+
+                    });
+                }
+            }
 
             _context.SaveChanges();
 
