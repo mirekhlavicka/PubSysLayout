@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using System.Configuration;
+using Microsoft.AspNetCore.DataProtection;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,6 +35,16 @@ builder.Services.AddControllersWithViews().AddJsonOptions(
         );
 
 builder.Services.AddRazorPages();
+
+var keysDirectoryName = "Keys";
+var keysDirectoryPath = Path.Combine(builder.Environment.ContentRootPath, keysDirectoryName);
+if (!Directory.Exists(keysDirectoryPath))
+{
+    Directory.CreateDirectory(keysDirectoryPath);
+}
+builder.Services.AddDataProtection()
+      .PersistKeysToFileSystem(new DirectoryInfo(keysDirectoryPath))
+      .SetApplicationName("PubSysLayout");
 
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
