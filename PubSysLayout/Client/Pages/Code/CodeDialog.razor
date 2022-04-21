@@ -1,0 +1,47 @@
+﻿@inject IJSRuntime js
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Edit" Class="mr-3 mb-n1" />
+            @MudDialog.Title
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <form>
+            <textarea @ref="textarea" id="dlgCode" name="dlgCode" style="display:none" />
+        </form>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Filled">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="OK" Variant="Variant.Filled">Update</MudButton>        
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public string code { get; set; } = "";
+
+
+    private ElementReference textarea;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await js.InvokeVoidAsync("codemirror.create", textarea, code, "100%", "calc(100vh - 200px)");
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private async void OK()
+    {        
+        code = await js.InvokeAsync<string>("codemirror.getValue", "dlgCode");
+        MudDialog.Close(DialogResult.Ok(code));
+    }
+}

@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.EntityFrameworkCore;
 using System.Configuration;
 using Microsoft.AspNetCore.DataProtection;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -94,4 +95,5 @@ app.MapFallbackToFile("index.html", new StaticFileOptions
     }
 });
 
+Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 app.Run();

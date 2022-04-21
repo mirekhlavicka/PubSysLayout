@@ -8,6 +8,12 @@
     <base href="/" />
     <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
     <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
+
+    <link rel="stylesheet" href="codemirror/lib/codemirror.css">
+
+    <link rel="stylesheet" href="codemirror/addon/dialog/dialog.css">
+    <link rel="stylesheet" href="codemirror/addon/search/matchesonscrollbar.css">
+
     <link type="image/png" sizes="96x96" rel="icon" href="icons8-wrench-96.png">
     <!--<link href="PubSysLayout.Client.styles.css" rel="stylesheet" />-->
 
@@ -54,7 +60,7 @@
         }
 
         tr .mud-icon-button:disabled {
-            color: red!important;
+            color: red !important;
         }
 
         @keyframes highlight {
@@ -80,6 +86,31 @@
     </div>
     <script src="_framework/blazor.webassembly.js"></script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
+
+    <script src="codemirror/lib/codemirror.js"></script>
+    <script src="codemirror/mode/xml/xml.js"></script>
+    <script src="codemirror/mode/javascript/javascript.js"></script>
+    <script src="codemirror/mode/css/css.js"></script>
+    <script src="codemirror/mode/htmlmixed/htmlmixed.js"></script>
+    <script src="codemirror/addon/mode/multiplex.js"></script>
+    <script src="codemirror/mode/htmlembedded/htmlembedded.js"></script>
+
+    <script src="codemirror/addon/dialog/dialog.js"></script>
+    <script src="codemirror/addon/search/searchcursor.js"></script>
+    <script src="codemirror/addon/search/search.js"></script>
+    <script src="codemirror/addon/scroll/annotatescrollbar.js"></script>
+    <script src="codemirror/addon/search/matchesonscrollbar.js"></script>
+    <script src="codemirror/addon/search/jump-to-line.js"></script>
+
+    <!--<script src="codemirror/addon/display/fullscreen.js"></script>-->
+
+    <script src="codemirror/addon/edit/matchbrackets.js"></script>
+
+    <script src="codemirror/addon/fold/xml-fold.js"></script>
+    <script src="codemirror/addon/edit/matchtags.js"></script>
+
+    <script  src="codemirror/codemirrorwrapper.js"></script>
+
 </body>
 
 </html>
