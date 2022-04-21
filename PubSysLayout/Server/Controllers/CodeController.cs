@@ -13,7 +13,7 @@ namespace PubSysLayout.Server.Controllers
         [HttpGet]
         public async Task<ActionResult<string>> GetCode(string path)
         {
-            FtpClient client = new FtpClient("10.255.26.66", 2121, "mhlavicka", "An4t3eRXs");
+            FtpClient client = new FtpClient("10.255.26.66", 2121, "", "");
             client.DataConnectionType = FtpDataConnectionType.PASV;
             await client.ConnectAsync();
 
@@ -51,7 +51,7 @@ namespace PubSysLayout.Server.Controllers
             //    return BadRequest();
             //}
 
-            FtpClient client = new FtpClient("10.255.26.66", 2121, "mhlavicka", "An4t3eRXs");
+            FtpClient client = new FtpClient("10.255.26.66", 2121, "", "");
             client.DataConnectionType = FtpDataConnectionType.PASV;
             await client.ConnectAsync();
 
