@@ -10,14 +10,25 @@ namespace PubSysLayout.Server.Controllers
     [Authorize]
     public class CodeController : ControllerBase
     {
-        [HttpGet]
-        public async Task<ActionResult<string>> GetCode(string path)
+        private readonly IConfiguration _configuration;
+
+        public CodeController(IConfiguration configuration)
         {
-            FtpClient client = new FtpClient("10.255.26.66", 2121, "", "");
+            _configuration = configuration;
+        }
+
+        [HttpGet]
+        public async Task<ActionResult<string>> GetCode(string ftp, string path)
+        {
+            string[] tmp = ftp.Split('/');
+            string[] tmp1 = _configuration.GetSection("FTP").Get<Dictionary<string, string>>()[tmp[0]].Split(',');
+            path = path.Replace("~", $"/{tmp[1]}");
+
+            FtpClient client = new FtpClient(tmp1[0], Int32.Parse(tmp1[1]), tmp1[2], tmp1[3]);
             client.DataConnectionType = FtpDataConnectionType.PASV;
             await client.ConnectAsync();
 
-            client.Download(out byte[] bytes, path.Replace("~", "/m.navigovat.cz"));
+            client.Download(out byte[] bytes, path);
 
             client.Disconnect();
 
@@ -36,7 +47,6 @@ namespace PubSysLayout.Server.Controllers
             return contents;
         }
 
-
         public class UploadCode
         { 
             public string Path { get; set; }
@@ -44,22 +54,63 @@ namespace PubSysLayout.Server.Controllers
         }
 
         [HttpPut]
-        public async Task<IActionResult> PutCode(UploadCode uploadCode)
+        public async Task<IActionResult> PutCode(string ftp, UploadCode uploadCode)
         {
-            //if (id != layoutDefinition.IdLayoutdefinition)
-            //{
-            //    return BadRequest();
-            //}
+            string[] tmp = ftp.Split('/');
+            string[] tmp1 = _configuration.GetSection("FTP").Get<Dictionary<string, string>>()[tmp[0]].Split(',');
+            string path = uploadCode.Path.Replace("~", $"/{tmp[1]}");
 
-            FtpClient client = new FtpClient("10.255.26.66", 2121, "", "");
+
+            FtpClient client = new FtpClient(tmp1[0], Int32.Parse(tmp1[1]), tmp1[2], tmp1[3]);
             client.DataConnectionType = FtpDataConnectionType.PASV;
             await client.ConnectAsync();
 
-            client.Upload(/*Encoding.UTF8.GetBytes(uploadCode.Code)*/uploadCode.Code.ToBytes(Encoding.UTF8), uploadCode.Path.Replace("~", "/m.navigovat.cz"));
+            client.Upload(uploadCode.Code.ToBytes(Encoding.UTF8), path);
 
             client.Disconnect();
 
             return NoContent();
+        }
+
+        [HttpGet("ftp")]
+        public async Task<ActionResult<IEnumerable<string>>> FindFTP(string db = "digiarena_M_Layout_2")
+        {
+            var res = new List<string>();
+
+            var ftplist = _configuration.GetSection("FTP").Get<Dictionary<string, string>>();
+
+            foreach (var ftpl in ftplist.Keys)
+            {
+                var tmp = ftplist[ftpl].Split(',');
+
+                FtpClient client = new FtpClient(tmp[0], Int32.Parse(tmp[1]), tmp[2], tmp[3]);
+                client.DataConnectionType = FtpDataConnectionType.PASV;
+                await client.ConnectAsync();
+
+                var l = client.GetListing("/"/*, FtpListOption.*/);
+
+                foreach (var d in l.Where(li => li.Type == FtpFileSystemObjectType.Directory))
+                {
+                    if (client.FileExists(d.FullName + "/web.config"))
+                    {
+                        client.Download(out byte[] bytes, d.FullName + "/web.config");
+
+                        if (bytes != null)
+                        {
+                            var cfg = Encoding.UTF8.GetString(bytes);
+
+                            if (cfg.Contains(db, StringComparison.InvariantCultureIgnoreCase))
+                            {
+                                res.Add(ftpl + "/" + d.Name);
+                            }
+                        }
+                    }
+                }
+
+                client.Disconnect();
+            }
+
+            return res;
         }
     }
 

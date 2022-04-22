@@ -217,11 +217,30 @@ else
         DialogService.Show<Modules.ModuleSettingsDialog>($"{m.Name} default settings", parameters, options);
     }
 
+    string ftp = null;
     private async void OpenModuleCodeDialog(Module m)
     {
-        string code = await Http.GetStringAsync($"/api/code/?path={WebUtility.UrlEncode(m.DesktopSrc)}");
+        if (ftp == null)
+        {
+            var ftpresult = await DialogService.Show<Code.SelectFTPDialog>("Select FTP source",
+                new DialogParameters { },
+                new DialogOptions()
+                    {
+                        MaxWidth = MaxWidth.Small,
+                        CloseButton = true
+                    }
+                ).Result;
 
-        var result = await DialogService.Show<Code.CodeDialog>(m.DesktopSrc, 
+            if (ftpresult.Cancelled)
+            {
+                return;
+            }
+            ftp = ftpresult.Data.ToString();
+        }        
+
+        string code = await Http.GetStringAsync($"/api/code/?ftp={WebUtility.UrlEncode(ftp)}&path={WebUtility.UrlEncode(m.DesktopSrc)}");
+
+        var result = await DialogService.Show<Code.CodeDialog>(m.DesktopSrc.Replace("~", ftp), 
             new DialogParameters 
                 { 
                     ["code"] = code 
@@ -237,7 +256,7 @@ else
         if (!result.Cancelled)
         {
             code = result.Data.ToString();
-            await Http.PutAsJsonAsync($"api/code", new
+            await Http.PutAsJsonAsync($"api/code?ftp={WebUtility.UrlEncode(ftp)}", new
             {
                 Path = m.DesktopSrc,
                 Code = code
