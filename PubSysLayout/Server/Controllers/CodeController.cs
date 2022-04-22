@@ -73,7 +73,7 @@ namespace PubSysLayout.Server.Controllers
         }
 
         [HttpGet("ftp")]
-        public async Task<ActionResult<IEnumerable<string>>> FindFTP(string db = "digiarena_M_Layout_2")
+        public async Task<ActionResult<IEnumerable<string>>> FindFTP(string db)
         {
             var res = new List<string>();
 
