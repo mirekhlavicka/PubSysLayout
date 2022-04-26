@@ -5,6 +5,7 @@ using MudBlazor;
 using MudBlazor.Services;
 using PubSysLayout.Client;
 using PubSysLayout.Client.AuthProviders;
+using PubSysLayout.Client.Pages.Code;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
@@ -28,6 +29,7 @@ builder.Services.AddTransient/*Scoped*/(sp =>
 });
 
 builder.Services.AddScoped<DBList>();
+builder.Services.AddScoped<CodeEdit>();
 
 builder.Services.AddMudServices(config =>
 {

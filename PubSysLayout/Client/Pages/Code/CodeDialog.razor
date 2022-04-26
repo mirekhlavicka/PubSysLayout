@@ -1,28 +1,33 @@
-﻿@inject IJSRuntime js
+﻿@inject CurrentDB currentDB
+@inject IDialogService DialogService
+@inject HttpClient Http
+@inject IJSRuntime js
+@inject MudBlazor.ISnackbar snackBar
+@using System.Net;
 
-<MudDialog>
+<MudDialog >
     <TitleContent>
         <MudText Typo="Typo.h6">
             <MudIcon Icon="@Icons.Material.Filled.Edit" Class="mr-3 mb-n1" />
             @MudDialog.Title
         </MudText>
+        <MudIconButton aria-label="close" Icon="@Icons.Material.Filled.Close" @onclick="Close"/>
     </TitleContent>
     <DialogContent>
-        <form>
-            <textarea @ref="textarea" id="dlgCode" name="dlgCode" style="display:none" />
+        <form @onkeydown="KeyDown"> @*@onkeydown:preventDefault*@
+            <textarea @ref="textarea" id="dlgCode" name="dlgCode" style="display:none"/>
         </form>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel" Variant="Variant.Filled">Cancel</MudButton>
-        <MudButton Color="Color.Primary" OnClick="OK" Variant="Variant.Filled">Update</MudButton>        
+        <MudButton Variant="Variant.Filled" IconColor="Color.Secondary" Color="Color.Default" OnClick="Save" Class="ml-auto" StartIcon="@Icons.Material.Filled.Save" accesskey="s">Save</MudButton>
     </DialogActions>
 </MudDialog>
 
 @code {
     [CascadingParameter] MudDialogInstance MudDialog { get; set; }
 
-    [Parameter] public string code { get; set; } = "";
-
+    [Parameter] public string Code { get; set; } = "";
+    [Parameter] public string Path { get; set; } = "";
 
     private ElementReference textarea;
 
@@ -30,18 +35,62 @@
     {
         if (firstRender)
         {
-            await js.InvokeVoidAsync("codemirror.create", textarea, code, "100%", "calc(100vh - 200px)");
+            await js.InvokeVoidAsync("codemirror.create", textarea, Code, "100%", "calc(100vh - 200px)");
         }
     }
 
-    private void Cancel()
-    {
-        MudDialog.Cancel();
+    private async Task Save()
+    {        
+        Code = await js.InvokeAsync<string>("codemirror.getValue", "dlgCode");
+
+        await Http.PutAsJsonAsync($"api/code?ftp={WebUtility.UrlEncode(currentDB.FTP)}", new
+        {
+            Path = Path,
+            Code = Code
+        });
+
+        snackBar.Add($"{Path} saved", Severity.Success);
+        await js.InvokeAsync<bool>("codemirror.setChanges", "dlgCode", false);
     }
 
-    private async void OK()
-    {        
-        code = await js.InvokeAsync<string>("codemirror.getValue", "dlgCode");
-        MudDialog.Close(DialogResult.Ok(code));
+    private async void KeyDown(KeyboardEventArgs  e)
+    {
+        if (e.Key == "Escape")
+        {
+            Close();
+        }
+        //if (e.CtrlKey && e.Key == "s")
+        //{
+        //    await Save();
+        //}
+    }
+
+    private async void Close()
+    {
+        bool changes = await js.InvokeAsync<bool>("codemirror.getChanges", "dlgCode");
+
+        if (changes)
+        {
+            var res = await DialogService.ShowMessageBox(
+                "Save",
+                $"Do you want to save changes to {Path} ?",
+                yesText: "Save", noText: "Don't Save", cancelText: "Cancel");
+
+            if (res == null)
+            {
+                return;
+            }
+
+            if (res.Value)
+            {
+                await Save();
+            }
+
+            MudDialog.Cancel();
+        }
+        else
+        {
+            MudDialog.Cancel();
+        }
     }
 }
