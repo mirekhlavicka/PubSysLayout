@@ -22,7 +22,6 @@ namespace PubSysLayout.Client.Pages.Code
             if (currentDB.FTP == null)
             {
                 var ftpresult = await DialogService.Show<Code.SelectFTPDialog>("Select FTP source",
-                    //new DialogParameters { },
                     new DialogOptions()
                     {
                         MaxWidth = MaxWidth.Small,

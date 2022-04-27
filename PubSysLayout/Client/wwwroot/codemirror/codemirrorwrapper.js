@@ -12,13 +12,15 @@
             //indentUnit: 4,
             //indentWithTabs: true,
             extraKeys: {
-                "Alt-F": "findPersistent"/*,
+                "Alt-F": "findPersistent",
+                /*,
                             "F11": function (cm) {
                                 cm.setOption("fullScreen", !cm.getOption("fullScreen"));
                             },
                             "Esc": function (cm) {
                                 if (cm.getOption("fullScreen")) cm.setOption("fullScreen", false);
                             }*/
+                "Ctrl-S": function (cm) { /*alert("save")*/ }
             }
         });
         this.cm[textArea.id].setSize(width, height);

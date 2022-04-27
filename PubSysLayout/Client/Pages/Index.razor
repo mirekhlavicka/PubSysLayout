@@ -7,6 +7,7 @@
 @inject CurrentDB currentDB
 @inject DBList dbListService
 @inject MudBlazor.ISnackbar snackBar
+@inject IDialogService DialogService
 
 <style>
     .selectedDB {
@@ -28,7 +29,8 @@
         else
         {
             <MudText Typo="Typo.h4" GutterBottom="true">@server</MudText>
-            <MudText Typo="Typo.h6" Class="mb-8" Color="Color.Primary"><MudIcon Icon="@Icons.Material.Filled.ArrowRight" Title="Selected database" Style="margin-bottom: -4px;" />@currentDB.Current</MudText>
+            <MudText Typo="Typo.h6" Class="mb-4" Color="Color.Default" Title="Selected database"><MudIcon Icon="@Icons.Material.Filled.ArrowRight" Style="margin-bottom: -4px;" />@currentDB.Current</MudText>
+            <MudText Typo="Typo.h6" Class="mb-8" Color="Color.Primary" @onclick="SelectFTP" Style="cursor: pointer" Title="Selected FTP"><MudIcon Icon="@Icons.Material.Filled.ArrowRight" Style="margin-bottom: -4px" />@(currentDB.FTP ?? "FTP not selected")</MudText>
         }
     </MudItem>
     <MudItem xs="9">
@@ -86,5 +88,23 @@
         {
             return string.Empty;
         }
+    }
+
+    private async void SelectFTP()
+    {
+        var ftpresult = await DialogService.Show<Code.SelectFTPDialog>("Select FTP source",
+                new DialogOptions()
+                    {
+                        MaxWidth = MaxWidth.Small,
+                        CloseButton = true
+                    }
+                ).Result;
+
+        if (!ftpresult.Cancelled)
+        {
+            currentDB.FTP = ftpresult.Data.ToString();
+            StateHasChanged();
+        }
+
     }
 }

@@ -4,6 +4,7 @@
 @inject MudBlazor.ISnackbar snackBar
 @inject IDialogService DialogService
 @inject CurrentDB currentDB
+@inject LocalStorage localStorage
 
 @using PubSysLayout.Shared.Model
 
@@ -15,7 +16,7 @@
         </MudText>
     </TitleContent>
     <DialogContent>
-        <MudContainer Style="height: 150px; overflow-y: scroll">
+        <MudContainer Style="height: 170px; overflow-y: scroll">
         @if (FTPList == null)
         {
             <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-7" />
@@ -23,6 +24,7 @@
         }
         else
         {
+            <MudIconButton OnClick="Refresh" Icon="@Icons.Material.Filled.Refresh" Title="Refresh FTP sites"/>
             <MudList Clickable="true" SelectedItem="null">
                 @foreach (var s in FTPList)
                 {
@@ -32,7 +34,7 @@
         }
         </MudContainer>
     </DialogContent>
-    <DialogActions>
+    <DialogActions>        
         <MudButton OnClick="Close" Color="Color.Default" Variant="Variant.Filled">Cancel</MudButton>
     </DialogActions>
 </MudDialog>
@@ -47,9 +49,27 @@
         await LoadData();
     }
 
-    protected async Task LoadData()
+    protected async Task LoadData(bool refresh = false)
     {
-        FTPList = await Http.GetFromJsonAsync<string[]>($"api/code/ftp?db={currentDB.Current}");
+        if (!refresh)
+        {
+            FTPList = await localStorage.GetAsync<string[]>($"FTPList_{currentDB.Current}");
+        }
+        else
+        {
+            FTPList = null;
+        }
+
+        if (FTPList == null)
+        {
+            FTPList = await Http.GetFromJsonAsync<string[]>($"api/code/ftp?db={currentDB.Current}");
+            await localStorage.SetAsync($"FTPList_{currentDB.Current}", FTPList);
+        }
+    }
+
+    protected async Task Refresh()
+    {
+        await LoadData(true);
     }
 
     void Close() => MudDialog.Close(DialogResult.Cancel());

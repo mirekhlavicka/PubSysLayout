@@ -14,11 +14,27 @@
         <MudIconButton aria-label="close" Icon="@Icons.Material.Filled.Close" @onclick="Close"/>
     </TitleContent>
     <DialogContent>
-        <form @onkeydown="KeyDown"> @*@onkeydown:preventDefault*@
+        <form @onkeydown="KeyDown">
             <textarea @ref="textarea" id="dlgCode" name="dlgCode" style="display:none"/>
         </form>
     </DialogContent>
     <DialogActions>
+        <MudTooltip Arrow="true" Placement="Placement.Top" Color="Color.Default" Class="ml-6">
+            <ChildContent>
+                <MudIcon Icon="@Icons.Material.Filled.Help" Size="Size.Medium" Class="ml-10" />
+            </ChildContent>
+            <TooltipContent>
+                <MudText Typo="Typo.body2" Align="Align.Left"><b>Ctrl+S</b><br />&nbsp;Save</MudText>
+                <MudText Typo="Typo.body2" Align="Align.Left"><b>Esc</b><br />&nbsp;Close</MudText>
+                <MudText Typo="Typo.body2" Align="Align.Left"><b>Ctrl-F</b><br />&nbsp;Start searching</MudText>
+                <MudText Typo="Typo.body2" Align="Align.Left"><b>Ctrl-G</b><br />&nbsp;Find next</MudText>
+                <MudText Typo="Typo.body2" Align="Align.Left"><b>Shift-Ctrl-G</b><br />&nbsp;Find previous</MudText>
+                <MudText Typo="Typo.body2" Align="Align.Left"><b>Shift-Ctrl-F</b><br />&nbsp;Replace</MudText>
+                <MudText Typo="Typo.body2" Align="Align.Left"><b>Shift-Ctrl-R</b><br />&nbsp;Replace all</MudText>
+                <MudText Typo="Typo.body2" Align="Align.Left"><b>Alt-F</b><br />&nbsp;Persistent search<MudText Typo="Typo.caption"><br />&nbsp&nbspdialog doesn't autoclose,<br />&nbsp&nbspenter to find next,<br />&nbsp&nbspShift-Enter to find previous</MudText></MudText>
+                <MudText Typo="Typo.body2" Align="Align.Left"><b>Alt-G</b><br />&nbsp;Jump to line</MudText>
+            </TooltipContent>
+        </MudTooltip>        
         <MudButton Variant="Variant.Filled" IconColor="Color.Secondary" Color="Color.Default" OnClick="Save" Class="ml-auto" StartIcon="@Icons.Material.Filled.Save" accesskey="s">Save</MudButton>
     </DialogActions>
 </MudDialog>
@@ -59,22 +75,30 @@
         {
             Close();
         }
-        //if (e.CtrlKey && e.Key == "s")
-        //{
-        //    await Save();
-        //}
+        if (e.CtrlKey && e.Key == "s")
+        {
+            await Save();
+        }
     }
 
+    private bool messageBoxShown = false;
     private async void Close()
     {
+        if (messageBoxShown)
+        {
+            return;
+        }
+
         bool changes = await js.InvokeAsync<bool>("codemirror.getChanges", "dlgCode");
 
         if (changes)
         {
+            messageBoxShown = true;
             var res = await DialogService.ShowMessageBox(
-                "Save",
-                $"Do you want to save changes to {Path} ?",
-                yesText: "Save", noText: "Don't Save", cancelText: "Cancel");
+                "Unsaved changes",
+                $"Do you want to save changes to {MudDialog.Title} ?",
+                yesText: "Save", noText: "Don't Save", cancelText: "Cancel", options: new DialogOptions { MaxWidth = MaxWidth.Medium});
+            messageBoxShown = false;
 
             if (res == null)
             {

@@ -230,8 +230,8 @@ OF SUCH DAMAGE.
             if (BOMBytes[0] == 0xef && BOMBytes[1] == 0xbb && BOMBytes[2] == 0xbf)
                 return Encoding.UTF8;
 
-            if (BOMBytes[0] == 0x2b && BOMBytes[1] == 0x2f && BOMBytes[2] == 0x76)
-                return Encoding.UTF7;
+            //if (BOMBytes[0] == 0x2b && BOMBytes[1] == 0x2f && BOMBytes[2] == 0x76)
+            //    return Encoding.UTF7;
 
             if (BOMBytes.Length < 4)
                 return null;
