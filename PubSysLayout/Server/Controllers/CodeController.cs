@@ -32,18 +32,23 @@ namespace PubSysLayout.Server.Controllers
 
             client.Disconnect();
 
-            var encoding = KlerksSoft.TextFileEncodingDetector.DetectTextByteArrayEncoding(bytes);
-
+            Encoding encoding = Encoding.UTF8;
             string contents = null;
 
-            if (/*bytes[0] == 0xEF && bytes[1] == 0xBB && bytes[2] == 0xBF*/encoding != null)
+            if (bytes != null && bytes.Length > 0)
             {
-                contents = /*Encoding.UTF8*/encoding.GetString(bytes);
+                encoding = KlerksSoft.TextFileEncodingDetector.DetectTextByteArrayEncoding(bytes);
+
+                if (encoding != null)
+                {
+                    contents = encoding.GetString(bytes);
+                }
+                else
+                {
+                    contents = Encoding.GetEncoding(1250).GetString(bytes);
+                }
             }
-            else
-            {
-                contents = Encoding.GetEncoding(1250).GetString(bytes);
-            }
+
             return contents;
         }
 
@@ -65,7 +70,7 @@ namespace PubSysLayout.Server.Controllers
             client.DataConnectionType = FtpDataConnectionType.PASV;
             await client.ConnectAsync();
 
-            client.Upload(uploadCode.Code.ToBytes(Encoding.UTF8), path);
+            client.Upload(uploadCode.Code.ToBytes(Encoding.UTF8), path, existsMode: FtpRemoteExists.Overwrite, createRemoteDir: true);
 
             client.Disconnect();
 

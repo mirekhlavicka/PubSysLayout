@@ -8,6 +8,7 @@
 @inject NavigationManager uriHelper
 @inject IDialogService DialogService
 @inject CurrentDB currentDB
+@inject PubSysLayout.Client.Pages.Code.CodeEdit codeEdit
 @inject Clipboard clipboard
 
 
@@ -51,7 +52,7 @@ else
                 <col style="width:30%;" />
                 <col  />
                 <col style="width:100px;" />
-                <col style="width:100px;" />
+                <col style="width:150px;" />
                 <col style="width:0px;"/>
             </ColGroup>
             <HeaderContent>
@@ -67,6 +68,7 @@ else
                 <MudTd DataLabel="Path"><MudHighlighter Text="@context.DesktopSrc" HighlightedText="@searchString" /></MudTd>
                 <MudTd DataLabel="Used"><MudIcon Icon="@(usedItems.Contains(context.IdLayout) ? Icons.Material.Outlined.CheckCircle : Icons.Material.Outlined.Circle)" Size="Size.Small" Class="mr-3 mb-n1" /></MudTd>
                 <MudTd DataLabel="">
+                    <MudIconButton Icon="@Icons.Material.Filled.Edit" @onclick="@(()=>codeEdit.Edit(context.DesktopSrc))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text" Title="Edit css"/>
                     <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" @onclick="@(()=> clipboard.Content = context)" Color="Color.Default" Size="Size.Small" Variant="Variant.Text" Title="Copy" />
                     <MudIconButton Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" @onclick="@(()=>Delete(@context.IdLayout))"Size="Size.Small" Variant="Variant.Text" Title="Delete layout"/>
                 </MudTd>

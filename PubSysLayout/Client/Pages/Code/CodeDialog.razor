@@ -51,7 +51,7 @@
     {
         if (firstRender)
         {
-            await js.InvokeVoidAsync("codemirror.create", textarea, Code, "100%", "calc(100vh - 200px)");
+            await js.InvokeVoidAsync("codemirror.create", textarea, Code, "100%", "calc(100vh - 200px)", Path.EndsWith("css") ? "text/css" : "application/x-aspx");
         }
     }
 

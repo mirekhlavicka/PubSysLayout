@@ -36,6 +36,17 @@ namespace PubSysLayout.Client.Pages.Code
                 currentDB.FTP = ftpresult.Data.ToString();
             }
 
+            path = path.Split('?')[0];
+
+            if (!path.StartsWith("~"))
+            {
+                if (!path.StartsWith("/"))
+                {
+                    path = "/" + path;
+                }
+                path = "~" + path;
+            }
+
             string code = await httpClient.GetStringAsync($"/api/code/?ftp={WebUtility.UrlEncode(currentDB.FTP)}&path={WebUtility.UrlEncode(path)}");
 
             DialogService.Show<CodeDialog>(path.Replace("~", currentDB.FTP),

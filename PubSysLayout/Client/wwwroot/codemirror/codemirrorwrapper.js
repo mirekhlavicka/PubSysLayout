@@ -1,11 +1,11 @@
 ﻿window.codemirror = {
     cm: {},
     changes: {},
-    create: function (textArea, initialCode, width, height) {
+    create: function (textArea, initialCode, width, height, mode) {
 
         this.cm[textArea.id] = CodeMirror.fromTextArea(textArea, {
             //value: initialCode,
-            mode: "application/x-aspx",
+            mode: mode, //"text/css",//"application/x-aspx",
             lineNumbers: true,
             matchBrackets: true,
             matchTags: { bothTags: false },
