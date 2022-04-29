@@ -13,6 +13,7 @@
 
   var defaultTags = {
     script: [
+      ["runat", /^server$/, "text/x-csharp"],
       ["lang", /(javascript|babel)/i, "javascript"],
       ["type", /^(?:text|application)\/(?:x-)?(?:java|ecma)script$|^module$|^$/i, "javascript"],
       ["type", /./, "text/plain"],

@@ -21,7 +21,7 @@ namespace PubSysLayout.Server.Controllers
         public async Task<ActionResult<string>> GetCode(string ftp, string path)
         {
             string[] tmp = ftp.Split('/');
-            string[] tmp1 = _configuration.GetSection("FTP").Get<Dictionary<string, string>>()[tmp[0]].Split(',');
+            string[] tmp1 = _configuration.GetSection("FTP").GetValue<string>(tmp[0]).Split(',');
             path = path.Replace("~", $"/{tmp[1]}");
 
             FtpClient client = new FtpClient(tmp1[0], Int32.Parse(tmp1[1]), tmp1[2], tmp1[3]);
@@ -62,7 +62,7 @@ namespace PubSysLayout.Server.Controllers
         public async Task<IActionResult> PutCode(string ftp, UploadCode uploadCode)
         {
             string[] tmp = ftp.Split('/');
-            string[] tmp1 = _configuration.GetSection("FTP").Get<Dictionary<string, string>>()[tmp[0]].Split(',');
+            string[] tmp1 = _configuration.GetSection("FTP").GetValue<string>(tmp[0]).Split(',');
             string path = uploadCode.Path.Replace("~", $"/{tmp[1]}");
 
 

@@ -4,23 +4,13 @@
     create: function (textArea, initialCode, width, height, mode) {
 
         this.cm[textArea.id] = CodeMirror.fromTextArea(textArea, {
-            //value: initialCode,
-            mode: mode, //"text/css",//"application/x-aspx",
+            mode: mode,
             lineNumbers: true,
             matchBrackets: true,
             matchTags: { bothTags: false },
-            //indentUnit: 4,
-            //indentWithTabs: true,
             extraKeys: {
                 "Alt-F": "findPersistent",
-                /*,
-                            "F11": function (cm) {
-                                cm.setOption("fullScreen", !cm.getOption("fullScreen"));
-                            },
-                            "Esc": function (cm) {
-                                if (cm.getOption("fullScreen")) cm.setOption("fullScreen", false);
-                            }*/
-                "Ctrl-S": function (cm) { /*alert("save")*/ }
+                "Ctrl-S": function (cm) { /*only for preventdefault*/ }
             }
         });
         this.cm[textArea.id].setSize(width, height);
