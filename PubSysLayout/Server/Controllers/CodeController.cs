@@ -117,6 +117,31 @@ namespace PubSysLayout.Server.Controllers
 
             return res;
         }
+
+        [HttpGet("list")]
+        public async Task<ActionResult<object[]>> GetListing(string ftp, string path)
+        {
+            string[] tmp = ftp.Split('/');
+            string[] tmp1 = _configuration.GetSection("FTP").GetValue<string>(tmp[0]).Split(',');
+            path = path.Replace("~", $"/{tmp[1]}");
+
+            FtpClient client = new FtpClient(tmp1[0], Int32.Parse(tmp1[1]), tmp1[2], tmp1[3]);
+            client.DataConnectionType = FtpDataConnectionType.PASV;
+            await client.ConnectAsync();
+
+            FtpListItem[] l = client.GetListing(path);
+
+            client.Disconnect();
+
+            return l.Select(i => new 
+            {
+                Type = (int)i.Type,
+                i.Name,
+                i.Size,
+                i.Modified,
+                Extension = i.Type == 0 ? Path.GetExtension(i.Name) : ""
+            }).ToArray();
+        }
     }
 
     public static class StreamExtensions

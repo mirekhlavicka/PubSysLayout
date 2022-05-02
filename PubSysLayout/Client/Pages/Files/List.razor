@@ -1,0 +1,131 @@
+﻿@page "/files"
+@using Microsoft.AspNetCore.Authorization
+@using System.Net
+@attribute [Authorize]
+
+@inject HttpClient Http
+@inject IJSRuntime js
+@inject MudBlazor.ISnackbar snackBar
+@inject NavigationManager _navigation
+@inject IDialogService DialogService
+@inject CurrentDB currentDB
+@inject PubSysLayout.Client.Pages.Code.CodeEdit codeEdit
+@inject Clipboard clipboard
+
+
+@using PubSysLayout.Shared.Model
+
+<PageTitle>@currentDB.Current – Files</PageTitle>
+
+@if (items == null)
+{
+    <MudProgressCircular Color="Color.Default" Indeterminate="true" />
+}
+else
+{
+    <MudContainer MaxWidth="MaxWidth.Large">
+        <MudTableFix @ref="mudTable" Items="items" Hover="true" SortLabel="Sort By" AllowUnsorted="false" Elevation="5" RowsPerPage="0" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 180px)" Dense="true"
+                 Filter="new Func<FtpListItem,bool>(FilterFunc)"
+                 MultiSelection="false" @bind-SelectedItems="selectedItems"
+                 Virtualize="false" T="FtpListItem">
+            <ToolBarContent>
+                <MudBadge Content='@($"{mudTable?.GetFilteredItemsCount()}")' Color="Color.Info" Overlap="false" Class="mt-3"> @*{selectedItems.Count} / *@
+                    <MudText Typo="Typo.h6">Files</MudText>
+                </MudBadge>
+                <MudSpacer />
+                <MudTextField DebounceInterval="300" @bind-Value="searchString" Placeholder="Search by name or ext" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true"></MudTextField>
+            </ToolBarContent>
+            <ColGroup>
+                @*<col style="width:80px;" />*@
+                <col style="width:50%;" />
+                <col style="width:10%;" />
+                <col style="width:20%;" />
+                <col style="width:20%;" />
+                @*<col style="width:100px;" />*@
+            </ColGroup>
+            <HeaderContent>
+                <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy='new Func<FtpListItem, object>(x => (x.Type == 1 ? "___" : "") + x.Name)'>Name</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy='new Func<FtpListItem, object>(x => x.Extension)'>Ext</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy='new Func<FtpListItem, object>(x => x.Size)'>Size</MudTableSortLabel></MudTh>
+                <MudTh><MudTableSortLabel SortBy='new Func<FtpListItem, object>(x => x.Modified)'>Date</MudTableSortLabel></MudTh>
+                @*<MudTh></MudTh>*@
+                <MudTh></MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Name"><MudHighlighter Text='@(context.Type == 0 ? context.Name.Replace(context.Extension, "") : $"[{context.Name}]")' HighlightedText="@searchString" /></MudTd>
+                <MudTd DataLabel="Ext"><MudHighlighter Text='@context.Extension.Replace(".", "")' HighlightedText="@searchString" /></MudTd>
+                <MudTd DataLabel="Size">@(context.Type == 0 ? context.Size.ToString("n0") : "<DIR>")</MudTd>
+                <MudTd DataLabel="Date">@context.Modified.ToString()</MudTd>
+@*                <MudTd DataLabel="">
+                    <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" @onclick="@(()=> clipboard.Content = context)" Color="Color.Default" Size="Size.Small" Variant="Variant.Text" Title="Copy" />
+                </MudTd>*@
+                <MudTd></MudTd>
+            </RowTemplate>
+        </MudTableFix>
+    </MudContainer>
+}
+
+@code {
+    public class FtpListItem
+    {
+        public int Type { get; set; }
+        public String Name { get; set; }
+        public long Size { get; set; }
+        public DateTime Modified { get; set; }
+        public string Extension { get; set; }
+    }
+
+    private List<FtpListItem> items;
+
+    private string searchString = "";
+
+    MudTable<FtpListItem> mudTable;
+
+    private HashSet<FtpListItem> selectedItems = new HashSet<FtpListItem>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (currentDB.Current is null)
+        {
+            return;
+        }
+
+        if (currentDB.FTP == null)
+        {
+            await Task.Delay(500);
+            var ftpresult = await DialogService.Show<Code.SelectFTPDialog>("Select FTP source",
+                new DialogOptions()
+                    {
+                        MaxWidth = MaxWidth.Small,
+                        CloseButton = true
+                    }
+                ).Result;
+
+            if (ftpresult.Cancelled)
+            {
+                _navigation.NavigateTo("/", false);
+                return;
+            }
+            currentDB.FTP = ftpresult.Data.ToString();
+        }
+
+        await LoadData();
+    }
+
+    protected async Task LoadData()
+    {
+        items = await Http.GetFromJsonAsync<List<FtpListItem>>($"api/code/list?ftp={WebUtility.UrlEncode(currentDB.FTP)}&path={WebUtility.UrlEncode("~")}");
+        selectedItems.Clear();
+    }
+
+    private bool FilterFunc(FtpListItem i)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+
+        if (i.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase))
+            return true;
+
+        return false;
+    }
+}
