@@ -17,7 +17,7 @@ namespace PubSysLayout.Client.Pages.Code
             this.currentDB = currentDB;
         }
 
-        public async void Edit(string path)
+        public async Task<string> SelectFTP()
         {
             if (currentDB.FTP == null)
             {
@@ -31,9 +31,20 @@ namespace PubSysLayout.Client.Pages.Code
 
                 if (ftpresult.Cancelled)
                 {
-                    return;
+                    return null;
                 }
                 currentDB.FTP = ftpresult.Data.ToString();
+                currentDB.CurrentFTPPath = "~";
+            }
+
+            return currentDB.FTP;
+        }
+
+        public async void Edit(string path)
+        {
+            if (await SelectFTP() == null)
+            {
+                return;
             }
 
             path = path.Split('?')[0];

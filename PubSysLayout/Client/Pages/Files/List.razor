@@ -12,6 +12,11 @@
 @inject PubSysLayout.Client.Pages.Code.CodeEdit codeEdit
 @inject Clipboard clipboard
 
+<style>
+    :hover.hover-underline {
+        text-decoration: underline;
+    }
+</style>
 
 @using PubSysLayout.Shared.Model
 
@@ -26,39 +31,54 @@ else
     <MudContainer MaxWidth="MaxWidth.Large">
         <MudTableFix @ref="mudTable" Items="items" Hover="true" SortLabel="Sort By" AllowUnsorted="false" Elevation="5" RowsPerPage="0" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 180px)" Dense="true"
                  Filter="new Func<FtpListItem,bool>(FilterFunc)"
-                 MultiSelection="false" @bind-SelectedItems="selectedItems"
+                 MultiSelection="false"
+                 RowClass="cursor-pointer" OnRowClick="RowClicked"
                  Virtualize="false" T="FtpListItem">
             <ToolBarContent>
-                <MudBadge Content='@($"{mudTable?.GetFilteredItemsCount()}")' Color="Color.Info" Overlap="false" Class="mt-3"> @*{selectedItems.Count} / *@
-                    <MudText Typo="Typo.h6">Files</MudText>
+                <MudBadge Content='@($"{mudTable?.GetFilteredItemsCount()}")' Color="Color.Info" Overlap="false" Class="mt-0" Origin="Origin.CenterRight">
+                    <MudText Typo="Typo.h6">@(currentDB.FTP.Split('/')[0])</MudText>
+                    @{
+                        string p = "";
+
+                        @foreach (var s in currentDB.CurrentFTPPath.Split('/', StringSplitOptions.RemoveEmptyEntries))
+                        {
+                            p += s;
+                            string pp = p;
+                            p += "/";
+
+                            if (!currentDB.CurrentFTPPath.EndsWith(s))
+                            {
+                                <MudText Typo="Typo.caption" Class="cursor-pointer hover-underline" @onclick="async _ => {currentDB.CurrentFTPPath = pp; await LoadData();StateHasChanged();}">@(s == "~" ? currentDB.FTP.Split('/')[1] : s )</MudText>
+                                <MudText Typo="Typo.caption">/</MudText>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.caption">@(s == "~" ? currentDB.FTP.Split('/')[1] : s )</MudText>
+                            }
+                        }
+                    }
                 </MudBadge>
                 <MudSpacer />
                 <MudTextField DebounceInterval="300" @bind-Value="searchString" Placeholder="Search by name or ext" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true"></MudTextField>
             </ToolBarContent>
             <ColGroup>
-                @*<col style="width:80px;" />*@
                 <col style="width:50%;" />
                 <col style="width:10%;" />
                 <col style="width:20%;" />
                 <col style="width:20%;" />
-                @*<col style="width:100px;" />*@
             </ColGroup>
             <HeaderContent>
                 <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy='new Func<FtpListItem, object>(x => (x.Type == 1 ? "___" : "") + x.Name)'>Name</MudTableSortLabel></MudTh>
                 <MudTh><MudTableSortLabel SortBy='new Func<FtpListItem, object>(x => x.Extension)'>Ext</MudTableSortLabel></MudTh>
                 <MudTh><MudTableSortLabel SortBy='new Func<FtpListItem, object>(x => x.Size)'>Size</MudTableSortLabel></MudTh>
-                <MudTh><MudTableSortLabel SortBy='new Func<FtpListItem, object>(x => x.Modified)'>Date</MudTableSortLabel></MudTh>
-                @*<MudTh></MudTh>*@
+                <MudTh><MudTableSortLabel SortBy='new Func<FtpListItem, object>(x => x.Modified.AddYears(x.Type == 0 ? 100 : 0))'>Date</MudTableSortLabel></MudTh>
                 <MudTh></MudTh>
             </HeaderContent>
             <RowTemplate>
-                <MudTd DataLabel="Name"><MudHighlighter Text='@(context.Type == 0 ? context.Name.Replace(context.Extension, "") : $"[{context.Name}]")' HighlightedText="@searchString" /></MudTd>
+                <MudTd DataLabel="Name"><MudIcon Style="margin-bottom:-5px" Icon="@(context.Type == 1 ? (context.Name == ".." ? Icons.Material.Filled.DriveFolderUpload : Icons.Material.Filled.Folder) : Icons.Material.Outlined.InsertDriveFile)" Size="Size.Small" Class="mr-2" /><MudHighlighter Text='@(context.Type == 0 ? context.Name.Replace(context.Extension, "") : $"[{context.Name}]")' HighlightedText="@searchString" /></MudTd>
                 <MudTd DataLabel="Ext"><MudHighlighter Text='@context.Extension.Replace(".", "")' HighlightedText="@searchString" /></MudTd>
                 <MudTd DataLabel="Size">@(context.Type == 0 ? context.Size.ToString("n0") : "<DIR>")</MudTd>
-                <MudTd DataLabel="Date">@context.Modified.ToString()</MudTd>
-@*                <MudTd DataLabel="">
-                    <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" @onclick="@(()=> clipboard.Content = context)" Color="Color.Default" Size="Size.Small" Variant="Variant.Text" Title="Copy" />
-                </MudTd>*@
+                <MudTd DataLabel="Date">@(context.Name == ".." ? "—" : context.Modified.ToString())</MudTd>
                 <MudTd></MudTd>
             </RowTemplate>
         </MudTableFix>
@@ -81,8 +101,6 @@ else
 
     MudTable<FtpListItem> mudTable;
 
-    private HashSet<FtpListItem> selectedItems = new HashSet<FtpListItem>();
-
     protected override async Task OnInitializedAsync()
     {
         if (currentDB.Current is null)
@@ -93,20 +111,11 @@ else
         if (currentDB.FTP == null)
         {
             await Task.Delay(500);
-            var ftpresult = await DialogService.Show<Code.SelectFTPDialog>("Select FTP source",
-                new DialogOptions()
-                    {
-                        MaxWidth = MaxWidth.Small,
-                        CloseButton = true
-                    }
-                ).Result;
-
-            if (ftpresult.Cancelled)
+            if (await codeEdit.SelectFTP() == null)
             {
                 _navigation.NavigateTo("/", false);
                 return;
             }
-            currentDB.FTP = ftpresult.Data.ToString();
         }
 
         await LoadData();
@@ -114,8 +123,17 @@ else
 
     protected async Task LoadData()
     {
-        items = await Http.GetFromJsonAsync<List<FtpListItem>>($"api/code/list?ftp={WebUtility.UrlEncode(currentDB.FTP)}&path={WebUtility.UrlEncode("~")}");
-        selectedItems.Clear();
+        items = await Http.GetFromJsonAsync<List<FtpListItem>>($"api/code/list?ftp={WebUtility.UrlEncode(currentDB.FTP)}&path={WebUtility.UrlEncode(currentDB.CurrentFTPPath)}");
+
+        if (currentDB.CurrentFTPPath != "~")
+        {
+            items.Add(new FtpListItem
+                {
+                    Type = 1,
+                    Name = "..",
+                    Extension = ""
+                });
+        }
     }
 
     private bool FilterFunc(FtpListItem i)
@@ -127,5 +145,25 @@ else
             return true;
 
         return false;
+    }
+
+    private async void RowClicked(TableRowClickEventArgs<FtpListItem> i)
+    {
+        if (i.Item.Type == 1)
+        {
+            if (i.Item.Name == "..")
+            {
+                var tmp = currentDB.CurrentFTPPath.Split('/');
+                currentDB.CurrentFTPPath = String.Join("/", tmp.Take(tmp.Length - 1));
+            }
+            else
+            {
+                currentDB.CurrentFTPPath += "/";
+                currentDB.CurrentFTPPath += i.Item.Name;
+            }
+
+            await LoadData();
+            StateHasChanged();
+        }
     }
 }

@@ -19,5 +19,7 @@
 
         private void NotifyStateChanged() => CurrentChanged?.Invoke();
         public string FTP { get; set; } = null;
+
+        public string CurrentFTPPath { get; set; } =  "~";
     }    
 }
