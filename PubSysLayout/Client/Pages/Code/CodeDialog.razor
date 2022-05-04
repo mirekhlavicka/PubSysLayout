@@ -19,9 +19,9 @@
         </form>
     </DialogContent>
     <DialogActions>
-        <MudTooltip Arrow="true" Placement="Placement.Top" Color="Color.Default" Class="ml-6">
+        <MudTooltip Arrow="false" Placement="Placement.Top" Color="Color.Info" Class="ml-10">
             <ChildContent>
-                <MudIcon Icon="@Icons.Material.Filled.Help" Size="Size.Medium" Class="ml-10" />
+                <MudIcon Icon="@Icons.Material.Filled.Help" Size="Size.Medium" Class="ml-2" Color="Color.Info" />
             </ChildContent>
             <TooltipContent>
                 <MudText Typo="Typo.body2" Align="Align.Left"><b>Ctrl+S</b><br />&nbsp;Save</MudText>
@@ -44,6 +44,7 @@
 
     [Parameter] public string Code { get; set; } = "";
     [Parameter] public string Path { get; set; } = "";
+    [Parameter] public string Ext { get; set; } = "";
 
     private ElementReference textarea;
 
@@ -51,7 +52,29 @@
     {
         if (firstRender)
         {
-            await js.InvokeVoidAsync("codemirror.create", textarea, Code, "100%", "calc(100vh - 200px)", Path.EndsWith("css") ? "text/css" : "application/x-aspx");
+            await js.InvokeVoidAsync("codemirror.create", textarea, Code, "100%", "calc(100vh - 200px)", GetMode());
+        }
+    }
+
+    protected string GetMode()
+    {
+        if (String.IsNullOrEmpty(Ext))
+        {
+            return Path.EndsWith("css") ? "text/css" : "application/x-aspx";
+        }
+
+        switch (Ext.ToLower())
+        {
+            case ".cs": 
+            case ".ashx":
+                return "text/x-csharp";
+            case ".js":
+            case ".json":
+                return "text/javascript";
+            case ".css":
+                return "text/css";
+            default:
+                return "application/x-aspx";
         }
     }
 

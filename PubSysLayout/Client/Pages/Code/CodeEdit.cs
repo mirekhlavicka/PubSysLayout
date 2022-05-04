@@ -40,7 +40,7 @@ namespace PubSysLayout.Client.Pages.Code
             return currentDB.FTP;
         }
 
-        public async void Edit(string path)
+        public async Task Edit(string path, string ext = "")
         {
             if (await SelectFTP() == null)
             {
@@ -60,11 +60,12 @@ namespace PubSysLayout.Client.Pages.Code
 
             string code = await httpClient.GetStringAsync($"/api/code/?ftp={WebUtility.UrlEncode(currentDB.FTP)}&path={WebUtility.UrlEncode(path)}");
 
-            DialogService.Show<CodeDialog>(path.Replace("~", currentDB.FTP),
+            var dialog = DialogService.Show<CodeDialog>(path.Replace("~", currentDB.FTP),
                 new DialogParameters
                 {
                     ["Code"] = code,
-                    ["Path"] = path
+                    ["Path"] = path,
+                    ["Ext"] = ext
                 },
                 new DialogOptions()
                 {
@@ -73,6 +74,8 @@ namespace PubSysLayout.Client.Pages.Code
                     CloseButton = false,
                     CloseOnEscapeKey = false
                 });
+
+            await dialog.Result;
         }
     }
 }

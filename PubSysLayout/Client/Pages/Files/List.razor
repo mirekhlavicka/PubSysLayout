@@ -16,6 +16,14 @@
     :hover.hover-underline {
         text-decoration: underline;
     }
+
+    .selected {
+        background-color: #1E88E5 !important;
+    }
+
+        .selected > td,.selected .mud-icon-default {
+            color: white !important;
+        }
 </style>
 
 @using PubSysLayout.Shared.Model
@@ -32,11 +40,12 @@ else
         <MudTableFix @ref="mudTable" Items="items" Hover="true" SortLabel="Sort By" AllowUnsorted="false" Elevation="5" RowsPerPage="0" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 180px)" Dense="true"
                  Filter="new Func<FtpListItem,bool>(FilterFunc)"
                  MultiSelection="false"
+                 RowClassFunc="@SelectedRowClassFunc"
                  RowClass="cursor-pointer" OnRowClick="RowClicked"
                  Virtualize="false" T="FtpListItem">
             <ToolBarContent>
-                <MudBadge Content='@($"{mudTable?.GetFilteredItemsCount()}")' Color="Color.Info" Overlap="false" Class="mt-0" Origin="Origin.CenterRight">
-                    <MudText Typo="Typo.h6">@(currentDB.FTP.Split('/')[0])</MudText>
+                <MudBadge Content='@($"{mudTable?.GetFilteredItemsCount() - (currentDB.CurrentFTPPath == "~" ? 0 : 1) }")' Color="Color.Info" Overlap="false" Class="mt-0 ml-0" Origin="Origin.CenterRight">
+                    <MudText Typo="Typo.subtitle2">@(currentDB.FTP.Split('/')[0])</MudText>
                     @{
                         string p = "";
 
@@ -48,7 +57,12 @@ else
 
                             if (!currentDB.CurrentFTPPath.EndsWith(s))
                             {
-                                <MudText Typo="Typo.caption" Class="cursor-pointer hover-underline" @onclick="async _ => {currentDB.CurrentFTPPath = pp; await LoadData();StateHasChanged();}">@(s == "~" ? currentDB.FTP.Split('/')[1] : s )</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Info" Class="cursor-pointer hover-underline" @onclick='async _ => {
+                                    currentDB.CurrentFTPPath = pp;
+                                    searchString = "";
+                                    await LoadData();
+                                    StateHasChanged();
+                                }'>@(s == "~" ? currentDB.FTP.Split('/')[1] : s )</MudText>
                                 <MudText Typo="Typo.caption">/</MudText>
                             }
                             else
@@ -59,7 +73,7 @@ else
                     }
                 </MudBadge>
                 <MudSpacer />
-                <MudTextField DebounceInterval="300" @bind-Value="searchString" Placeholder="Search by name or ext" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true"></MudTextField>
+                <MudTextField DebounceInterval="300" @bind-Value="searchString" AutoFocus="false" Placeholder="Search by name or ext" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true"></MudTextField>
             </ToolBarContent>
             <ColGroup>
                 <col style="width:50%;" />
@@ -75,7 +89,7 @@ else
                 <MudTh></MudTh>
             </HeaderContent>
             <RowTemplate>
-                <MudTd DataLabel="Name"><MudIcon Style="margin-bottom:-5px" Icon="@(context.Type == 1 ? (context.Name == ".." ? Icons.Material.Filled.DriveFolderUpload : Icons.Material.Filled.Folder) : Icons.Material.Outlined.InsertDriveFile)" Size="Size.Small" Class="mr-2" /><MudHighlighter Text='@(context.Type == 0 ? context.Name.Replace(context.Extension, "") : $"[{context.Name}]")' HighlightedText="@searchString" /></MudTd>
+                <MudTd DataLabel="Name"><MudIcon Style="margin-bottom:-5px" Color="@(context.Type == 1 ? (context.Name == ".." ? Color.Info : Color.Info) : Color.Default)" Icon="@(context.Type == 1 ? (context.Name == ".." ? Icons.Material.Filled.DriveFolderUpload : Icons.Material.Filled.Folder) : Icons.Material.Outlined.InsertDriveFile)" Size="Size.Small" Class="mr-2" /><MudHighlighter Text='@(context.Type == 0 ? context.Name.Replace(context.Extension, "") : $"[{context.Name}]")' HighlightedText="@searchString" /></MudTd>
                 <MudTd DataLabel="Ext"><MudHighlighter Text='@context.Extension.Replace(".", "")' HighlightedText="@searchString" /></MudTd>
                 <MudTd DataLabel="Size">@(context.Type == 0 ? context.Size.ToString("n0") : "<DIR>")</MudTd>
                 <MudTd DataLabel="Date">@(context.Name == ".." ? "—" : context.Modified.ToString())</MudTd>
@@ -138,7 +152,7 @@ else
 
     private bool FilterFunc(FtpListItem i)
     {
-        if (string.IsNullOrWhiteSpace(searchString))
+        if (string.IsNullOrWhiteSpace(searchString) || i.Name == "..")
             return true;
 
         if (i.Name.Contains(searchString, StringComparison.OrdinalIgnoreCase))
@@ -163,7 +177,38 @@ else
             }
 
             await LoadData();
+            searchString = "";
             StateHasChanged();
+        }
+
+        if (i.Item.Type == 0)
+        {
+            if (!(new string[] { ".dll", ".png", ".gif", ".jpg", ".jpeg" }.Contains(i.Item.Extension)))
+            {
+                await codeEdit.Edit(currentDB.CurrentFTPPath + "/" + i.Item.Name, i.Item.Extension);
+
+                var refresh = (await Http.GetFromJsonAsync<List<FtpListItem>>($"api/code/list?ftp={WebUtility.UrlEncode(currentDB.FTP)}&path={WebUtility.UrlEncode(currentDB.CurrentFTPPath + "/" + i.Item.Name)}")).FirstOrDefault();
+
+                if (refresh != null)
+                {
+                    i.Item.Modified = refresh.Modified;
+                    i.Item.Size = refresh.Size;
+                }
+
+                StateHasChanged();
+            }
+        }
+    }
+
+    private string SelectedRowClassFunc(FtpListItem element, int rowNumber)
+    {
+        if (mudTable.SelectedItem != null && mudTable.SelectedItem.Equals(element) && element.Type == 0)
+        {
+            return "selected";
+        }
+        else
+        {
+            return string.Empty;
         }
     }
 }
