@@ -12,22 +12,22 @@ namespace MudBlazor
 {
     public class MudTableFix<T> : MudTable<T>
     {
-        public MudTableFix()
-        {
-            this.GetType().BaseType
-                .GetField("<Context>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic )
-                .SetValue(this, new TableContextFix<T>());
-        }
+        //public MudTableFix()
+        //{
+        //    this.GetType().BaseType
+        //        .GetField("<Context>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic )
+        //        .SetValue(this, new TableContextFix<T>());
+        //}
     }
 
-    public class TableContextFix<T> : TableContext<T>
-    {        
-        public override void Remove(MudTr row, object item) 
-        {
-            if (this.Table != null && this.Table is MudTable<T> && !(this.Table as MudTable<T>).Items.Contains(item.As<T>()))
-            {
-                base.Remove(row, item);
-            }
-        }
-    }
+    //public class TableContextFix<T> : TableContext<T>
+    //{        
+    //    public override void Remove(MudTr row, object item) 
+    //    {
+    //        if (this.Table != null && this.Table is MudTable<T> && !(this.Table as MudTable<T>).Items.Contains(item.As<T>()))
+    //        {
+    //            base.Remove(row, item);
+    //        }
+    //    }
+    //}
 }
