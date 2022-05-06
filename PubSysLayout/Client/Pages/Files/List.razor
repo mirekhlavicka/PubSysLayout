@@ -21,7 +21,7 @@
         background-color: #1E88E5 !important;
     }
 
-        .selected > td,.selected .mud-icon-default {
+        .selected > td, .selected .mud-icon-default {
             color: white !important;
         }
 </style>
@@ -42,7 +42,7 @@ else
                  MultiSelection="false"
                  RowClassFunc="@SelectedRowClassFunc"
                  RowClass="cursor-pointer" OnRowClick="RowClicked"
-                 Virtualize="false" T="FtpListItem">
+                 Virtualize="true" T="FtpListItem">
             <ToolBarContent>
                 <MudBadge Content='@($"{mudTable?.GetFilteredItemsCount() - (currentDB.CurrentFTPPath == "~" ? 0 : 1) }")' Color="Color.Info" Overlap="false" Class="mt-0 ml-0" Origin="Origin.CenterRight">
                     <MudText Typo="Typo.subtitle2">@(currentDB.FTP.Split('/')[0])</MudText>
@@ -80,6 +80,7 @@ else
                 <col style="width:10%;" />
                 <col style="width:20%;" />
                 <col style="width:20%;" />
+                <col style="width:50px;" />
             </ColGroup>
             <HeaderContent>
                 <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy='new Func<FtpListItem, object>(x => (mudTable.Context.SortDirection == SortDirection.Descending && x.Name == ".." ? "ZZZ" : "") + ((mudTable.Context.SortDirection == SortDirection.Ascending && x.Type == 1) || ((mudTable.Context.SortDirection == SortDirection.Descending && x.Type == 0)) ? "___" : "") + x.Name)'>Name</MudTableSortLabel></MudTh>
@@ -87,15 +88,45 @@ else
                 <MudTh><MudTableSortLabel SortBy='new Func<FtpListItem, object>(x => (mudTable.Context.SortDirection == SortDirection.Ascending && x.Type == 1 ? -999999 : 0) + (mudTable.Context.SortDirection == SortDirection.Descending && x.Type == 1 ? 999999 : 0) + (mudTable.Context.SortDirection == SortDirection.Ascending && x.Name == ".." ? -9999999 : 0) + (mudTable.Context.SortDirection == SortDirection.Descending && x.Name == ".." ? 9999999 : 0) + x.Size)'>Size</MudTableSortLabel></MudTh>
                 <MudTh><MudTableSortLabel SortBy='new Func<FtpListItem, object>(x => x.Modified.AddYears((mudTable.Context.SortDirection == SortDirection.Descending && x.Name == ".." ? 2150 : 0) + ((mudTable.Context.SortDirection == SortDirection.Ascending && x.Type == 1) || ((mudTable.Context.SortDirection == SortDirection.Descending && x.Type == 0)) ? 0 : 100)))'>Date</MudTableSortLabel></MudTh>
                 <MudTh></MudTh>
+                <MudTh></MudTh>
             </HeaderContent>
             <RowTemplate>
-                <MudTd DataLabel="Name"><MudIcon Style="margin-bottom:-5px" Color="@(context.Type == 1 ? (context.Name == ".." ? Color.Info : Color.Info) : Color.Default)" Icon="@(context.Type == 1 ? (context.Name == ".." ? Icons.Material.Filled.ArrowBack : Icons.Material.Filled.Folder) : (editableExt.Contains(context.Extension) ? Icons.Material.Outlined.InsertDriveFile : Icons.Material.Outlined.FileOpen))" Size="Size.Small" Class="mr-2" /><MudHighlighter Text='@(context.Type == 0 ? context.Name.Replace(context.Extension, "") : $"[{context.Name}]")' HighlightedText="@searchString" /></MudTd>
+                <MudTd DataLabel="Name"><MudIcon Style="margin-bottom:-5px" Color="@(context.Type == 1 ? (context.Name == ".." ? Color.Info : Color.Info) : Color.Default)" Icon="@(context.Type == 1 ? (context.Name == ".." ? Icons.Material.Filled.ArrowBack : Icons.Material.Filled.Folder) : (editableExt.Contains(context.Extension) ? Icons.Material.Outlined.InsertDriveFile : (imgExt.Contains(context.Extension) ? Icons.Material.Outlined.Image : Icons.Material.Outlined.FileOpen)))" Size="Size.Small" Class="mr-2" /><MudHighlighter Text='@(context.Type == 0 ? context.Name.Replace(context.Extension, "") : $"[{context.Name}]")' HighlightedText="@searchString" /></MudTd>
                 <MudTd DataLabel="Ext"><MudHighlighter Text='@context.Extension.Replace(".", "")' HighlightedText="@searchString" /></MudTd>
                 <MudTd DataLabel="Size">@(context.Type == 0 ? context.Size.ToString("n0") : "<DIR>")</MudTd>
                 <MudTd DataLabel="Date">@(context.Name == ".." ? "—" : context.Modified.ToString())</MudTd>
+                <MudTd DataLabel="">
+                    @if (context.Type == 0)
+                    {
+                        <MudButton Variant="Variant.Text" Size="Size.Small" Style="padding:0px"  OnClick="@(_ => OpenContextDialog(context))">...</MudButton>
+                    }
+                </MudTd>
                 <MudTd></MudTd>
             </RowTemplate>
         </MudTableFix>
+
+        <MudDialog @bind-IsVisible="contextVisible" Options="contextDialogOptions" DefaultFocus="DefaultFocus.FirstChild">
+            <TitleContent>
+                <MudText Typo="Typo.caption">
+                     @contextItem.Name
+                </MudText>
+            </TitleContent>
+            <DialogContent>
+                <MudPaper Width="200px" Elevation="0">
+                    <MudList Clickable="true">
+                        <MudListItem Text="Edit" Icon="@Icons.Material.Filled.Edit" IconSize="Size.Small" OnClick="@(_ => {CloseContextDialog(); Edit(contextItem);})" Disabled="@(!editableExt.Contains(contextItem.Extension))"/>
+                        <MudListItem Text="Download" Icon="@Icons.Material.Filled.Download" IconSize="Size.Small" OnClick="@(_ => {CloseContextDialog(); Download(contextItem);})"/>
+@*                        <MudDivider />
+                        <MudListItem Text="Trash" />
+                        <MudListItem Text="Spam" />*@
+                    </MudList>
+                </MudPaper>
+            </DialogContent>
+@*            <DialogActions>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CloseContextDialog" Class="px-10">Close</MudButton>
+            </DialogActions>*@
+        </MudDialog>
+
     </MudContainer>
 }
 
@@ -115,7 +146,14 @@ else
 
     MudTable<FtpListItem> mudTable;
 
-    private HashSet<string> editableExt = new HashSet<string> {".aspx", ".ascx", ".ashx", ".asax", ".asp", ".cs", ".config", ".browser", ".js", ".json", ".css", ".html", ".htm", ".xml", ".xsl", ".txt"};
+    private bool contextVisible = false;
+    FtpListItem contextItem = null;
+    private void OpenContextDialog(FtpListItem item)  { contextVisible = true; contextItem = item; }
+    void CloseContextDialog() => contextVisible = false;
+    private DialogOptions contextDialogOptions = new() { FullWidth = false, CloseOnEscapeKey = true, DisableBackdropClick = false, CloseButton = false, NoHeader = false, MaxWidth = MaxWidth.Small };
+
+    private HashSet<string> editableExt = new HashSet<string> { ".aspx", ".ascx", ".ashx", ".asax", ".asp", ".cs", ".config", ".browser", ".js", ".json", ".css", ".html", ".htm", ".xml", ".xsl", ".txt" };
+    private HashSet<string> imgExt = new HashSet<string> { ".png", ".jpg", ".jpeg", ".gif"};
 
     protected override async Task OnInitializedAsync()
     {
@@ -187,23 +225,41 @@ else
         {
             if (editableExt.Contains(i.Item.Extension))
             {
-                await codeEdit.Edit(currentDB.CurrentFTPPath + "/" + i.Item.Name, i.Item.Extension);
-
-                var refresh = (await Http.GetFromJsonAsync<List<FtpListItem>>($"api/code/list?ftp={WebUtility.UrlEncode(currentDB.FTP)}&path={WebUtility.UrlEncode(currentDB.CurrentFTPPath + "/" + i.Item.Name)}")).FirstOrDefault();
-
-                if (refresh != null)
-                {
-                    i.Item.Modified = refresh.Modified;
-                    i.Item.Size = refresh.Size;
-                }
-
-                StateHasChanged();
+                Edit(i.Item);
+            }
+            else if(imgExt.Contains(i.Item.Extension))
+            {
+                Show(i.Item);
             }
             else
             {
-                await js.InvokeAsync<object>("open", $"/api/code/download?ftp={WebUtility.UrlEncode(currentDB.FTP)}&path={WebUtility.UrlEncode(currentDB.CurrentFTPPath + "/" + i.Item.Name)}", "_blank");
+                Download(i.Item);
             }
         }
+    }
+
+    private async void Edit(FtpListItem item)
+    {
+        await codeEdit.Edit(currentDB.CurrentFTPPath + "/" + item.Name, item.Extension);
+
+        var refresh = (await Http.GetFromJsonAsync<List<FtpListItem>>($"api/code/list?ftp={WebUtility.UrlEncode(currentDB.FTP)}&path={WebUtility.UrlEncode(currentDB.CurrentFTPPath + "/" + item.Name)}")).FirstOrDefault();
+
+        if (refresh != null)
+        {
+            item.Modified = refresh.Modified;
+            item.Size = refresh.Size;
+            StateHasChanged();
+        }        
+    }
+
+    private async void Download(FtpListItem item)
+    {
+        await js.InvokeAsync<object>("open", $"/api/code/download?ftp={WebUtility.UrlEncode(currentDB.FTP)}&path={WebUtility.UrlEncode(currentDB.CurrentFTPPath + "/" + item.Name)}", "_self"); 
+    }
+
+    private async void Show(FtpListItem item)
+    {
+        await js.InvokeAsync<object>("open", $"/api/code/download?ftp={WebUtility.UrlEncode(currentDB.FTP)}&path={WebUtility.UrlEncode(currentDB.CurrentFTPPath + "/" + item.Name)}&show=true", "_blank"); 
     }
 
     private string SelectedRowClassFunc(FtpListItem element, int rowNumber)

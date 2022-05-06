@@ -53,7 +53,7 @@ namespace PubSysLayout.Server.Controllers
         }
 
         [HttpGet("download")]
-        public async Task<ActionResult> GetFile(string ftp, string path)
+        public async Task<ActionResult> GetFile(string ftp, string path, bool show = false)
         {
             string[] tmp = ftp.Split('/');
             string[] tmp1 = _configuration.GetSection("FTP").GetValue<string>(tmp[0]).Split(',');
@@ -66,8 +66,23 @@ namespace PubSysLayout.Server.Controllers
             client.Download(out byte[] bytes, path);
 
             client.Disconnect();
-            
-            return File(bytes, "application/octet-stream", path.Split('/').Last());
+
+            if (show && path.EndsWith(".png"))
+            {
+                return File(bytes, "image/png");
+            }
+            else if (show && (path.EndsWith(".jpg") || path.EndsWith(".jpeg")))
+            {
+                return File(bytes, "image/jpeg");
+            }
+            else if (show && path.EndsWith(".gif"))
+            {
+                return File(bytes, "image/gif");
+            }
+            else
+            {
+                return File(bytes, "application/octet-stream", path.Split('/').Last());
+            }
         }
 
 
