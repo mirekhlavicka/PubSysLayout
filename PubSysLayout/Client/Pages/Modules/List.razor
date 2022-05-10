@@ -217,17 +217,18 @@ else
         DialogService.Show<Modules.ModuleSettingsDialog>($"{m.Name} default settings", parameters, options);
     }
 
-    private void OpenModuleCodeDialog(Module m)
+    private async void OpenModuleCodeDialog(Module m)
     {
-        codeEdit.Edit(m.DesktopSrc);
+        await codeEdit.Edit(m.DesktopSrc);
     }
 
     private void OpenModuleUsagesDialog(Module m)
     {
-        var options = new DialogOptions { 
-            MaxWidth = MaxWidth.Small, 
-            CloseButton = true
-        };
+        var options = new DialogOptions {
+                MaxWidth = MaxWidth.Medium,
+                CloseButton = true,
+                FullWidth = true
+    };
 
         var parameters = new DialogParameters();
 

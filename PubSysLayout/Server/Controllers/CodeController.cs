@@ -111,6 +111,26 @@ namespace PubSysLayout.Server.Controllers
             return NoContent();
         }
 
+        [HttpGet("rename")]
+        public async Task<IActionResult> Rename(string ftp, string path, string newpath)
+        {
+            string[] tmp = ftp.Split('/');
+            string[] tmp1 = _configuration.GetSection("FTP").GetValue<string>(tmp[0]).Split(',');
+            path = path.Replace("~", $"/{tmp[1]}");
+            newpath = newpath.Replace("~", $"/{tmp[1]}");
+
+
+            FtpClient client = new FtpClient(tmp1[0], Int32.Parse(tmp1[1]), tmp1[2], tmp1[3]);
+            client.DataConnectionType = FtpDataConnectionType.PASV;
+            await client.ConnectAsync();
+
+            client.Rename(path, newpath);
+
+            client.Disconnect();
+
+            return NoContent();
+        }
+
         [HttpGet("ftp")]
         public async Task<ActionResult<IEnumerable<string>>> FindFTP(string db)
         {

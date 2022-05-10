@@ -91,40 +91,32 @@ else
                 <MudTh></MudTh>
             </HeaderContent>
             <RowTemplate>
-                <MudTd DataLabel="Name"><MudIcon Style="margin-bottom:-5px" Color="@(context.Type == 1 ? (context.Name == ".." ? Color.Info : Color.Info) : Color.Default)" Icon="@(context.Type == 1 ? (context.Name == ".." ? Icons.Material.Filled.ArrowBack : Icons.Material.Filled.Folder) : (editableExt.Contains(context.Extension) ? Icons.Material.Outlined.InsertDriveFile : (imgExt.Contains(context.Extension) ? Icons.Material.Outlined.Image : Icons.Material.Outlined.FileOpen)))" Size="Size.Small" Class="mr-2" /><MudHighlighter Text='@(context.Type == 0 ? context.Name.Replace(context.Extension, "") : $"[{context.Name}]")' HighlightedText="@searchString" /></MudTd>
-                <MudTd DataLabel="Ext"><MudHighlighter Text='@context.Extension.Replace(".", "")' HighlightedText="@searchString" /></MudTd>
+                <MudTd DataLabel="Name"><MudIcon Style="margin-bottom:-5px" Color="@(context.Type == 1 ? (context.Name == ".." ? Color.Info : Color.Info) : Color.Default)" Icon="@(context.Type == 1 ? (context.Name == ".." ? Icons.Material.Filled.ArrowBack : Icons.Material.Filled.Folder) : (editableExt.Contains(context.Extension) ? Icons.Material.Outlined.InsertDriveFile : (imgExt.Contains(context.Extension) ? Icons.Material.Outlined.Image : Icons.Material.Outlined.FileOpen)))" Size="Size.Small" Class="mr-2" /><MudHighlighter Text='@(context.Type == 0 ? (!String.IsNullOrEmpty(context.Extension) ?  context.Name.Replace(context.Extension, "") : context.Name) : $"[{context.Name}]")' HighlightedText="@searchString" /></MudTd>
+                <MudTd DataLabel="Ext"><MudHighlighter Text='@context.Extension?.Replace(".", "")' HighlightedText="@searchString" /></MudTd>
                 <MudTd DataLabel="Size">@(context.Type == 0 ? context.Size.ToString("n0") : "<DIR>")</MudTd>
                 <MudTd DataLabel="Date">@(context.Name == ".." ? "—" : context.Modified.ToString())</MudTd>
                 <MudTd DataLabel="">
                     @if (context.Type == 0)
                     {
-                        <MudButton Variant="Variant.Text" Size="Size.Small" Style="padding:0px"  OnClick="@(_ => OpenContextDialog(context))">...</MudButton>
+                        <MudButton Variant="Variant.Text" Size="Size.Small" Style="padding:0px" OnClick="@(_ => OpenContextDialog(context))">...</MudButton>
                     }
                 </MudTd>
                 <MudTd></MudTd>
             </RowTemplate>
         </MudTableFix>
 
-        <MudDialog @bind-IsVisible="contextVisible" Options="contextDialogOptions" DefaultFocus="DefaultFocus.FirstChild">
-            <TitleContent>
-                <MudText Typo="Typo.caption">
-                     @contextItem.Name
-                </MudText>
-            </TitleContent>
+        <MudDialog @bind-IsVisible="contextVisible" Options="contextDialogOptions" DisableSidePadding="false">
             <DialogContent>
-                <MudPaper Width="200px" Elevation="0">
+                <MudPaper Width="300px" Elevation="0">
+                    <MudTextField @bind-Value="contextItem.Name" Variant="Variant.Text" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Check"  OnAdornmentClick="Rename" Required="true" FullWidth="true" Label="Rename"></MudTextField>
                     <MudList Clickable="true">
-                        <MudListItem Text="Edit" Icon="@Icons.Material.Filled.Edit" IconSize="Size.Small" OnClick="@(_ => {CloseContextDialog(); Edit(contextItem);})" Disabled="@(!editableExt.Contains(contextItem.Extension))"/>
-                        <MudListItem Text="Download" Icon="@Icons.Material.Filled.Download" IconSize="Size.Small" OnClick="@(_ => {CloseContextDialog(); Download(contextItem);})"/>
-@*                        <MudDivider />
-                        <MudListItem Text="Trash" />
-                        <MudListItem Text="Spam" />*@
+                        <MudListItem Text="Edit" Icon="@Icons.Material.Filled.Edit" IconSize="Size.Small" OnClick="@(_ => {CloseContextDialog(); Edit(contextItem);})" Disabled="@(!editableExt.Contains(contextItem.Extension))" />
+                        <MudListItem Text="Download" Icon="@Icons.Material.Filled.Download" IconSize="Size.Small" OnClick="@(_ => {CloseContextDialog(); Download(contextItem);})" />
+                        @*<MudDivider />*@
                     </MudList>
                 </MudPaper>
+                <div class="fixed pointer-events-none" tabindex="-1" @ref="focusContextDialog"></div>
             </DialogContent>
-@*            <DialogActions>
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CloseContextDialog" Class="px-10">Close</MudButton>
-            </DialogActions>*@
         </MudDialog>
 
     </MudContainer>
@@ -145,15 +137,17 @@ else
     private string searchString = "";
 
     MudTable<FtpListItem> mudTable;
+    ElementReference focusContextDialog;
 
     private bool contextVisible = false;
     FtpListItem contextItem = null;
-    private void OpenContextDialog(FtpListItem item)  { contextVisible = true; contextItem = item; }
+    string contextOrigName = null;
+    private async void OpenContextDialog(FtpListItem item) { contextVisible = true; contextItem = item; contextOrigName = item.Name; await Task.Delay(300); await focusContextDialog.FocusAsync(); }
     void CloseContextDialog() => contextVisible = false;
-    private DialogOptions contextDialogOptions = new() { FullWidth = false, CloseOnEscapeKey = true, DisableBackdropClick = false, CloseButton = false, NoHeader = false, MaxWidth = MaxWidth.Small };
+    private DialogOptions contextDialogOptions = new() { FullWidth = false, CloseOnEscapeKey = true, DisableBackdropClick = false, CloseButton = true, NoHeader = true, MaxWidth = MaxWidth.Medium };
 
     private HashSet<string> editableExt = new HashSet<string> { ".aspx", ".ascx", ".ashx", ".asax", ".asp", ".cs", ".config", ".browser", ".js", ".json", ".css", ".html", ".htm", ".xml", ".xsl", ".txt" };
-    private HashSet<string> imgExt = new HashSet<string> { ".png", ".jpg", ".jpeg", ".gif"};
+    private HashSet<string> imgExt = new HashSet<string> { ".png", ".jpg", ".jpeg", ".gif" };
 
     protected override async Task OnInitializedAsync()
     {
@@ -227,7 +221,7 @@ else
             {
                 Edit(i.Item);
             }
-            else if(imgExt.Contains(i.Item.Extension))
+            else if (imgExt.Contains(i.Item.Extension))
             {
                 Show(i.Item);
             }
@@ -249,17 +243,17 @@ else
             item.Modified = refresh.Modified;
             item.Size = refresh.Size;
             StateHasChanged();
-        }        
+        }
     }
 
     private async void Download(FtpListItem item)
     {
-        await js.InvokeAsync<object>("open", $"/api/code/download?ftp={WebUtility.UrlEncode(currentDB.FTP)}&path={WebUtility.UrlEncode(currentDB.CurrentFTPPath + "/" + item.Name)}", "_self"); 
+        await js.InvokeVoidAsync("open", $"/api/code/download?ftp={WebUtility.UrlEncode(currentDB.FTP)}&path={WebUtility.UrlEncode(currentDB.CurrentFTPPath + "/" + item.Name)}", "_self");
     }
 
     private async void Show(FtpListItem item)
     {
-        await js.InvokeAsync<object>("open", $"/api/code/download?ftp={WebUtility.UrlEncode(currentDB.FTP)}&path={WebUtility.UrlEncode(currentDB.CurrentFTPPath + "/" + item.Name)}&show=true", "_blank"); 
+        await js.InvokeVoidAsync("open", $"/api/code/download?ftp={WebUtility.UrlEncode(currentDB.FTP)}&path={WebUtility.UrlEncode(currentDB.CurrentFTPPath + "/" + item.Name)}&show=true", "_blank");
     }
 
     private string SelectedRowClassFunc(FtpListItem element, int rowNumber)
@@ -272,5 +266,30 @@ else
         {
             return string.Empty;
         }
+    }
+
+    protected async void Rename()
+    {
+        if (!String.IsNullOrEmpty(contextItem.Name))
+        {
+            var res = await Http.GetAsync($"api/code/rename?ftp={WebUtility.UrlEncode(currentDB.FTP)}&path={WebUtility.UrlEncode(currentDB.CurrentFTPPath + "/" + contextOrigName)}&newpath={WebUtility.UrlEncode(currentDB.CurrentFTPPath + "/" + contextItem.Name)}");
+
+            if (res.IsSuccessStatusCode)
+            {
+                snackBar.Add($"{contextItem.Name} renamed", Severity.Success);
+                contextOrigName = contextItem.Name;
+            }
+            else
+            {                
+                await DialogService.ShowMessageBox("Rename", "Invalid file name", options : new DialogOptions { CloseOnEscapeKey = true });
+                contextItem.Name = contextOrigName;
+            }
+        }
+        else
+        {
+            contextItem.Name = contextOrigName;
+        }
+
+        StateHasChanged();
     }
 }
