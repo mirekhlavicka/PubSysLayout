@@ -12,6 +12,8 @@
 @inject PubSysLayout.Client.Pages.Code.CodeEdit codeEdit
 @inject Clipboard clipboard
 
+@implements IAsyncDisposable
+
 <style>
     :hover.hover-underline {
         text-decoration: underline;
@@ -24,103 +26,114 @@
         .selected > td, .selected .mud-icon-default {
             color: white !important;
         }
+
+    .drop-zone {
+        border: 2px solid #00000000;
+        border-radius: 5px;
+    }
+
+        .drop-zone.hover {
+            border: 2px dashed #0087F7;
+        }
 </style>
 
 @using PubSysLayout.Shared.Model
 
 <PageTitle>@currentDB.Current – Files</PageTitle>
 
-@if (items == null)
-{
-    <MudProgressCircular Color="Color.Default" Indeterminate="true" />
-}
-else
-{
-    <MudContainer MaxWidth="MaxWidth.Large">
-        <MudTableFix @ref="mudTable" Items="items" Hover="true" SortLabel="Sort By" AllowUnsorted="false" Elevation="5" RowsPerPage="0" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 180px)" Dense="true"
-                 Filter="new Func<FtpListItem,bool>(FilterFunc)"
-                 MultiSelection="false"
-                 RowClassFunc="@SelectedRowClassFunc"
-                 RowClass="cursor-pointer" OnRowClick="RowClicked"
-                 Virtualize="true" T="FtpListItem">
-            <ToolBarContent>
-                <MudBadge Content='@($"{mudTable?.GetFilteredItemsCount() - (currentDB.CurrentFTPPath == "~" ? 0 : 1) }")' Color="Color.Info" Overlap="false" Class="mt-0 ml-0" Origin="Origin.CenterRight">
-                    <MudText Typo="Typo.subtitle2">@(currentDB.FTP.Split('/')[0])</MudText>
-                    @{
-                        string p = "";
+<div @ref="dropZoneElement" class="drop-zone">
+    <InputFile OnChange="OnInputFileChanged" hidden multiple  @ref="inputFile" />
+    @if (items == null)
+    {
+        <MudProgressCircular Color="Color.Default" Indeterminate="true" />
+    }
+    else
+    {
+        <MudContainer MaxWidth="MaxWidth.Large">
+            <MudTableFix @ref="mudTable" Items="items" Hover="true" SortLabel="Sort By" AllowUnsorted="false" Elevation="5" RowsPerPage="0" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 180px)" Dense="true"
+                     Filter="new Func<FtpListItem,bool>(FilterFunc)"
+                     MultiSelection="false"
+                     RowClassFunc="@SelectedRowClassFunc"
+                     RowClass="cursor-pointer" OnRowClick="RowClicked"
+                     Virtualize="true" T="FtpListItem">
+                <ToolBarContent>
+                    <MudBadge Content='@($"{mudTable?.GetFilteredItemsCount() - (currentDB.CurrentFTPPath == "~" ? 0 : 1) }")' Color="Color.Info" Overlap="false" Class="mt-0 ml-0" Origin="Origin.CenterRight">
+                        <MudText Typo="Typo.subtitle2">@(currentDB.FTP.Split('/')[0])</MudText>
+                        @{
+                            string p = "";
 
-                        @foreach (var s in currentDB.CurrentFTPPath.Split('/', StringSplitOptions.RemoveEmptyEntries))
-                        {
-                            p += s;
-                            string pp = p;
-                            p += "/";
-
-                            if (!currentDB.CurrentFTPPath.EndsWith(s))
+                            @foreach (var s in currentDB.CurrentFTPPath.Split('/', StringSplitOptions.RemoveEmptyEntries))
                             {
-                                <MudText Typo="Typo.caption" Color="Color.Info" Class="cursor-pointer hover-underline" @onclick='async _ => {
+                                p += s;
+                                string pp = p;
+                                p += "/";
+
+                                if (!currentDB.CurrentFTPPath.EndsWith(s))
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Info" Class="cursor-pointer hover-underline" @onclick='async _ => {
                                     currentDB.CurrentFTPPath = pp;
                                     searchString = "";
                                     await LoadData();
                                     StateHasChanged();
                                 }'>@(s == "~" ? currentDB.FTP.Split('/')[1] : s )</MudText>
-                                <MudText Typo="Typo.caption">/</MudText>
-                            }
-                            else
-                            {
-                                <MudText Typo="Typo.caption">@(s == "~" ? currentDB.FTP.Split('/')[1] : s )</MudText>
+                                    <MudText Typo="Typo.caption">/</MudText>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.caption">@(s == "~" ? currentDB.FTP.Split('/')[1] : s )</MudText>
+                                }
                             }
                         }
-                    }
-                </MudBadge>
-                <MudSpacer />
-                <MudTextField DebounceInterval="300" @bind-Value="searchString" AutoFocus="false" Placeholder="Search by name or ext" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true"></MudTextField>
-            </ToolBarContent>
-            <ColGroup>
-                <col style="width:50%;" />
-                <col style="width:10%;" />
-                <col style="width:20%;" />
-                <col style="width:20%;" />
-                <col style="width:50px;" />
-            </ColGroup>
-            <HeaderContent>
-                <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy='new Func<FtpListItem, object>(x => (mudTable.Context.SortDirection == SortDirection.Descending && x.Name == ".." ? "ZZZ" : "") + ((mudTable.Context.SortDirection == SortDirection.Ascending && x.Type == 1) || ((mudTable.Context.SortDirection == SortDirection.Descending && x.Type == 0)) ? "___" : "") + x.Name)'>Name</MudTableSortLabel></MudTh>
-                <MudTh><MudTableSortLabel SortBy='new Func<FtpListItem, object>(x => (mudTable.Context.SortDirection == SortDirection.Descending && x.Name == ".." ? "ZZZ" : "") + ((mudTable.Context.SortDirection == SortDirection.Ascending && x.Type == 1) || ((mudTable.Context.SortDirection == SortDirection.Descending && x.Type == 0)) ? "___" : "") + x.Extension + x.Name)'>Ext</MudTableSortLabel></MudTh>
-                <MudTh><MudTableSortLabel SortBy='new Func<FtpListItem, object>(x => (mudTable.Context.SortDirection == SortDirection.Ascending && x.Type == 1 ? -999999 : 0) + (mudTable.Context.SortDirection == SortDirection.Descending && x.Type == 1 ? 999999 : 0) + (mudTable.Context.SortDirection == SortDirection.Ascending && x.Name == ".." ? -9999999 : 0) + (mudTable.Context.SortDirection == SortDirection.Descending && x.Name == ".." ? 9999999 : 0) + x.Size)'>Size</MudTableSortLabel></MudTh>
-                <MudTh><MudTableSortLabel SortBy='new Func<FtpListItem, object>(x => x.Modified.AddYears((mudTable.Context.SortDirection == SortDirection.Descending && x.Name == ".." ? 2150 : 0) + ((mudTable.Context.SortDirection == SortDirection.Ascending && x.Type == 1) || ((mudTable.Context.SortDirection == SortDirection.Descending && x.Type == 0)) ? 0 : 100)))'>Date</MudTableSortLabel></MudTh>
-                <MudTh></MudTh>
-                <MudTh></MudTh>
-            </HeaderContent>
-            <RowTemplate>
-                <MudTd DataLabel="Name"><MudIcon Style="margin-bottom:-5px" Color="@(context.Type == 1 ? (context.Name == ".." ? Color.Info : Color.Info) : Color.Default)" Icon="@(context.Type == 1 ? (context.Name == ".." ? Icons.Material.Filled.ArrowBack : Icons.Material.Filled.Folder) : (editableExt.Contains(context.Extension) ? Icons.Material.Outlined.InsertDriveFile : (imgExt.Contains(context.Extension) ? Icons.Material.Outlined.Image : Icons.Material.Outlined.FileOpen)))" Size="Size.Small" Class="mr-2" /><MudHighlighter Text='@(context.Type == 0 ? (!String.IsNullOrEmpty(context.Extension) ?  context.Name.Replace(context.Extension, "") : context.Name) : $"[{context.Name}]")' HighlightedText="@searchString" /></MudTd>
-                <MudTd DataLabel="Ext"><MudHighlighter Text='@context.Extension?.Replace(".", "")' HighlightedText="@searchString" /></MudTd>
-                <MudTd DataLabel="Size">@(context.Type == 0 ? context.Size.ToString("n0") : "<DIR>")</MudTd>
-                <MudTd DataLabel="Date">@(context.Name == ".." ? "—" : context.Modified.ToString())</MudTd>
-                <MudTd DataLabel="">
-                    @if (context.Type == 0)
-                    {
-                        <MudButton Variant="Variant.Text" Size="Size.Small" Style="padding:0px" OnClick="@(_ => OpenContextDialog(context))">...</MudButton>
-                    }
-                </MudTd>
-                <MudTd></MudTd>
-            </RowTemplate>
-        </MudTableFix>
+                    </MudBadge>
+                    <MudSpacer />
+                    <MudTextField DebounceInterval="300" @bind-Value="searchString" AutoFocus="false" Placeholder="Search by name or ext" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true"></MudTextField>
+                </ToolBarContent>
+                <ColGroup>
+                    <col style="width:50%;" />
+                    <col style="width:10%;" />
+                    <col style="width:20%;" />
+                    <col style="width:20%;" />
+                    <col style="width:50px;" />
+                </ColGroup>
+                <HeaderContent>
+                    <MudTh><MudTableSortLabel InitialDirection="SortDirection.Ascending" SortBy='new Func<FtpListItem, object>(x => (mudTable.Context.SortDirection == SortDirection.Descending && x.Name == ".." ? "ZZZ" : "") + ((mudTable.Context.SortDirection == SortDirection.Ascending && x.Type == 1) || ((mudTable.Context.SortDirection == SortDirection.Descending && x.Type == 0)) ? "___" : "") + x.Name)'>Name</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy='new Func<FtpListItem, object>(x => (mudTable.Context.SortDirection == SortDirection.Descending && x.Name == ".." ? "ZZZ" : "") + ((mudTable.Context.SortDirection == SortDirection.Ascending && x.Type == 1) || ((mudTable.Context.SortDirection == SortDirection.Descending && x.Type == 0)) ? "___" : "") + x.Extension + x.Name)'>Ext</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy='new Func<FtpListItem, object>(x => (mudTable.Context.SortDirection == SortDirection.Ascending && x.Type == 1 ? -999999 : 0) + (mudTable.Context.SortDirection == SortDirection.Descending && x.Type == 1 ? 999999 : 0) + (mudTable.Context.SortDirection == SortDirection.Ascending && x.Name == ".." ? -9999999 : 0) + (mudTable.Context.SortDirection == SortDirection.Descending && x.Name == ".." ? 9999999 : 0) + x.Size)'>Size</MudTableSortLabel></MudTh>
+                    <MudTh><MudTableSortLabel SortBy='new Func<FtpListItem, object>(x => x.Modified.AddYears((mudTable.Context.SortDirection == SortDirection.Descending && x.Name == ".." ? 2150 : 0) + ((mudTable.Context.SortDirection == SortDirection.Ascending && x.Type == 1) || ((mudTable.Context.SortDirection == SortDirection.Descending && x.Type == 0)) ? 0 : 100)))'>Date</MudTableSortLabel></MudTh>
+                    <MudTh></MudTh>
+                    <MudTh></MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Name"><MudIcon Style="margin-bottom:-5px" Color="@(context.Type == 1 ? (context.Name == ".." ? Color.Info : Color.Info) : Color.Default)" Icon="@(context.Type == 1 ? (context.Name == ".." ? Icons.Material.Filled.ArrowBack : Icons.Material.Filled.Folder) : (editableExt.Contains(context.Extension) ? Icons.Material.Outlined.InsertDriveFile : (imgExt.Contains(context.Extension) ? Icons.Material.Outlined.Image : Icons.Material.Outlined.FileOpen)))" Size="Size.Small" Class="mr-2" /><MudHighlighter Text='@(context.Type == 0 ? (!String.IsNullOrEmpty(context.Extension) ?  context.Name.Replace(context.Extension, "") : context.Name) : $"[{context.Name}]")' HighlightedText="@searchString" /></MudTd>
+                    <MudTd DataLabel="Ext"><MudHighlighter Text='@context.Extension?.Replace(".", "")' HighlightedText="@searchString" /></MudTd>
+                    <MudTd DataLabel="Size">@(context.Type == 0 ? context.Size.ToString("n0") : "<DIR>")</MudTd>
+                    <MudTd DataLabel="Date">@(context.Name == ".." ? "—" : context.Modified.ToString())</MudTd>
+                    <MudTd DataLabel="">
+                        @if (context.Type == 0)
+                        {
+                            <MudButton Variant="Variant.Text" Size="Size.Small" Style="padding:0px" OnClick="@(_ => OpenContextDialog(context))">...</MudButton>
+                        }
+                    </MudTd>
+                    <MudTd></MudTd>
+                </RowTemplate>
+            </MudTableFix>
+            <MudDialog @bind-IsVisible="contextVisible" Options="contextDialogOptions" DisableSidePadding="false">
+                <DialogContent>
+                    <MudPaper Width="300px" Elevation="0">
+                        <MudTextField @bind-Value="contextItem.Name" Variant="Variant.Text" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Check" OnAdornmentClick="Rename" Required="true" FullWidth="true" Label="Rename"></MudTextField>
+                        <MudList Clickable="true">
+                            <MudListItem Text="Edit" Icon="@Icons.Material.Filled.Edit" IconSize="Size.Small" OnClick="@(_ => {CloseContextDialog(); Edit(contextItem);})" Disabled="@(!editableExt.Contains(contextItem.Extension))" />
+                            <MudListItem Text="Download" Icon="@Icons.Material.Filled.Download" IconSize="Size.Small" OnClick="@(_ => {CloseContextDialog(); Download(contextItem);})" />
+                            @*<MudDivider />*@
+                        </MudList>
+                    </MudPaper>
+                    <div class="fixed pointer-events-none" tabindex="-1" @ref="focusContextDialog"></div>
+                </DialogContent>
+            </MudDialog>
 
-        <MudDialog @bind-IsVisible="contextVisible" Options="contextDialogOptions" DisableSidePadding="false">
-            <DialogContent>
-                <MudPaper Width="300px" Elevation="0">
-                    <MudTextField @bind-Value="contextItem.Name" Variant="Variant.Text" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Check"  OnAdornmentClick="Rename" Required="true" FullWidth="true" Label="Rename"></MudTextField>
-                    <MudList Clickable="true">
-                        <MudListItem Text="Edit" Icon="@Icons.Material.Filled.Edit" IconSize="Size.Small" OnClick="@(_ => {CloseContextDialog(); Edit(contextItem);})" Disabled="@(!editableExt.Contains(contextItem.Extension))" />
-                        <MudListItem Text="Download" Icon="@Icons.Material.Filled.Download" IconSize="Size.Small" OnClick="@(_ => {CloseContextDialog(); Download(contextItem);})" />
-                        @*<MudDivider />*@
-                    </MudList>
-                </MudPaper>
-                <div class="fixed pointer-events-none" tabindex="-1" @ref="focusContextDialog"></div>
-            </DialogContent>
-        </MudDialog>
-
-    </MudContainer>
-}
+        </MudContainer>
+    }
+</div>
 
 @code {
     public class FtpListItem
@@ -148,6 +161,21 @@ else
 
     private HashSet<string> editableExt = new HashSet<string> { ".aspx", ".ascx", ".ashx", ".asax", ".asp", ".cs", ".config", ".browser", ".js", ".json", ".css", ".html", ".htm", ".xml", ".xsl", ".txt" };
     private HashSet<string> imgExt = new HashSet<string> { ".png", ".jpg", ".jpeg", ".gif" };
+
+    ElementReference dropZoneElement;
+    InputFile inputFile;
+
+    IJSObjectReference _module;
+    IJSObjectReference _dropZoneInstance;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _module = await js.InvokeAsync<IJSObjectReference>("import", "./DropZone.js?v=1.05");
+            _dropZoneInstance = await _module.InvokeAsync<IJSObjectReference>("initializeFileDropZone", dropZoneElement, inputFile.Element);
+        }
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -280,8 +308,8 @@ else
                 contextOrigName = contextItem.Name;
             }
             else
-            {                
-                await DialogService.ShowMessageBox("Rename", "Invalid file name", options : new DialogOptions { CloseOnEscapeKey = true });
+            {
+                await DialogService.ShowMessageBox("Rename", "Invalid file name", options: new DialogOptions { CloseOnEscapeKey = true });
                 contextItem.Name = contextOrigName;
             }
         }
@@ -291,5 +319,26 @@ else
         }
 
         StateHasChanged();
+    }
+    private void OnInputFileChanged(InputFileChangeEventArgs e)
+    {
+        foreach (var file in e.GetMultipleFiles())
+        {
+            Console.WriteLine($"{file.Name} - {file.ContentType}");
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (_dropZoneInstance != null)
+        {
+            await _dropZoneInstance.InvokeVoidAsync("dispose");
+            await _dropZoneInstance.DisposeAsync();
+        }
+
+        if (_module != null)
+        {
+            await _module.DisposeAsync();
+        }
     }
 }
