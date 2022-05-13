@@ -1,6 +1,7 @@
 ﻿using FluentFTP;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using PubSysLayout.Shared.Files;
 using System.Text;
 
 namespace PubSysLayout.Server.Controllers
@@ -131,6 +132,25 @@ namespace PubSysLayout.Server.Controllers
             return NoContent();
         }
 
+        [HttpGet("delete")]
+        public async Task<IActionResult> Delete(string ftp, string path)
+        {
+            string[] tmp = ftp.Split('/');
+            string[] tmp1 = _configuration.GetSection("FTP").GetValue<string>(tmp[0]).Split(',');
+            path = path.Replace("~", $"/{tmp[1]}");
+
+
+            FtpClient client = new FtpClient(tmp1[0], Int32.Parse(tmp1[1]), tmp1[2], tmp1[3]);
+            client.DataConnectionType = FtpDataConnectionType.PASV;
+            await client.ConnectAsync();
+
+            client.DeleteFile(path);
+
+            client.Disconnect();
+
+            return NoContent();
+        }
+
         [HttpGet("ftp")]
         public async Task<ActionResult<IEnumerable<string>>> FindFTP(string db)
         {
@@ -195,6 +215,27 @@ namespace PubSysLayout.Server.Controllers
                 i.Modified,
                 Extension = i.Type == 0 ? Path.GetExtension(i.Name) : ""
             }).ToArray();
+        }
+
+        [HttpPost]
+        [Route("savefile")]
+        public async Task<IActionResult> SaveToFTP(string ftp, string path, [FromBody] SaveFile saveFile)
+        {
+            string[] tmp = ftp.Split('/');
+            string[] tmp1 = _configuration.GetSection("FTP").GetValue<string>(tmp[0]).Split(',');
+            path = path.Replace("~", $"/{tmp[1]}");
+
+            FtpClient client = new FtpClient(tmp1[0], Int32.Parse(tmp1[1]), tmp1[2], tmp1[3]);
+            client.DataConnectionType = FtpDataConnectionType.PASV;
+            await client.ConnectAsync();         
+
+            foreach (var file in saveFile.Files)
+            {
+                client.Upload(file.ImageBytes, path + "/" + file.FileName, existsMode: FtpRemoteExists.Overwrite/*, createRemoteDir: true*/);
+            }
+
+            client.Disconnect();
+            return Ok();
         }
     }
 

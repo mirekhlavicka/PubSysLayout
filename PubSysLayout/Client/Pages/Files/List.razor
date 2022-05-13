@@ -1,6 +1,7 @@
 ﻿@page "/files"
 @using Microsoft.AspNetCore.Authorization
 @using System.Net
+@using PubSysLayout.Shared.Files
 @attribute [Authorize]
 
 @inject HttpClient Http
@@ -125,6 +126,7 @@
                             <MudListItem Text="Edit" Icon="@Icons.Material.Filled.Edit" IconSize="Size.Small" OnClick="@(_ => {CloseContextDialog(); Edit(contextItem);})" Disabled="@(!editableExt.Contains(contextItem.Extension))" />
                             <MudListItem Text="Download" Icon="@Icons.Material.Filled.Download" IconSize="Size.Small" OnClick="@(_ => {CloseContextDialog(); Download(contextItem);})" />
                             @*<MudDivider />*@
+                            <MudListItem Text="Delete" Icon="@Icons.Material.Filled.Delete" IconSize="Size.Small" IconColor="Color.Secondary" OnClick="@(async _ => {CloseContextDialog();await Task.Delay(100);await Delete(contextItem);})" />
                         </MudList>
                     </MudPaper>
                     <div class="fixed pointer-events-none" tabindex="-1" @ref="focusContextDialog"></div>
@@ -320,12 +322,50 @@
 
         StateHasChanged();
     }
-    private void OnInputFileChanged(InputFileChangeEventArgs e)
+
+    private async Task Delete(FtpListItem item)
     {
-        foreach (var file in e.GetMultipleFiles())
+        if ((await DialogService.ShowMessageBox(
+            "Warning",
+            $"Do you want to delete file \"{item.Name}\" ?",
+            yesText: "Delete!", cancelText: "Cancel")) != null)
         {
-            Console.WriteLine($"{file.Name} - {file.ContentType}");
+            var res = await Http.GetAsync($"api/code/delete?ftp={WebUtility.UrlEncode(currentDB.FTP)}&path={WebUtility.UrlEncode(currentDB.CurrentFTPPath + "/" + item.Name)}");
+            snackBar.Add($"{item.Name} deleted", Severity.Success);
+            await LoadData();
+            StateHasChanged();
         }
+    }
+
+    private async Task OnInputFileChanged(InputFileChangeEventArgs e)
+    {
+        SaveFile saveFile = new SaveFile();
+
+        foreach (var file in e.GetMultipleFiles().Where(e => !String.IsNullOrEmpty(e.ContentType)))
+        {
+            if (items.Any(i => i.Name == file.Name) && ((await DialogService.ShowMessageBox(
+                     "Warning",
+                     $"Do you want to replace file {file.Name} ?",
+                     yesText: "Replace!", cancelText: "Skip") == null)))
+            {
+                continue;
+            }
+
+            var fileData = new FileData();
+            var buffers = new byte[file.Size];
+            await file.OpenReadStream(maxAllowedSize:5120000).ReadAsync(buffers);
+            fileData.FileName = file.Name;
+            fileData.FileSize = file.Size;
+            fileData.FileType = file.ContentType;
+            fileData.ImageBytes = buffers;
+            saveFile.Files.Add(fileData);
+        }
+
+        await Http.PostAsJsonAsync($"api/code/savefile?ftp={WebUtility.UrlEncode(currentDB.FTP)}&path={WebUtility.UrlEncode(currentDB.CurrentFTPPath)}", saveFile);
+
+        await LoadData();
+        searchString = "";
+        StateHasChanged();
     }
 
     public async ValueTask DisposeAsync()
