@@ -292,6 +292,11 @@
         {
             return "selected";
         }
+        else if (newFileNames.Contains(element.Name))
+        {
+            //newFileNames.Remove(element.Name);
+            return "editRow";
+        }
         else
         {
             return string.Empty;
@@ -337,9 +342,11 @@
         }
     }
 
+    List<string> newFileNames = new List<string>();
     private async Task OnInputFileChanged(InputFileChangeEventArgs e)
     {
         SaveFile saveFile = new SaveFile();
+        newFileNames.Clear();
 
         foreach (var file in e.GetMultipleFiles().Where(e => !String.IsNullOrEmpty(e.ContentType)))
         {
@@ -359,6 +366,7 @@
             fileData.FileType = file.ContentType;
             fileData.ImageBytes = buffers;
             saveFile.Files.Add(fileData);
+            newFileNames.Add(file.Name);
         }
 
         await Http.PostAsJsonAsync($"api/code/savefile?ftp={WebUtility.UrlEncode(currentDB.FTP)}&path={WebUtility.UrlEncode(currentDB.CurrentFTPPath)}", saveFile);
