@@ -51,7 +51,10 @@
     else
     {
         <MudContainer MaxWidth="MaxWidth.Large">
-            <MudTableFix @ref="mudTable" Items="items" Hover="true" SortLabel="Sort By" AllowUnsorted="false" Elevation="5" RowsPerPage="0" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 180px)" Dense="true"
+            <MudTooltip Text="Add new file">
+                <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5"  OnClick="@(()=> OpenContextDialog(new FtpListItem { Type = -1 }))"/> @*OnClick="@(()=> /*Addtem()*/)" OpenContextDialog*@
+            </MudTooltip>
+            <MudTableFix @ref="mudTable" Items="items" Hover="true" SortLabel="Sort By" AllowUnsorted="false" Elevation="5" RowsPerPage="0" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 250px)" Dense="true"
                      Filter="new Func<FtpListItem,bool>(FilterFunc)"
                      MultiSelection="false"
                      RowClassFunc="@SelectedRowClassFunc"
@@ -121,13 +124,16 @@
             <MudDialog @bind-IsVisible="contextVisible" Options="contextDialogOptions" DisableSidePadding="false">
                 <DialogContent>
                     <MudPaper Width="300px" Elevation="0">
-                        <MudTextField @bind-Value="contextItem.Name" Variant="Variant.Text" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Check" OnAdornmentClick="Rename" Required="true" FullWidth="true" Label="Rename"></MudTextField>
-                        <MudList Clickable="true">
-                            <MudListItem Text="Edit" Icon="@Icons.Material.Filled.Edit" IconSize="Size.Small" OnClick="@(_ => {CloseContextDialog(); Edit(contextItem);})" Disabled="@(!editableExt.Contains(contextItem.Extension))" />
-                            <MudListItem Text="Download" Icon="@Icons.Material.Filled.Download" IconSize="Size.Small" OnClick="@(_ => {CloseContextDialog(); Download(contextItem);})" />
-                            @*<MudDivider />*@
-                            <MudListItem Text="Delete" Icon="@Icons.Material.Filled.Delete" IconSize="Size.Small" IconColor="Color.Secondary" OnClick="@(async _ => {CloseContextDialog();await Task.Delay(100);await Delete(contextItem);})" />
-                        </MudList>
+                        <MudTextField @bind-Value="contextItem.Name" Variant="Variant.Text" DebounceInterval="300" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Check" OnAdornmentClick="Rename" Required="true" FullWidth="true" Label='@(contextItem.Type != -1 ? "Rename" : "Enter new file name")'></MudTextField>
+                        @if (contextItem.Type != -1)
+                        {
+                            <MudList Clickable="true">
+                                <MudListItem Text="Edit" Icon="@Icons.Material.Filled.Edit" IconSize="Size.Small" OnClick="@(_ => {CloseContextDialog(); Edit(contextItem);})" Disabled="@(!editableExt.Contains(contextItem.Extension))" />
+                                <MudListItem Text="Download" Icon="@Icons.Material.Filled.Download" IconSize="Size.Small" OnClick="@(_ => {CloseContextDialog(); Download(contextItem);})" />
+                                @*<MudDivider />*@
+                                <MudListItem Text="Delete" Icon="@Icons.Material.Filled.Delete" IconSize="Size.Small" IconColor="Color.Secondary" OnClick="@(async _ => {CloseContextDialog();await Task.Delay(100);await Delete(contextItem);})" />
+                            </MudList>
+                        }
                     </MudPaper>
                     <div class="fixed pointer-events-none" tabindex="-1" @ref="focusContextDialog"></div>
                 </DialogContent>
@@ -266,13 +272,25 @@
     {
         await codeEdit.Edit(currentDB.CurrentFTPPath + "/" + item.Name, item.Extension);
 
-        var refresh = (await Http.GetFromJsonAsync<List<FtpListItem>>($"api/code/list?ftp={WebUtility.UrlEncode(currentDB.FTP)}&path={WebUtility.UrlEncode(currentDB.CurrentFTPPath + "/" + item.Name)}")).FirstOrDefault();
-
-        if (refresh != null)
+        if (item.Type != -1)
         {
-            item.Modified = refresh.Modified;
-            item.Size = refresh.Size;
+            var refresh = (await Http.GetFromJsonAsync<List<FtpListItem>>($"api/code/list?ftp={WebUtility.UrlEncode(currentDB.FTP)}&path={WebUtility.UrlEncode(currentDB.CurrentFTPPath + "/" + item.Name)}")).FirstOrDefault();
+
+            if (refresh != null)
+            {
+                item.Modified = refresh.Modified;
+                item.Size = refresh.Size;
+                StateHasChanged();
+            }
+        }
+        else
+        {
+            newFileNames.Add(item.Name);
+            await LoadData();
+            searchString = "";
             StateHasChanged();
+            await Task.Delay(5000);
+            newFileNames.Clear();
         }
     }
 
@@ -305,26 +323,34 @@
 
     protected async void Rename()
     {
-        if (!String.IsNullOrEmpty(contextItem.Name))
+        if (contextItem.Type == -1 && !String.IsNullOrEmpty(contextItem.Name))
         {
-            var res = await Http.GetAsync($"api/code/rename?ftp={WebUtility.UrlEncode(currentDB.FTP)}&path={WebUtility.UrlEncode(currentDB.CurrentFTPPath + "/" + contextOrigName)}&newpath={WebUtility.UrlEncode(currentDB.CurrentFTPPath + "/" + contextItem.Name)}");
-
-            if (res.IsSuccessStatusCode)
-            {
-                snackBar.Add($"{contextItem.Name} renamed", Severity.Success);
-                contextOrigName = contextItem.Name;
-            }
-            else
-            {
-                await DialogService.ShowMessageBox("Rename", "Invalid file name", options: new DialogOptions { CloseOnEscapeKey = true });
-                contextItem.Name = contextOrigName;
-            }
+            contextItem.Extension = "." + contextItem.Name.Split('.').Last();
+            CloseContextDialog(); 
+            Edit(contextItem);
         }
         else
         {
-            contextItem.Name = contextOrigName;
-        }
+            if (!String.IsNullOrEmpty(contextItem.Name))
+            {
+                var res = await Http.GetAsync($"api/code/rename?ftp={WebUtility.UrlEncode(currentDB.FTP)}&path={WebUtility.UrlEncode(currentDB.CurrentFTPPath + "/" + contextOrigName)}&newpath={WebUtility.UrlEncode(currentDB.CurrentFTPPath + "/" + contextItem.Name)}");
 
+                if (res.IsSuccessStatusCode)
+                {
+                    snackBar.Add($"{contextItem.Name} renamed", Severity.Success);
+                    contextOrigName = contextItem.Name;
+                }
+                else
+                {
+                    await DialogService.ShowMessageBox("Rename", "Invalid file name", options: new DialogOptions { CloseOnEscapeKey = true });
+                    contextItem.Name = contextOrigName;
+                }
+            }
+            else
+            {
+                contextItem.Name = contextOrigName;
+            }
+        }
         StateHasChanged();
     }
 
@@ -374,6 +400,9 @@
         await LoadData();
         searchString = "";
         StateHasChanged();
+
+        await Task.Delay(5000);
+        newFileNames.Clear();
     }
 
     public async ValueTask DisposeAsync()
