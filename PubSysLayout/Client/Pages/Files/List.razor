@@ -52,7 +52,10 @@
     {
         <MudContainer MaxWidth="MaxWidth.Large">
             <MudTooltip Text="Add new file">
-                <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5"  OnClick="@(()=> OpenContextDialog(new FtpListItem { Type = -1 }))"/> @*OnClick="@(()=> /*Addtem()*/)" OpenContextDialog*@
+                <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5"  OnClick="@(()=> OpenContextDialog(new FtpListItem { Type = -1 }))"/>
+            </MudTooltip>
+            <MudTooltip Text="Refresh">
+                <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Refresh" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5"  OnClick="@(async ()=> await LoadData())"/>
             </MudTooltip>
             <MudTableFix @ref="mudTable" Items="items" Hover="true" SortLabel="Sort By" AllowUnsorted="false" Elevation="5" RowsPerPage="0" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 250px)" Dense="true"
                      Filter="new Func<FtpListItem,bool>(FilterFunc)"
@@ -124,7 +127,7 @@
             <MudDialog @bind-IsVisible="contextVisible" Options="contextDialogOptions" DisableSidePadding="false">
                 <DialogContent>
                     <MudPaper Width="300px" Elevation="0">
-                        <MudTextField @bind-Value="contextItem.Name" Variant="Variant.Text" DebounceInterval="300" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Check" OnAdornmentClick="Rename" Required="true" FullWidth="true" Label='@(contextItem.Type != -1 ? "Rename" : "Enter new file name")'></MudTextField>
+                        <MudTextField @bind-Value="contextEditName" Variant="Variant.Text" DebounceInterval="300" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Check" OnAdornmentClick="Rename" Required="true" FullWidth="true" Label='@(contextItem.Type != -1 ? "Rename" : "Enter new file name")'></MudTextField>
                         @if (contextItem.Type != -1)
                         {
                             <MudList Clickable="true">
@@ -162,8 +165,8 @@
 
     private bool contextVisible = false;
     FtpListItem contextItem = null;
-    string contextOrigName = null;
-    private async void OpenContextDialog(FtpListItem item) { contextVisible = true; contextItem = item; contextOrigName = item.Name; await Task.Delay(300); await focusContextDialog.FocusAsync(); }
+    string contextEditName = null;
+    private async void OpenContextDialog(FtpListItem item) { contextVisible = true; contextItem = item; contextEditName = item.Name; await Task.Delay(300); await focusContextDialog.FocusAsync(); }
     void CloseContextDialog() => contextVisible = false;
     private DialogOptions contextDialogOptions = new() { FullWidth = false, CloseOnEscapeKey = true, DisableBackdropClick = false, CloseButton = true, NoHeader = true, MaxWidth = MaxWidth.Medium };
 
@@ -323,32 +326,33 @@
 
     protected async void Rename()
     {
-        if (contextItem.Type == -1 && !String.IsNullOrEmpty(contextItem.Name))
+        if (contextItem.Type == -1 && !String.IsNullOrEmpty(contextEditName))
         {
+            contextItem.Name = contextEditName;
             contextItem.Extension = "." + contextItem.Name.Split('.').Last();
             CloseContextDialog(); 
             Edit(contextItem);
         }
         else
         {
-            if (!String.IsNullOrEmpty(contextItem.Name))
+            if (!String.IsNullOrEmpty(contextEditName))
             {
-                var res = await Http.GetAsync($"api/code/rename?ftp={WebUtility.UrlEncode(currentDB.FTP)}&path={WebUtility.UrlEncode(currentDB.CurrentFTPPath + "/" + contextOrigName)}&newpath={WebUtility.UrlEncode(currentDB.CurrentFTPPath + "/" + contextItem.Name)}");
+                var res = await Http.GetAsync($"api/code/rename?ftp={WebUtility.UrlEncode(currentDB.FTP)}&path={WebUtility.UrlEncode(currentDB.CurrentFTPPath + "/" + contextItem.Name)}&newpath={WebUtility.UrlEncode(currentDB.CurrentFTPPath + "/" + contextEditName)}");
 
                 if (res.IsSuccessStatusCode)
                 {
                     snackBar.Add($"{contextItem.Name} renamed", Severity.Success);
-                    contextOrigName = contextItem.Name;
+                    contextItem.Name = contextEditName;
                 }
                 else
                 {
                     await DialogService.ShowMessageBox("Rename", "Invalid file name", options: new DialogOptions { CloseOnEscapeKey = true });
-                    contextItem.Name = contextOrigName;
+                    contextEditName = contextItem.Name;
                 }
             }
             else
             {
-                contextItem.Name = contextOrigName;
+                contextEditName = contextItem.Name;
             }
         }
         StateHasChanged();
