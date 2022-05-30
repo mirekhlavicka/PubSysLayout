@@ -51,9 +51,15 @@
     else
     {
         <MudContainer MaxWidth="MaxWidth.Large">
-            <MudTooltip Text="Add new file">
-                <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5"  OnClick="@(()=> OpenContextDialog(new FtpListItem { Type = -1 }))"/>
-            </MudTooltip>
+            <MudMenu Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" AnchorOrigin="Origin.CenterLeft" TransformOrigin="Origin.TopLeft" Dense="true">
+                <ActivatorContent>
+                    <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5"/>
+                </ActivatorContent>
+                <ChildContent>
+                    <MudMenuItem OnClick="@(()=> OpenContextDialog(new FtpListItem { Type = -1 }))">New file</MudMenuItem>
+                    <MudMenuItem OnClick="@(()=> OpenContextDialog(new FtpListItem { Type = -2 }))">New folder</MudMenuItem>
+                </ChildContent>
+            </MudMenu>
             <MudTooltip Text="Refresh">
                 <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Refresh" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5"  OnClick="@(async ()=> await LoadData())"/>
             </MudTooltip>
@@ -127,8 +133,8 @@
             <MudDialog @bind-IsVisible="contextVisible" Options="contextDialogOptions" DisableSidePadding="false">
                 <DialogContent>
                     <MudPaper Width="300px" Elevation="0">
-                        <MudTextField @bind-Value="contextEditName" Variant="Variant.Text" DebounceInterval="300" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Check" OnAdornmentClick="Rename" Required="true" FullWidth="true" Label='@(contextItem.Type != -1 ? "Rename" : "Enter new file name")'></MudTextField>
-                        @if (contextItem.Type != -1)
+                        <MudTextField @bind-Value="contextEditName" Variant="Variant.Text" DebounceInterval="300" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Check" OnAdornmentClick="Rename" Required="true" FullWidth="true" Label='@(contextItem.Type >= 0 ? "Rename" : (contextItem.Type == -2 ? "Enter new folder name" : "Enter new file name"))'></MudTextField>
+                        @if (contextItem.Type >= 0)
                         {
                             <MudList Clickable="true">
                                 <MudListItem Text="Edit" Icon="@Icons.Material.Filled.Edit" IconSize="Size.Small" OnClick="@(_ => {CloseContextDialog(); Edit(contextItem);})" Disabled="@(!editableExt.Contains(contextItem.Extension))" />
@@ -332,6 +338,27 @@
             contextItem.Extension = "." + contextItem.Name.Split('.').Last();
             CloseContextDialog(); 
             Edit(contextItem);
+        }
+        else if (contextItem.Type == -2 && !String.IsNullOrEmpty(contextEditName))
+        {
+            CloseContextDialog(); 
+
+            var res = await Http.GetAsync($"api/code/newfolder?ftp={WebUtility.UrlEncode(currentDB.FTP)}&path={WebUtility.UrlEncode(currentDB.CurrentFTPPath + "/" + contextEditName)}");
+
+            if (res.IsSuccessStatusCode)
+            {
+                snackBar.Add($"{contextEditName} folder added", Severity.Success);
+                newFileNames.Add(contextEditName);
+                searchString = "";
+                await LoadData();
+                StateHasChanged();
+                await Task.Delay(5000);
+                newFileNames.Clear();
+            }
+            else
+            {
+                await DialogService.ShowMessageBox("New folder", "Invalid folder name", options: new DialogOptions { CloseOnEscapeKey = true });
+            }
         }
         else
         {
