@@ -122,7 +122,7 @@
                     <MudTd DataLabel="Size">@(context.Type == 0 ? context.Size.ToString("n0") : "<DIR>")</MudTd>
                     <MudTd DataLabel="Date">@(context.Name == ".." ? "—" : context.Modified.ToString())</MudTd>
                     <MudTd DataLabel="">
-                        @if (context.Type == 0)
+                        @if (context.Name != "..")
                         {
                             <MudButton Variant="Variant.Text" Size="Size.Small" Style="padding:0px" OnClick="@(_ => OpenContextDialog(context))">...</MudButton>
                         }
@@ -134,7 +134,7 @@
                 <DialogContent>
                     <MudPaper Width="300px" Elevation="0">
                         <MudTextField @bind-Value="contextEditName" Variant="Variant.Text" DebounceInterval="300" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentIcon="@Icons.Material.Filled.Check" OnAdornmentClick="Rename" Required="true" FullWidth="true" Label='@(contextItem.Type >= 0 ? "Rename" : (contextItem.Type == -2 ? "Enter new folder name" : "Enter new file name"))'></MudTextField>
-                        @if (contextItem.Type >= 0)
+                        @if (contextItem.Type == 0)
                         {
                             <MudList Clickable="true">
                                 <MudListItem Text="Edit" Icon="@Icons.Material.Filled.Edit" IconSize="Size.Small" OnClick="@(_ => {CloseContextDialog(); Edit(contextItem);})" Disabled="@(!editableExt.Contains(contextItem.Extension))" />
@@ -142,6 +142,16 @@
                                 @*<MudDivider />*@
                                 <MudListItem Text="Delete" Icon="@Icons.Material.Filled.Delete" IconSize="Size.Small" IconColor="Color.Secondary" OnClick="@(async _ => {CloseContextDialog();await Task.Delay(100);await Delete(contextItem);})" />
                             </MudList>
+                        }
+                        @if (contextItem.Type == 1)
+                        {
+                            <MudList Clickable="true">
+                                <MudListItem Text="Delete" Icon="@Icons.Material.Filled.Delete" IconSize="Size.Small" IconColor="Color.Secondary" OnClick="@(async _ => {CloseContextDialog();await Task.Delay(100);await Delete(contextItem);})" />
+                            </MudList>
+                        }
+                        @if (contextItem.Type < 0)
+                        {
+                            <br />
                         }
                     </MudPaper>
                     <div class="fixed pointer-events-none" tabindex="-1" @ref="focusContextDialog"></div>
@@ -389,10 +399,24 @@
     {
         if ((await DialogService.ShowMessageBox(
             "Warning",
-            $"Do you want to delete file \"{item.Name}\" ?",
+            $"Do you want to delete {(item.Type == 0 ? "file" : "folder")} \"{item.Name}\" ?",
             yesText: "Delete!", cancelText: "Cancel")) != null)
         {
-            var res = await Http.GetAsync($"api/code/delete?ftp={WebUtility.UrlEncode(currentDB.FTP)}&path={WebUtility.UrlEncode(currentDB.CurrentFTPPath + "/" + item.Name)}");
+            if (item.Type == 0)
+            {
+                var res = await Http.GetAsync($"api/code/delete?ftp={WebUtility.UrlEncode(currentDB.FTP)}&path={WebUtility.UrlEncode(currentDB.CurrentFTPPath + "/" + item.Name)}");
+            }
+            if (item.Type == 1)
+            {
+                var res = await Http.GetAsync($"api/code/deletefolder?ftp={WebUtility.UrlEncode(currentDB.FTP)}&path={WebUtility.UrlEncode(currentDB.CurrentFTPPath + "/" + item.Name)}");
+
+                if (!res.IsSuccessStatusCode)
+                {
+                    await DialogService.ShowMessageBox("Delete", "Cannot Delete folder: The directory is not empty", options: new DialogOptions { CloseOnEscapeKey = true });
+                    return;
+                }
+            }            
+
             snackBar.Add($"{item.Name} deleted", Severity.Success);
             await LoadData();
             StateHasChanged();
