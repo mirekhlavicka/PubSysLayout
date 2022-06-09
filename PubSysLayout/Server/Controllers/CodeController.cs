@@ -263,6 +263,43 @@ namespace PubSysLayout.Server.Controllers
             return Ok();
         }
 
+        [HttpGet("copy")]
+        public async Task<ActionResult<string>> CopyFile(string srcftp, string srcpath, string ftp, string path, string fileName)
+        {
+            string[] tmp = srcftp.Split('/');
+            string[] tmp1 = _configuration.GetSection("FTP").GetValue<string>(tmp[0]).Split(',');
+            srcpath = srcpath.Replace("~", $"/{tmp[1]}");
+
+            FtpClient client = new FtpClient(tmp1[0], Int32.Parse(tmp1[1]), tmp1[2], tmp1[3]);
+            client.DataConnectionType = FtpDataConnectionType.PASV;
+            await client.ConnectAsync();
+
+            client.Download(out byte[] bytes, srcpath + "/" + fileName);
+
+            client.Disconnect();
+            client.Dispose();
+
+            tmp = ftp.Split('/');
+            tmp1 = _configuration.GetSection("FTP").GetValue<string>(tmp[0]).Split(',');
+            path = path.Replace("~", $"/{tmp[1]}");
+
+            client = new FtpClient(tmp1[0], Int32.Parse(tmp1[1]), tmp1[2], tmp1[3]);
+            client.DataConnectionType = FtpDataConnectionType.PASV;
+            await client.ConnectAsync();
+
+            if (srcftp == ftp && srcpath == path)
+            {
+                fileName = "Copy of " + fileName;
+            }
+
+            client.Upload(bytes, path + "/" + fileName, existsMode: FtpRemoteExists.Overwrite/*, createRemoteDir: true*/);
+
+            client.Disconnect();
+            
+            return fileName;
+
+        }
+
         [HttpGet("newfolder")]
         public async Task<IActionResult> NewFolder(string ftp, string path)
         {

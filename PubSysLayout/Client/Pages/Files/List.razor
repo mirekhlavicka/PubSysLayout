@@ -61,7 +61,10 @@
                 </ChildContent>
             </MudMenu>
             <MudTooltip Text="Refresh">
-                <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Refresh" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5"  OnClick="@(async ()=> await LoadData())"/>
+                <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Refresh" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5 ml-3"  OnClick="@(async ()=> await LoadData())"/>
+            </MudTooltip>
+            <MudTooltip Text="Paste file">
+                <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.ContentPaste" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-5 ml-3" OnClick="@(async () => { await PasteFile(clipboard.Content as FileToCopy); clipboard.Content = null; })" Disabled="@(!(clipboard.Content is FileToCopy) )"/>
             </MudTooltip>
             <MudTableFix @ref="mudTable" Items="items" Hover="true" SortLabel="Sort By" AllowUnsorted="false" Elevation="5" RowsPerPage="0" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 250px)" Dense="true"
                      Filter="new Func<FtpListItem,bool>(FilterFunc)"
@@ -137,6 +140,7 @@
                         @if (contextItem.Type == 0)
                         {
                             <MudList Clickable="true">
+                                <MudListItem Text="Copy" Icon="@Icons.Material.Filled.FileCopy" IconSize="Size.Small" IconColor="Color.Default" OnClick="@(() => {CloseContextDialog();clipboard.Content = new FileToCopy { FTP = currentDB.FTP, Path = currentDB.CurrentFTPPath ,  FileName = contextItem.Name};})" />
                                 <MudListItem Text="Edit" Icon="@Icons.Material.Filled.Edit" IconSize="Size.Small" OnClick="@(_ => {CloseContextDialog(); Edit(contextItem);})" Disabled="@(!editableExt.Contains(contextItem.Extension))" />
                                 <MudListItem Text="Download" Icon="@Icons.Material.Filled.Download" IconSize="Size.Small" OnClick="@(_ => {CloseContextDialog(); Download(contextItem);})" />
                                 @*<MudDivider />*@
@@ -170,6 +174,13 @@
         public long Size { get; set; }
         public DateTime Modified { get; set; }
         public string Extension { get; set; }
+    }
+
+    public class FileToCopy
+    {
+        public string FTP { get; set; }
+        public string Path { get; set; }
+        public string FileName { get; set; }
     }
 
     private List<FtpListItem> items;
@@ -456,6 +467,17 @@
         searchString = "";
         StateHasChanged();
 
+        await Task.Delay(5000);
+        newFileNames.Clear();
+    }
+
+    private async Task PasteFile(FileToCopy f)
+    {
+        var res = await Http.GetStringAsync($"api/code/copy?srcftp={WebUtility.UrlEncode(f.FTP)}&srcpath={WebUtility.UrlEncode(f.Path)}&ftp={WebUtility.UrlEncode(currentDB.FTP)}&path={WebUtility.UrlEncode(currentDB.CurrentFTPPath)}&filename={WebUtility.UrlEncode(f.FileName)}");
+        newFileNames.Add(res);
+        await LoadData();
+        searchString = "";
+        StateHasChanged();
         await Task.Delay(5000);
         newFileNames.Clear();
     }
