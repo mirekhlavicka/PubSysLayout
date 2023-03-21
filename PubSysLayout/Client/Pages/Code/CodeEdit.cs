@@ -29,7 +29,7 @@ namespace PubSysLayout.Client.Pages.Code
                     }
                     ).Result;
 
-                if (ftpresult.Cancelled)
+                if (ftpresult.Canceled)
                 {
                     return null;
                 }
@@ -58,7 +58,7 @@ namespace PubSysLayout.Client.Pages.Code
                 path = "~" + path;
             }
 
-            string code = await httpClient.GetStringAsync($"/api/code/?ftp={WebUtility.UrlEncode(currentDB.FTP)}&path={WebUtility.UrlEncode(path)}");
+            string code = await httpClient.GetStringAsync($"api/code/?ftp={WebUtility.UrlEncode(currentDB.FTP)}&path={WebUtility.UrlEncode(path)}");
 
             var dialog = DialogService.Show<CodeDialog>(path.Replace("~", currentDB.FTP),
                 new DialogParameters

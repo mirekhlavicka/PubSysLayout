@@ -18,7 +18,7 @@
         }
 </style>
 
-<PageTitle>PubSysLayout – @currentDB.Current</PageTitle>
+<PageTitle>PubSystem – @currentDB.Current</PageTitle>
 
 <MudGrid>
     <MudItem xs="3">
@@ -100,7 +100,7 @@
                     }
                 ).Result;
 
-        if (!ftpresult.Cancelled)
+        if (!ftpresult.Canceled)
         {
             currentDB.FTP = ftpresult.Data.ToString();
             StateHasChanged();

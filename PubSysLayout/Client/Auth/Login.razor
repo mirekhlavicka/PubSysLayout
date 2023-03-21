@@ -70,11 +70,15 @@
 
             if (!String.IsNullOrEmpty(returnUrl))
             {
+                if (!returnUrl.EndsWith("/") && !returnUrl.Contains('?')/*.EndsWith("pubsystem")*/)
+                {
+                    returnUrl += "/";
+                }
                 _navigation.NavigateTo(returnUrl, false);
             }
             else
             {
-                _navigation.NavigateTo("/", false);
+                _navigation.NavigateTo("./", false);
             }
         }
         else

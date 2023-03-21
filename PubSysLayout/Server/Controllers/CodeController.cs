@@ -29,7 +29,7 @@ namespace PubSysLayout.Server.Controllers
             client.DataConnectionType = FtpDataConnectionType.PASV;
             await client.ConnectAsync();
 
-            client.Download(out byte[] bytes, path);
+            client.DownloadBytes(out byte[] bytes, path);
 
             client.Disconnect();
 
@@ -64,7 +64,7 @@ namespace PubSysLayout.Server.Controllers
             client.DataConnectionType = FtpDataConnectionType.PASV;
             await client.ConnectAsync();
 
-            client.Download(out byte[] bytes, path);
+            client.DownloadBytes(out byte[] bytes, path);
 
             client.Disconnect();
 
@@ -105,7 +105,7 @@ namespace PubSysLayout.Server.Controllers
             client.DataConnectionType = FtpDataConnectionType.PASV;
             await client.ConnectAsync();
 
-            client.Upload(uploadCode.Code.ToBytes(Encoding.UTF8), path, existsMode: FtpRemoteExists.Overwrite, createRemoteDir: true);
+            client.UploadBytes(uploadCode.Code.ToBytes(Encoding.UTF8), path, existsMode: FtpRemoteExists.Overwrite, createRemoteDir: true);
 
             client.Disconnect();
 
@@ -193,11 +193,11 @@ namespace PubSysLayout.Server.Controllers
 
                 var l = client.GetListing("/"/*, FtpListOption.*/);
 
-                foreach (var d in l.Where(li => li.Type == FtpFileSystemObjectType.Directory))
+                foreach (var d in l.Where(li => li.Type == FtpObjectType.Directory))
                 {
                     if (client.FileExists(d.FullName + "/web.config"))
                     {
-                        client.Download(out byte[] bytes, d.FullName + "/web.config");
+                        client.DownloadBytes(out byte[] bytes, d.FullName + "/web.config");
 
                         if (bytes != null)
                         {
@@ -256,7 +256,7 @@ namespace PubSysLayout.Server.Controllers
 
             foreach (var file in saveFile.Files)
             {
-                client.Upload(file.ImageBytes, path + "/" + file.FileName, existsMode: FtpRemoteExists.Overwrite/*, createRemoteDir: true*/);
+                client.UploadBytes(file.ImageBytes, path + "/" + file.FileName, existsMode: FtpRemoteExists.Overwrite/*, createRemoteDir: true*/);
             }
 
             client.Disconnect();
@@ -274,7 +274,7 @@ namespace PubSysLayout.Server.Controllers
             client.DataConnectionType = FtpDataConnectionType.PASV;
             await client.ConnectAsync();
 
-            client.Download(out byte[] bytes, srcpath + "/" + fileName);
+            client.DownloadBytes(out byte[] bytes, srcpath + "/" + fileName);
 
             client.Disconnect();
             client.Dispose();
@@ -292,7 +292,7 @@ namespace PubSysLayout.Server.Controllers
                 fileName = "Copy of " + fileName;
             }
 
-            client.Upload(bytes, path + "/" + fileName, existsMode: FtpRemoteExists.Overwrite/*, createRemoteDir: true*/);
+            client.UploadBytes(bytes, path + "/" + fileName, existsMode: FtpRemoteExists.Overwrite/*, createRemoteDir: true*/);
 
             client.Disconnect();
             

@@ -113,10 +113,10 @@
 
         if (returnFromDetail)
         {
-            uri = uriHelper.ToAbsoluteUri(uriHelper.ToBaseRelativePath(uri).Split('/').FirstOrDefault()).ToString();
+            uri = uriHelper.ToAbsoluteUri("./" + uriHelper.ToBaseRelativePath(uri).Split('/').FirstOrDefault()).ToString();
         }
 
-        uriHelper.NavigateTo("/dummy", forceLoad: false);
+        uriHelper.NavigateTo("./dummy", forceLoad: false);
         uriHelper.NavigateTo(uri, forceLoad: false);
 
     }

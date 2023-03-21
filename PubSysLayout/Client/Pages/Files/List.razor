@@ -227,7 +227,7 @@
             await Task.Delay(500);
             if (await codeEdit.SelectFTP() == null)
             {
-                _navigation.NavigateTo("/", false);
+                _navigation.NavigateTo("./", false);
                 return;
             }
         }
@@ -326,12 +326,12 @@
 
     private async void Download(FtpListItem item)
     {
-        await js.InvokeVoidAsync("open", $"/api/code/download?ftp={WebUtility.UrlEncode(currentDB.FTP)}&path={WebUtility.UrlEncode(currentDB.CurrentFTPPath + "/" + item.Name)}", "_self");
+        await js.InvokeVoidAsync("open", $"api/code/download?ftp={WebUtility.UrlEncode(currentDB.FTP)}&path={WebUtility.UrlEncode(currentDB.CurrentFTPPath + "/" + item.Name)}", "_self");
     }
 
     private async void Show(FtpListItem item)
     {
-        await js.InvokeVoidAsync("open", $"/api/code/download?ftp={WebUtility.UrlEncode(currentDB.FTP)}&path={WebUtility.UrlEncode(currentDB.CurrentFTPPath + "/" + item.Name)}&show=true", "_blank");
+        await js.InvokeVoidAsync("open", $"api/code/download?ftp={WebUtility.UrlEncode(currentDB.FTP)}&path={WebUtility.UrlEncode(currentDB.CurrentFTPPath + "/" + item.Name)}&show=true", "_blank");
     }
 
     private string SelectedRowClassFunc(FtpListItem element, int rowNumber)

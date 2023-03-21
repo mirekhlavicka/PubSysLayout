@@ -58,6 +58,12 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 
 var app = builder.Build();
 
+string basePath = builder.Configuration.GetValue<string>("basePath") ?? String.Empty;
+if (String.IsNullOrEmpty(basePath) == false)
+{
+    app.UsePathBase(basePath);
+}
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {

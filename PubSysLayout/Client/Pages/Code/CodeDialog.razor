@@ -11,7 +11,7 @@
             <MudIcon Icon="@Icons.Material.Filled.Edit" Class="mr-3 mb-n1" />
             @MudDialog.Title
         </MudText>
-        <MudIconButton aria-label="close" Icon="@Icons.Material.Filled.Close" @onclick="Close"/>
+        <MudIconButton aria-label="close" Icon="@Icons.Material.Filled.Close" @onclick="Close" Style="top: 8px;right: 8px;position: absolute;" />
     </TitleContent>
     <DialogContent>
         <form @onkeydown="KeyDown">
