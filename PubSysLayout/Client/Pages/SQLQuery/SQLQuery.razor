@@ -1,0 +1,235 @@
+﻿@page "/sqlquery"
+@inject HttpClient Http
+
+@using System.Net.Http.Json
+@using System.Text.Json.Serialization;
+@using System.Reflection;
+@using System.Text.Json;
+@using System.Dynamic;
+@using PubSysLayout.Shared.SQLQuery;
+@inject HttpClient httpClient
+@inject IJSRuntime js
+
+<MudTabs Elevation="5" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6" @ref="tabs">
+    <MudTabPanel Text="Query" Icon="@Icons.Material.Filled.Build">
+        <MudSelect T="string" Label="Database" AnchorOrigin="Origin.BottomCenter" @bind-Value="database" FullWidth="false">
+            @foreach (string db in dbList)
+            {
+                <MudSelectItem Value="@db">@db</MudSelectItem>
+            }
+        </MudSelect>
+        <MudTextField T="string" Label="SQL" Variant="Variant.Outlined" @bind-Value="SQL" Lines="30" spellcheck="false" />
+        <MudButton Variant="Variant.Filled" OnClick="async () => await LoadData()">Run</MudButton>
+    </MudTabPanel>
+    <MudTabPanel Text="Result" @ref="panelResult" Icon="@Icons.Material.Filled.Dataset">
+        @if (Elements != null && Elements.Length > 0)
+        {
+            <MudTable @ref="mudTable" Items="@Elements" RowsPerPage="50" Hover="true" SortLabel="Sort By" AllowUnsorted="true" Virtualize="false"
+                  FixedHeader="true" FixedFooter="true" HorizontalScrollbar="true" Elevation="2"
+                  Height="calc(100vh - 350px)" Dense="true" Bordered="true" Striped="true" HeaderClass="table-head-bordered" FooterClass="table-foot-bordered"
+                  Filter="new Func<Dictionary<string, object>,bool>(FilterFunc)"
+                  T="Dictionary<string, object>">
+                <ToolBarContent>
+                    <MudTextField DebounceInterval="300" @bind-Value="searchString" Placeholder="Search by text or ID" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true"></MudTextField>
+                </ToolBarContent>
+                <HeaderContent>
+                    @foreach (var p in (Elements[0]).Keys)
+                    {
+                        <MudTh>
+                            <MudTableSortLabel InitialDirection="SortDirection.None" SortBy="new Func<Dictionary<string, object>, object>(x => {x.TryGetValue(p,out object res); return res;})">
+                                @(p)
+                            </MudTableSortLabel>
+                        </MudTh>
+                    }
+                    <MudTh />
+                </HeaderContent>
+                <RowTemplate>
+                    @foreach (var p in (Elements[0]).Keys)
+                    {
+                        <MudTd Style="max-width: 400px;overflow-x: hidden;white-space: nowrap" title="@context[p].ToString()">
+                            @if (context[p] is string)
+                            {
+                                <MudHighlighter Text="@((context[p].ToString()))" HighlightedText="@searchString" />
+                            }
+                            else
+                            {
+                                @(context[p] is DateTime ? ((DateTime)(context[p])).ToString("g") : context[p])
+                            }
+                        </MudTd>
+                    }
+                    <MudTd />
+                </RowTemplate>
+                <PagerContent>
+                    <MudTablePager PageSizeOptions="new int[]{10, 50, 100}" />
+                </PagerContent>
+            </MudTable>
+
+            <MudButton Variant="Variant.Filled" OnClick='async () => await CopyToClipboard(GetTableTex("\t"))' Disabled="@(Elements == null || Elements.Length == 0)">Copy to clipboard</MudButton>
+        }
+        else if (errorMsg != "")
+        {
+            <MudAlert Severity="Severity.Error">@errorMsg</MudAlert>
+        }
+    </MudTabPanel>
+</MudTabs>
+
+
+<MudOverlay Visible="@inProgress" DarkBackground="true" AutoClose="false" />
+
+@code {
+    MudTable<Dictionary<string, object>> mudTable;
+    MudTabs tabs;
+    MudTabPanel panelResult;
+
+    private Dictionary<string, object>[] Elements = null;
+    private string errorMsg = "";
+    private string searchString = "";
+    private bool inProgress = false;
+    private string[] dbList = { };
+    private string database = "";
+    private string SQL =
+                @"select top 200
+	id_article,
+	title,
+	dbo.udfGetArticleAuthorsFLName(a.id_article) + CASE WHEN a.options & 131072 <> 0 THEN '[PR]' ELSE '' END,
+	u.firstname + ' ' + u.lastname,
+	convert(varchar(20), created,104),
+	convert(varchar(20), datereleased,104),
+	chaptercount,
+	(select sum(charcount) from Chapters ch where ch.id_article=a.id_article),
+	isnull((select sum(impressions) from StatArticlesMonth s where s.id_article=a.id_article), 0),
+	forumitems
+from
+	articles a join
+	users u on a.id_user=u.id_user
+where
+	a.del=0 and released=1 and complete=1 and getdate()>=datereleased and id_arttype in (1,2,3)
+order by
+	a.id_article desc";
+
+    protected override async Task OnInitializedAsync()
+    {
+        dbList = await Http.GetFromJsonAsync<string[]>("api/sqlquery/dblist");
+        database = dbList[0];
+        panelResult.Disabled = true;
+        //await LoadData();
+    }
+
+    protected async Task LoadData()
+    {
+        inProgress = true;
+        //if (Elements != null)
+        //{
+        //    Elements = null;
+        //    StateHasChanged();
+        //}
+
+        try
+        {
+            var res = (await Http.PostAsJsonAsync("api/sqlquery", new Query
+                {
+                    Database = database,
+                    SQL = SQL
+                }));
+
+            if (res.IsSuccessStatusCode)
+            {
+                errorMsg = "";
+                Elements = (await res.Content.ReadFromJsonAsync<ExpandoObject[]>()).Select(e => ExpandoJson2Dictionary(e)).ToArray();
+                if (Elements.Length == 0)
+                {
+                    errorMsg = "No result";
+                }
+            }
+            else
+            {
+                errorMsg = await res.Content.ReadAsStringAsync();
+                Elements = null;
+            }
+        }
+        catch (HttpRequestException exc)
+        {
+            errorMsg = exc.Message;
+            Elements = null;
+        }
+        inProgress = false;
+        panelResult.Disabled = false;
+        ActivatePanel(1);
+    }
+
+    void ActivatePanel(int index)
+    {
+        tabs.ActivatePanel(index);
+    }
+
+    //protected override void OnAfterRender(bool firstRender)
+    //{
+    //    if (Elements != null || errorMsg != "")
+    //    {
+    //        inProgress = false;
+    //    }
+    //}
+
+    private Dictionary<string, object> ExpandoJson2Dictionary(ExpandoObject src)
+    {
+        Dictionary<string, object> res = new Dictionary<string, object>();
+        IDictionary<string, object> srcd = src as IDictionary<string, object>;
+
+        foreach (var p in srcd.Keys)
+        {
+            JsonElement val = (JsonElement)(srcd[p]);
+            if (val.ValueKind == JsonValueKind.Number)
+            {
+                res[p] = val.GetDouble();
+            }
+            else if (val.ValueKind == JsonValueKind.String && val.TryGetDateTime(out DateTime dt))
+            {
+                res[p] = dt;
+            }
+            else if (val.ValueKind == JsonValueKind.String)
+            {
+                res[p] = val.GetString();
+            }
+            else
+            {
+                res[p] = val.ToString();
+            }
+        }
+
+        return res;
+    }
+
+    private bool FilterFunc(Dictionary<string, object> i)
+    {
+
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+
+        if (Double.TryParse(searchString, out double num))
+        {
+            if (i.Values.Any(v => (v is double) && (double)v == num))
+            {
+                return true;
+            }
+        }
+
+        if (i.Values.Any(v => (v is string) && ((string)v).Contains(searchString, StringComparison.CurrentCultureIgnoreCase)))
+        {
+            return true;
+        }
+
+        return false;
+    }
+
+    private async Task CopyToClipboard(string text)
+    {
+        await js.InvokeVoidAsync("navigator.clipboard.writeText", text);
+    }
+
+    private string GetTableTex(string divider)
+    {
+        string th = String.Join(divider, Elements[0].Keys);
+        string td = String.Join("\"\n\"", Elements.Select(el => String.Join($"\"{divider}\"", el.Values)));
+        return $"{th}\n\"{td}";
+    }
+}
