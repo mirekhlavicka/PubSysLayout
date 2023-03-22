@@ -106,7 +106,7 @@
     {
         string uri = uriHelper.Uri;
 
-        if (uri.Contains("login"))
+        if (uri.Contains("login") || uri.Contains("sqlquery"))
         {
             return;
         }
