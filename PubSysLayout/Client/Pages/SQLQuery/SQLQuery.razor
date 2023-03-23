@@ -1,12 +1,13 @@
 ﻿@page "/sqlquery"
-@inject HttpClient Http
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
 
+@inject HttpClient Http
 @using System.Net.Http.Json
 @using System.Text.Json.Serialization;
 @using System.Text.Json;
 @using System.Dynamic;
 @using PubSysLayout.Shared.SQLQuery;
-@inject HttpClient httpClient
 @inject IJSRuntime js
 @inject MudBlazor.ISnackbar snackBar
 
