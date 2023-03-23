@@ -10,6 +10,8 @@
 @using PubSysLayout.Shared.SQLQuery;
 @inject IJSRuntime js
 @inject MudBlazor.ISnackbar snackBar
+@inject LocalStorage localStorage
+
 
 <MudTabs Elevation="5" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6" @ref="tabs" KeepPanelsAlive="true">
     <MudTabPanel Text="Query" Icon="@Icons.Material.Filled.Build">
@@ -26,42 +28,43 @@
         <textarea @ref="textarea" id="taSQL" name="taSQL" style="display:none" />
     </MudTabPanel>
     <MudTabPanel Text="Results" @ref="panelResult" Icon="@Icons.Material.Filled.Dataset">
-        @if (Elements != null && Elements.Length > 0)
+        @if (queryResult != null && queryResult.Columns.Length > 0)
         {
-            <MudTable @ref="mudTable" Items="@Elements" RowsPerPage="50" SortLabel="Sort By" AllowUnsorted="true" Virtualize="false"
+            <MudTable @ref="mudTable" Items="@queryResult.Rows" RowsPerPage="50" SortLabel="Sort By" AllowUnsorted="true" Virtualize="false"
                   Hover="true" FixedHeader="true" FixedFooter="true" HorizontalScrollbar="true" Dense="true" Bordered="true" Striped="true"
                   Height="calc(100vh - 323px)" HeaderClass="table-head-bordered" FooterClass="table-foot-bordered" Elevation="2"
-                  Filter="new Func<Dictionary<string, object>,bool>(FilterFunc)"
-                  T="Dictionary<string, object>">
+                  Filter="new Func<object[],bool>(FilterFunc)"
+                  T="object[]">
                 <ToolBarContent>
                     <MudTooltip Text="Copy tabular data to clipboard">
-                        <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Medium" IconSize="Size.Medium" Class="mt-2 mb-2 ml-3" OnClick='async () => await CopyToClipboard(GetTableTex("\t"))' Disabled="@(Elements == null || Elements.Length == 0)" />
+                        <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Medium" IconSize="Size.Medium" Class="mt-2 mb-2 ml-3" OnClick='async () => await CopyToClipboard(GetTableText("\t"))' Disabled="@(queryResult == null || queryResult.Columns.Length == 0)" />
                     </MudTooltip>
                     <MudSpacer />
                     <MudTextField DebounceInterval="300" @bind-Value="searchString" Placeholder="Search by text or ID" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true"></MudTextField>
                 </ToolBarContent>
                 <HeaderContent>
-                    @foreach (var p in (Elements[0]).Keys)
+                    @for (int i = 0; i < queryResult.Columns.Length; i++)
                     {
+                        int p = i; //Intermediate counter
                         <MudTh>
-                            <MudTableSortLabel InitialDirection="SortDirection.None" SortBy="new Func<Dictionary<string, object>, object>(x => {x.TryGetValue(p,out object res); return res;})">
-                                @(p)
+                            <MudTableSortLabel InitialDirection="SortDirection.None" SortBy="new Func<object[], object>(x => p < x.Length ? x[p] : null)">
+                                @(queryResult.Columns[p].Name)
                             </MudTableSortLabel>
                         </MudTh>
                     }
                     <MudTh />
                 </HeaderContent>
                 <RowTemplate>
-                    @foreach (var p in (Elements[0]).Keys)
+                    @foreach (var val in context)
                     {
-                        <MudTd Style="max-width: 400px;overflow-x: hidden;white-space: nowrap" title="@context[p].ToString()">
-                            @if (context[p] is string)
+                        <MudTd Style="max-width: 400px;overflow-x: hidden;white-space: nowrap" title="@val.ToString()">
+                            @if (val is string)
                             {
-                                <MudHighlighter Text="@((context[p].ToString()))" HighlightedText="@searchString" />
+                                <MudHighlighter Text="@(val.ToString())" HighlightedText="@searchString" />
                             }
                             else
                             {
-                                @(context[p] is DateTime ? ((DateTime)(context[p])).ToString("g") : context[p])
+                                @(val is DateTime ? ((DateTime)(val)).ToString("g") : val)
                             }
                         </MudTd>
                     }
@@ -82,45 +85,31 @@
 <MudOverlay Visible="@inProgress" DarkBackground="true" AutoClose="false" />
 
 @code {
-    MudTable<Dictionary<string, object>> mudTable;
+    MudTable<object[]> mudTable;
     MudTabs tabs;
     MudTabPanel panelResult;
     private ElementReference textarea;
 
-    private Dictionary<string, object>[] Elements = null;
+    private QueryResult queryResult = null;
     private string errorMsg = "";
     private string searchString = "";
     private bool inProgress = false;
     private string[] dbList = { };
     private string database = "";
-    private string SQL =
-            @"-- last 100 released articles
-SELECT TOP 100
-	id_article,	title,
-	dbo.udfGetArticleAuthorsFLName(a.id_article) AS author,
-	u.firstname + ' ' + u.lastname AS creator,
-	created, datereleased, datesort,
-	(
-		SELECT SUM(charcount) FROM Chapters ch WHERE ch.id_article=a.id_article
-	) AS charcount,
-	ISNULL((
-		SELECT SUM(impressions) FROM StatArticlesMonth s WHERE s.id_article=a.id_article
-	), 0) AS impressions,
-	forumitems
-FROM
-	articles a JOIN
-	users u ON a.id_user=u.id_user
-WHERE
-	a.del=0 AND released=1 AND complete=1 and GETDATE()>=datereleased AND id_arttype NOT IN (2,5)
-ORDER BY
-	a.datesort DESC";
+    private string SQL = "";
 
     protected override async Task OnInitializedAsync()
     {
         dbList = await Http.GetFromJsonAsync<string[]>("api/sqlquery/dblist");
-        database = dbList[0];
-        //panelResult.Disabled = true;
-        //await LoadData();
+
+        database = await localStorage.GetAsync<string>("SQLQuery_currentDB");
+
+        if (String.IsNullOrEmpty(database))
+        {
+            database = await Http.GetStringAsync("api/sqlquery/defaultdb"); //dbList[0];
+        }
+
+        panelResult.Disabled = true;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -130,10 +119,17 @@ ORDER BY
             //view-source:https://codemirror.net/5/mode/sql/
             //https://github.com/simonw/datasette/issues/949
             //https://stackoverflow.com/questions/20023381/codemirror-how-add-tables-to-sql-hint
+            
+            SQL = await localStorage.GetAsync<string>("SQLQuery_SQL");
+
+            if (String.IsNullOrEmpty(SQL))
+            {
+                SQL = await Http.GetStringAsync("api/sqlquery/defaultsql");
+            }
+            
             await js.InvokeVoidAsync("codemirror.create", textarea, SQL, "100%", "calc(100vh - 280px)", "text/x-mssql");
         }
     }
-
 
     protected async Task LoadData()
     {
@@ -156,25 +152,31 @@ ORDER BY
             if (res.IsSuccessStatusCode)
             {
                 errorMsg = "";
-                Elements = (await res.Content.ReadFromJsonAsync<ExpandoObject[]>()).Select(e => ExpandoJson2Dictionary(e)).ToArray();
-                if (Elements.Length == 0)
+                queryResult = await res.Content.ReadFromJsonAsync<QueryResult>();
+                if (queryResult.Columns.Length == 0)
                 {
                     errorMsg = "No result";
+                }
+                else
+                {
+                    ConvertJsonElements();
                 }
             }
             else
             {
                 errorMsg = await res.Content.ReadAsStringAsync();
-                Elements = null;
+                queryResult = null;
             }
+            await localStorage.SetAsync("SQLQuery_currentDB", database);
+            await localStorage.SetAsync("SQLQuery_SQL", SQL);
         }
         catch (HttpRequestException exc)
         {
             errorMsg = exc.Message;
-            Elements = null;
+            queryResult = null;
         }
         inProgress = false;
-        //panelResult.Disabled = false;
+        panelResult.Disabled = false;
         ActivatePanel(1);
     }
 
@@ -183,36 +185,63 @@ ORDER BY
         tabs.ActivatePanel(index);
     }
 
-    private Dictionary<string, object> ExpandoJson2Dictionary(ExpandoObject src)
+    private void ConvertJsonElements()
     {
-        Dictionary<string, object> res = new Dictionary<string, object>();
-        IDictionary<string, object> srcd = src as IDictionary<string, object>;
-
-        foreach (var p in srcd.Keys)
+        foreach (var row in queryResult.Rows)
         {
-            JsonElement val = (JsonElement)(srcd[p]);
-            if (val.ValueKind == JsonValueKind.Number)
+            for (int p = 0; p < row.Length; p++)
             {
-                res[p] = val.GetDouble();
-            }
-            else if (val.ValueKind == JsonValueKind.String && val.TryGetDateTime(out DateTime dt))
-            {
-                res[p] = dt;
-            }
-            else if (val.ValueKind == JsonValueKind.String)
-            {
-                res[p] = val.GetString();
-            }
-            else
-            {
-                res[p] = val.ToString();
+                JsonElement val = (JsonElement)(row[p]);
+                if (val.ValueKind == JsonValueKind.Number)
+                {
+                    row[p] = val.GetDouble();
+                }
+                else if (val.ValueKind == JsonValueKind.String && val.TryGetDateTime(out DateTime dt))
+                {
+                    row[p] = dt;
+                }
+                else if (val.ValueKind == JsonValueKind.String)
+                {
+                    row[p] = val.GetString();
+                }
+                else
+                {
+                    row[p] = val.ToString();
+                }
             }
         }
-
-        return res;
     }
 
-    private bool FilterFunc(Dictionary<string, object> i)
+    //private Dictionary<string, object> ExpandoJson2Dictionary(ExpandoObject src)
+    //{
+    //    Dictionary<string, object> res = new Dictionary<string, object>();
+    //    IDictionary<string, object> srcd = src as IDictionary<string, object>;
+
+    //    foreach (var p in srcd.Keys)
+    //    {
+    //        JsonElement val = (JsonElement)(srcd[p]);
+    //        if (val.ValueKind == JsonValueKind.Number)
+    //        {
+    //            res[p] = val.GetDouble();
+    //        }
+    //        else if (val.ValueKind == JsonValueKind.String && val.TryGetDateTime(out DateTime dt))
+    //        {
+    //            res[p] = dt;
+    //        }
+    //        else if (val.ValueKind == JsonValueKind.String)
+    //        {
+    //            res[p] = val.GetString();
+    //        }
+    //        else
+    //        {
+    //            res[p] = val.ToString();
+    //        }
+    //    }
+
+    //    return res;
+    //}
+
+    private bool FilterFunc(object[] i)
     {
 
         if (string.IsNullOrWhiteSpace(searchString))
@@ -220,13 +249,13 @@ ORDER BY
 
         if (Double.TryParse(searchString, out double num))
         {
-            if (i.Values.Any(v => (v is double) && (double)v == num))
+            if (i.Any(v => (v is double) && (double)v == num))
             {
                 return true;
             }
         }
 
-        if (i.Values.Any(v => (v is string) && ((string)v).Contains(searchString, StringComparison.CurrentCultureIgnoreCase)))
+        if (i.Any(v => (v is string) && ((string)v).Contains(searchString, StringComparison.CurrentCultureIgnoreCase)))
         {
             return true;
         }
@@ -240,10 +269,10 @@ ORDER BY
         await js.InvokeVoidAsync("navigator.clipboard.writeText", text);
     }
 
-    private string GetTableTex(string divider)
+    private string GetTableText(string divider)
     {
-        string th = String.Join(divider, Elements[0].Keys);
-        string td = String.Join("\"\n\"", Elements.Select(el => String.Join($"\"{divider}\"", el.Values)));
+        string th = String.Join(divider, queryResult.Columns.Select(c => c.Name));
+        string td = String.Join("\"\n\"", queryResult.Rows.Select(r => String.Join($"\"{divider}\"", r)));
         return $"{th}\n\"{td}";
     }
 }
