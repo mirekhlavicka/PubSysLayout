@@ -42,7 +42,7 @@
         }
         </div>
         <div class="dbselect">
-            <MudSelect T="string" Label="Database" Variant="Variant.Text" AnchorOrigin="Origin.BottomCenter" Value="@currentDB.Current" ValueChanged="@SetCurrent" Margin="Margin.Dense">
+            <MudSelect T="string" Label="Layout DB" Variant="Variant.Text" AnchorOrigin="Origin.BottomCenter" Value="@currentDB.Current" ValueChanged="@SetCurrent" Margin="Margin.Dense">
                 @foreach (var constr in dblist)
                 {
                     <MudSelectItem Value="@constr" />

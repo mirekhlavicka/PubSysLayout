@@ -1,17 +1,19 @@
 ﻿@page "/sqlquery"
+
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
 
-@inject HttpClient Http
 @using System.Net.Http.Json
 @using System.Text.Json.Serialization;
 @using System.Text.Json;
-@using System.Dynamic;
 @using PubSysLayout.Shared.SQLQuery;
+
+@inject HttpClient Http
 @inject IJSRuntime js
 @inject MudBlazor.ISnackbar snackBar
 @inject LocalStorage localStorage
 
+<PageTitle>SQL query – @database</PageTitle>
 
 <MudTabs Elevation="5" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6" @ref="tabs" KeepPanelsAlive="true">
     <MudTabPanel Text="Query" Icon="@Icons.Material.Filled.Build">
@@ -27,7 +29,7 @@
         <MudDivider />
         <textarea @ref="textarea" id="taSQL" name="taSQL" style="display:none" />
     </MudTabPanel>
-    <MudTabPanel Text="Results" @ref="panelResult" Icon="@Icons.Material.Filled.Dataset">
+    <MudTabPanel Text="Results" Icon="@Icons.Material.Filled.Dataset">
         @if (queryResult != null && queryResult.Columns.Length > 0)
         {
             <MudTable @ref="mudTable" Items="@queryResult.Rows" RowsPerPage="50" SortLabel="Sort By" AllowUnsorted="true" Virtualize="false"
@@ -47,7 +49,7 @@
                     {
                         int p = i; //Intermediate counter
                         <MudTh>
-                            <MudTableSortLabel InitialDirection="SortDirection.None" SortBy="new Func<object[], object>(x => p < x.Length ? x[p] : null)">
+                            <MudTableSortLabel InitialDirection="SortDirection.None" SortBy="new Func<object[], object>(row => row[p])">
                                 @(queryResult.Columns[p].Name)
                             </MudTableSortLabel>
                         </MudTh>
@@ -58,13 +60,13 @@
                     @foreach (var val in context)
                     {
                         <MudTd Style="max-width: 400px;overflow-x: hidden;white-space: nowrap" title="@val.ToString()">
-                            @if (val is string)
+                            @if (val is String && !String.IsNullOrEmpty(searchString))
                             {
                                 <MudHighlighter Text="@(val.ToString())" HighlightedText="@searchString" />
                             }
                             else
                             {
-                                @(val is DateTime ? ((DateTime)(val)).ToString("g") : val)
+                                @val
                             }
                         </MudTd>
                     }
@@ -87,13 +89,13 @@
 @code {
     MudTable<object[]> mudTable;
     MudTabs tabs;
-    MudTabPanel panelResult;
     private ElementReference textarea;
 
     private QueryResult queryResult = null;
-    private string errorMsg = "";
+    private string errorMsg = "No result";
     private string searchString = "";
     private bool inProgress = false;
+
     private string[] dbList = { };
     private string database = "";
     private string SQL = "";
@@ -101,32 +103,26 @@
     protected override async Task OnInitializedAsync()
     {
         dbList = await Http.GetFromJsonAsync<string[]>("api/sqlquery/dblist");
-
         database = await localStorage.GetAsync<string>("SQLQuery_currentDB");
-
         if (String.IsNullOrEmpty(database))
         {
-            database = await Http.GetStringAsync("api/sqlquery/defaultdb"); //dbList[0];
+            database = await Http.GetStringAsync("api/sqlquery/defaultdb");
         }
-
-        panelResult.Disabled = true;
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
-            //view-source:https://codemirror.net/5/mode/sql/
+            //https://codemirror.net/5/mode/sql/
             //https://github.com/simonw/datasette/issues/949
             //https://stackoverflow.com/questions/20023381/codemirror-how-add-tables-to-sql-hint
-            
-            SQL = await localStorage.GetAsync<string>("SQLQuery_SQL");
 
+            SQL = await localStorage.GetAsync<string>("SQLQuery_SQL");
             if (String.IsNullOrEmpty(SQL))
             {
                 SQL = await Http.GetStringAsync("api/sqlquery/defaultsql");
             }
-            
             await js.InvokeVoidAsync("codemirror.create", textarea, SQL, "100%", "calc(100vh - 280px)", "text/x-mssql");
         }
     }
@@ -134,11 +130,12 @@
     protected async Task LoadData()
     {
         inProgress = true;
-        //if (Elements != null)
-        //{
-        //    Elements = null;
-        //    StateHasChanged();
-        //}
+
+        if (queryResult != null)
+        {
+            queryResult = null;
+            StateHasChanged();
+        }
 
         SQL = await js.InvokeAsync<string>("codemirror.getValue", "taSQL");
         try
@@ -176,13 +173,7 @@
             queryResult = null;
         }
         inProgress = false;
-        panelResult.Disabled = false;
-        ActivatePanel(1);
-    }
-
-    void ActivatePanel(int index)
-    {
-        tabs.ActivatePanel(index);
+        tabs.ActivatePanel(1);
     }
 
     private void ConvertJsonElements()
@@ -191,71 +182,26 @@
         {
             for (int p = 0; p < row.Length; p++)
             {
-                JsonElement val = (JsonElement)(row[p]);
-                if (val.ValueKind == JsonValueKind.Number)
-                {
-                    row[p] = val.GetDouble();
-                }
-                else if (val.ValueKind == JsonValueKind.String && val.TryGetDateTime(out DateTime dt))
-                {
-                    row[p] = dt;
-                }
-                else if (val.ValueKind == JsonValueKind.String)
-                {
-                    row[p] = val.GetString();
-                }
-                else
-                {
-                    row[p] = val.ToString();
-                }
+                row[p] = ((JsonElement)(row[p])).Deserialize(Type.GetType(queryResult.Columns[p].TypeName));
             }
         }
     }
 
-    //private Dictionary<string, object> ExpandoJson2Dictionary(ExpandoObject src)
-    //{
-    //    Dictionary<string, object> res = new Dictionary<string, object>();
-    //    IDictionary<string, object> srcd = src as IDictionary<string, object>;
-
-    //    foreach (var p in srcd.Keys)
-    //    {
-    //        JsonElement val = (JsonElement)(srcd[p]);
-    //        if (val.ValueKind == JsonValueKind.Number)
-    //        {
-    //            res[p] = val.GetDouble();
-    //        }
-    //        else if (val.ValueKind == JsonValueKind.String && val.TryGetDateTime(out DateTime dt))
-    //        {
-    //            res[p] = dt;
-    //        }
-    //        else if (val.ValueKind == JsonValueKind.String)
-    //        {
-    //            res[p] = val.GetString();
-    //        }
-    //        else
-    //        {
-    //            res[p] = val.ToString();
-    //        }
-    //    }
-
-    //    return res;
-    //}
-
-    private bool FilterFunc(object[] i)
+    private bool FilterFunc(object[] row)
     {
 
         if (string.IsNullOrWhiteSpace(searchString))
             return true;
 
-        if (Double.TryParse(searchString, out double num))
+        if (Int32.TryParse(searchString, out int num))
         {
-            if (i.Any(v => (v is double) && (double)v == num))
+            if (row.Any(v => (v is int) && (int)v == num))
             {
                 return true;
             }
         }
 
-        if (i.Any(v => (v is string) && ((string)v).Contains(searchString, StringComparison.CurrentCultureIgnoreCase)))
+        if (row.Any(v => (v is string) && ((string)v).Contains(searchString, StringComparison.CurrentCultureIgnoreCase)))
         {
             return true;
         }

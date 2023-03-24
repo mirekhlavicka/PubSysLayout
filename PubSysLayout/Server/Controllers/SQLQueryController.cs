@@ -12,9 +12,11 @@ namespace PubSysLayout.Server.Controllers
     public class SQLQueryController : ControllerBase
     {
         private readonly IConfiguration _configuration;
+        private int maxRowCount = 1000;
         public SQLQueryController(IConfiguration configuration)
         {
             _configuration = configuration;
+            maxRowCount = _configuration.GetValue<int>("SQLQuery:maxRowCount");
         }
 
         [HttpPost]
@@ -30,10 +32,13 @@ namespace PubSysLayout.Server.Controllers
                         {
                             var resultTable = new DataTable();
                             adapter.Fill(resultTable);
-                            //return Ok(ConvertToDynamic(resultTable).Take(10000)); //!!! max rowcount protection !!!
                             return Ok(new QueryResult
                             {
-                                Columns = resultTable.Columns.Cast<DataColumn>().Select(dc => new QueryResultColumn { Name = dc.ColumnName, TypeName = dc.DataType.ToString() }).ToArray(),
+                                Columns = resultTable.Columns.Cast<DataColumn>().Select(dc => new QueryResultColumn 
+                                { 
+                                    Name = dc.ColumnName, 
+                                    TypeName = dc.DataType.ToString() 
+                                }).ToArray(),
                                 Rows = ConvertToArray(resultTable)
                             });
                         }
@@ -64,6 +69,16 @@ namespace PubSysLayout.Server.Controllers
             return _configuration.GetValue<string>("SQLQuery:defaultDB");
         }
 
+        private object[][] ConvertToArray(DataTable dataTable)
+        {
+            int count = Math.Min(dataTable.Rows.Count, maxRowCount);
+            var result = new object[count][];
+            for (int p = 0; p < count; p++)
+            {
+                result[p] = dataTable.Rows[p].ItemArray;
+            }
+            return result;
+        }
 
         //private static List<dynamic> ConvertToDynamic(DataTable dataTable)
         //{
@@ -80,15 +95,5 @@ namespace PubSysLayout.Server.Controllers
         //    }
         //    return result;
         //}
-
-        private static object[][] ConvertToArray(DataTable dataTable)
-        {
-            var result = new object[dataTable.Rows.Count][];
-            for (int p = 0; p < dataTable.Rows.Count; p++)
-            {
-                result[p] = dataTable.Rows[p].ItemArray;
-            }
-            return result;
-        }
     }
 }
