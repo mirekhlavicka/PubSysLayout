@@ -18,13 +18,13 @@
 <MudTabs Elevation="5" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6" @ref="tabs" KeepPanelsAlive="true">
     <MudTabPanel Text="Query" Icon="@Icons.Material.Filled.Build">
         <div class="d-flex" style="max-width:600px;margin-bottom:10px">
-            <MudSelect T="string" Label="Database" AnchorOrigin="Origin.BottomCenter" @bind-Value="database" FullWidth="false" Variant="Variant.Outlined" Class="mr-8">
+            <MudSelect T="string" Label="Database" AnchorOrigin="Origin.BottomCenter" @bind-Value="database" FullWidth="false" Variant="Variant.Outlined" Class="mr-6">
                 @foreach (string db in dbList)
                 {
                     <MudSelectItem Value="@db">@db</MudSelectItem>
                 }
             </MudSelect>
-            <MudFab OnClick="async () => await LoadData()" StartIcon="@Icons.Material.Filled.PlayArrow" Color="Color.Default" IconColor="Color.Secondary" IconSize="Size.Large" Size="Size.Large" Label="Run&nbsp;" DisableElevation="true" accesskey="r" Style="margin-top:8px"></MudFab>
+            <MudFab OnClick="async () => await LoadData()" StartIcon="@Icons.Material.Filled.PlayArrow" Color="Color.Default" IconColor="Color.Secondary" IconSize="Size.Large" Size="Size.Large" Label="Run&nbsp;" DisableElevation="true" accesskey="r" Style="margin-top:10px"></MudFab>
         </div>
         <MudDivider />
         <textarea @ref="textarea" id="taSQL" name="taSQL" style="display:none" />
@@ -39,7 +39,7 @@
                   T="object[]">
                 <ToolBarContent>
                     <MudTooltip Text="Copy tabular data to clipboard">
-                        <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Medium" IconSize="Size.Medium" Class="mt-2 mb-2 ml-3" OnClick='async () => await CopyToClipboard(GetTableText("\t"))' Disabled="@(queryResult == null || queryResult.Columns.Length == 0)" />
+                        <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Medium" IconSize="Size.Medium" Class="mt-2 mb-4 ml-3" OnClick='async () => await CopyToClipboard(GetTableText("\t"))' Disabled="@(queryResult == null || queryResult.Columns.Length == 0)" />
                     </MudTooltip>
                     <MudSpacer />
                     <MudTextField DebounceInterval="300" @bind-Value="searchString" Placeholder="Search by text or ID" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true"></MudTextField>
@@ -97,16 +97,28 @@
     private bool inProgress = false;
 
     private string[] dbList = { };
-    private string database = "";
     private string SQL = "";
+
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "db")]
+    public string database { get; set; } = null;
 
     protected override async Task OnInitializedAsync()
     {
         dbList = await Http.GetFromJsonAsync<string[]>("api/sqlquery/dblist");
-        database = await localStorage.GetAsync<string>("SQLQuery_currentDB");
+
+        if (!String.IsNullOrEmpty(database))
+        {
+            database = dbList.FirstOrDefault(s => String.Equals(s, database, StringComparison.OrdinalIgnoreCase));
+        }
+
         if (String.IsNullOrEmpty(database))
         {
-            database = await Http.GetStringAsync("api/sqlquery/defaultdb");
+            database = await localStorage.GetAsync<string>("SQLQuery_currentDB");
+            if (String.IsNullOrEmpty(database))
+            {
+                database = await Http.GetStringAsync("api/sqlquery/defaultdb");
+            }
         }
     }
 
@@ -114,10 +126,6 @@
     {
         if (firstRender)
         {
-            //https://codemirror.net/5/mode/sql/
-            //https://github.com/simonw/datasette/issues/949
-            //https://stackoverflow.com/questions/20023381/codemirror-how-add-tables-to-sql-hint
-
             SQL = await localStorage.GetAsync<string>("SQLQuery_SQL");
             if (String.IsNullOrEmpty(SQL))
             {
@@ -182,7 +190,14 @@
         {
             for (int p = 0; p < row.Length; p++)
             {
-                row[p] = ((JsonElement)(row[p])).Deserialize(Type.GetType(queryResult.Columns[p].TypeName));
+                try
+                {
+                    row[p] = ((JsonElement)(row[p])).Deserialize(Type.GetType(queryResult.Columns[p].TypeName));
+                }
+                catch
+                {
+                    row[p] = String.Empty;
+                }
             }
         }
     }
