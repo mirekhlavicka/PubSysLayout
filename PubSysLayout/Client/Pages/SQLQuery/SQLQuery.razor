@@ -12,6 +12,8 @@
 @inject IJSRuntime js
 @inject MudBlazor.ISnackbar snackBar
 @inject LocalStorage localStorage
+@inject NavigationManager uriHelper;
+
 
 <PageTitle>SQL query – @database</PageTitle>
 
@@ -39,7 +41,10 @@
                   T="object[]">
                 <ToolBarContent>
                     <MudTooltip Text="Copy tabular data to clipboard">
-                        <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Medium" IconSize="Size.Medium" Class="mt-2 mb-4 ml-3" OnClick='async () => await CopyToClipboard(GetTableText("\t"))' Disabled="@(queryResult == null || queryResult.Columns.Length == 0)" />
+                        <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Medium" IconSize="Size.Medium" Class="mt-4 mb-4 ml-3" OnClick='async () => await CopyToClipboard(GetTableText("\t"))' Disabled="@(queryResult == null || queryResult.Columns.Length == 0)" />
+                    </MudTooltip>
+                    <MudTooltip Text="Save query and create a shareable link">
+                        <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Share" Size="Size.Medium" IconSize="Size.Medium" Class="mt-4 mb-4 ml-3" OnClick='async () => await Save()' Disabled="@(String.IsNullOrWhiteSpace(SQL))" />
                     </MudTooltip>
                     <MudSpacer />
                     <MudTextField DebounceInterval="300" @bind-Value="searchString" Placeholder="Search by text or ID" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true"></MudTextField>
@@ -59,14 +64,18 @@
                 <RowTemplate>
                     @foreach (var val in context)
                     {
-                        <MudTd Style="max-width: 400px;overflow-x: hidden;white-space: nowrap" title="@val.ToString()">
+                        <MudTd Style="max-width: 400px;overflow-x: hidden;white-space: nowrap" title="@(val is String && ((string)val).Length > 50 ? val.ToString(): null)">
                             @if (val is String && !String.IsNullOrEmpty(searchString))
                             {
                                 <MudHighlighter Text="@(val.ToString())" HighlightedText="@searchString" />
                             }
+                            else if (val is Boolean)
+                            {
+                                <MudIcon Icon="@((bool)val ? Icons.Material.Outlined.CheckCircle : Icons.Material.Outlined.Circle)" Size="Size.Small" Class="mr-3 mb-n1" />
+                            }
                             else
                             {
-                                @val
+                                @Format(val)
                             }
                         </MudTd>
                     }
@@ -103,6 +112,11 @@
     [SupplyParameterFromQuery(Name = "db")]
     public string database { get; set; } = null;
 
+    [Parameter]
+    [SupplyParameterFromQuery(Name = "sql")]
+    public string SavedSQLName { get; set; } = null;
+
+
     protected override async Task OnInitializedAsync()
     {
         dbList = await Http.GetFromJsonAsync<string[]>("api/sqlquery/dblist");
@@ -126,10 +140,18 @@
     {
         if (firstRender)
         {
-            SQL = await localStorage.GetAsync<string>("SQLQuery_SQL");
+            if (!String.IsNullOrEmpty(SavedSQLName))
+            {
+                SQL = await Http.GetStringAsync($"api/sqlquery/savedsql?name={SavedSQLName}");
+            }
+
             if (String.IsNullOrEmpty(SQL))
             {
-                SQL = await Http.GetStringAsync("api/sqlquery/defaultsql");
+                SQL = await localStorage.GetAsync<string>("SQLQuery_SQL");
+                if (String.IsNullOrEmpty(SQL))
+                {
+                    SQL = await Http.GetStringAsync("api/sqlquery/defaultsql");
+                }
             }
             await js.InvokeVoidAsync("codemirror.create", textarea, SQL, "100%", "calc(100vh - 280px)", "text/x-mssql");
         }
@@ -172,8 +194,14 @@
                 errorMsg = await res.Content.ReadAsStringAsync();
                 queryResult = null;
             }
-            await localStorage.SetAsync("SQLQuery_currentDB", database);
-            await localStorage.SetAsync("SQLQuery_SQL", SQL);
+
+            bool changes = await js.InvokeAsync<bool>("codemirror.getChanges", "taSQL");
+            if (changes)
+            {
+                await localStorage.SetAsync("SQLQuery_SQL", SQL);
+                
+            }
+            await localStorage.SetAsync("SQLQuery_currentDB", database);            
         }
         catch (HttpRequestException exc)
         {
@@ -202,6 +230,24 @@
         }
     }
 
+    protected async Task Save()
+    {
+        SQL = await js.InvokeAsync<string>("codemirror.getValue", "taSQL");
+        var res = (await Http.PostAsJsonAsync($"api/sqlquery/save?name={SavedSQLName}", new Query
+            {
+                Database = "",
+                SQL = SQL
+            }));
+
+        if (res.IsSuccessStatusCode)
+        {
+            SavedSQLName = await res.Content.ReadAsStringAsync();
+            string uri = uriHelper.ToAbsoluteUri($"./sqlquery?db={database}&sql={SavedSQLName}").ToString();
+            await js.InvokeVoidAsync("navigator.clipboard.writeText", uri);
+            snackBar.Add($"{uri} was copied to clipboard", Severity.Success);
+        }
+    }
+
     private bool FilterFunc(object[] row)
     {
 
@@ -226,8 +272,8 @@
 
     private async Task CopyToClipboard(string text)
     {
-        snackBar.Add($"Tabular data was copied to clipboard", Severity.Success);
         await js.InvokeVoidAsync("navigator.clipboard.writeText", text);
+        snackBar.Add($"Tabular data was copied to clipboard", Severity.Success);
     }
 
     private string GetTableText(string divider)
@@ -235,5 +281,18 @@
         string th = String.Join(divider, queryResult.Columns.Select(c => c.Name));
         string td = String.Join("\"\n\"", queryResult.Rows.Select(r => String.Join($"\"{divider}\"", r)));
         return $"{th}\n\"{td}";
+    }
+
+    private string Format(object val)
+    {
+        switch (Type.GetTypeCode(val.GetType()))
+        {
+            case TypeCode.Int32:
+                return ((Int32)val).ToString("n0");
+            case TypeCode.DateTime:
+                return ((DateTime)val).ToString("g");
+            default:
+                return val.ToString();
+        }
     }
 }
