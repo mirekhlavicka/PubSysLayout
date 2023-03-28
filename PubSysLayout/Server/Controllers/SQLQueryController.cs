@@ -4,6 +4,7 @@ using Microsoft.Data.SqlClient;
 using System.Data;
 using PubSysLayout.Shared.SQLQuery;
 using Query = PubSysLayout.Shared.SQLQuery.Query;
+using System.Text.RegularExpressions;
 
 namespace PubSysLayout.Server.Controllers
 {
@@ -25,6 +26,10 @@ namespace PubSysLayout.Server.Controllers
         [HttpPost]
         public IActionResult Run(Query query)
         {
+            foreach (string s in _configuration.GetSection("SQLQuery:disabledCommands").Get<string[]>())
+            {
+                query.SQL = Regex.Replace(query.SQL, s + "(?=\\s)", "", RegexOptions.IgnoreCase);
+            }
             using (var conn = new SqlConnection(String.Format(_configuration.GetConnectionString("PubSysDefault"), query.Database)))
             {
                 try
@@ -34,7 +39,7 @@ namespace PubSysLayout.Server.Controllers
                         using (var adapter = new SqlDataAdapter(cmd))
                         {
                             var resultTable = new DataTable();
-                            adapter.Fill(resultTable);
+                            adapter.Fill(0, maxRowCount, resultTable);
                             return Ok(new QueryResult
                             {
                                 Columns = resultTable.Columns.Cast<DataColumn>().Select(dc => new QueryResultColumn 
@@ -135,9 +140,8 @@ namespace PubSysLayout.Server.Controllers
 
         private object[][] ConvertToArray(DataTable dataTable)
         {
-            int count = Math.Min(dataTable.Rows.Count, maxRowCount);
-            var result = new object[count][];
-            for (int p = 0; p < count; p++)
+            var result = new object[dataTable.Rows.Count][];
+            for (int p = 0; p < dataTable.Rows.Count; p++)
             {
                 result[p] = dataTable.Rows[p].ItemArray;
             }

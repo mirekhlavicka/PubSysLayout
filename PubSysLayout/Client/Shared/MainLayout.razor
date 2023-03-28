@@ -10,7 +10,7 @@
     }
 </style>
 
-<MudThemeProvider /> @*Theme="MyCustomTheme"*@
+<MudThemeProvider Theme="@ZiveTheme" />
 <MudDialogProvider 
     FullWidth="true"
     MaxWidth="MaxWidth.Small"
@@ -61,6 +61,16 @@
         //_navigation.NavigateTo("/", true);
         authState.StateChanged();
     }
+
+    MudTheme ZiveTheme = new MudTheme()
+    {
+        Palette = new Palette()
+        {
+            Primary = new MudBlazor.Utilities.MudColor("#2b4db7"),
+            AppbarBackground = new MudBlazor.Utilities.MudColor("#2b4db7"),
+        },
+
+    };
 
     //MudTheme MyCustomTheme = new MudTheme()
     //{

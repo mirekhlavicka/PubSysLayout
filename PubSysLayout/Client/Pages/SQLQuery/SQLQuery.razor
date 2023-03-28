@@ -12,7 +12,7 @@
 @inject IJSRuntime js
 @inject MudBlazor.ISnackbar snackBar
 @inject LocalStorage localStorage
-@inject NavigationManager uriHelper;
+@inject NavigationManager uriHelper
 
 
 <PageTitle>SQL query – @database</PageTitle>
@@ -65,7 +65,11 @@
                     @foreach (var val in context)
                     {
                         <MudTd Style="max-width: 400px;overflow-x: hidden;white-space: nowrap" title="@(val is String && ((string)val).Length > 50 ? val.ToString(): null)">
-                            @if (val is String && !String.IsNullOrEmpty(searchString))
+                            @if (val is String && ((string)val).StartsWith("http"))
+                            {
+                                <a href="@val" title="@val" target="_blank"><MudIcon Icon="@Icons.Material.Filled.Forward" Color="Color.Primary" Size="Size.Small" Class="mr-3 mb-n1" /></a>
+                            }
+                            else if (val is String && !String.IsNullOrEmpty(searchString))
                             {
                                 <MudHighlighter Text="@(val.ToString())" HighlightedText="@searchString" />
                             }
