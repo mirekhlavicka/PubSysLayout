@@ -28,7 +28,10 @@ namespace PubSysLayout.Server.Controllers
         {
             foreach (string s in _configuration.GetSection("SQLQuery:disabledCommands").Get<string[]>())
             {
-                query.SQL = Regex.Replace(query.SQL, s + "(?=\\s)", "", RegexOptions.IgnoreCase);
+                if (Regex.Match(query.SQL, s + "(?=\\s)", RegexOptions.IgnoreCase).Success)
+                {
+                    return BadRequest("Invalid command");
+                }
             }
             using (var conn = new SqlConnection(String.Format(_configuration.GetConnectionString("PubSysDefault"), query.Database)))
             {
