@@ -17,7 +17,7 @@
 
 <PageTitle>SQL query – @database</PageTitle>
 
-<MudTabs Elevation="5" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6" @ref="tabs" KeepPanelsAlive="true">
+<MudTabs Elevation="5" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6" @ref="tabs" KeepPanelsAlive="true" ActivePanelIndexChanged="@(_ => flagsOpened = false)">
     <MudTabPanel Text="Query" Icon="@Icons.Material.Filled.Build">
         <div class="d-flex" style="max-width:600px;margin-bottom:10px">
             <MudSelect T="string" Label="Database" AnchorOrigin="Origin.BottomCenter" @bind-Value="database" FullWidth="false" Variant="Variant.Outlined" Class="mr-6">
@@ -47,7 +47,24 @@
                         <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Share" Size="Size.Medium" IconSize="Size.Medium" Class="mt-4 mb-4 ml-3" OnClick='async () => await Save()' Disabled="@(String.IsNullOrWhiteSpace(SQL))" />
                     </MudTooltip>
                     <MudSpacer />
-                    <MudTextField DebounceInterval="300" @bind-Value="searchString" Placeholder="Search by text or ID" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true"></MudTextField>
+                    <div class="d-flex">
+                    @if (flagsFilter.Count > 0)
+                    {
+                        <div class="d-flex" style="width:130px; padding-bottom: 2px" @onclick:stopPropagation="true">
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => flagsOpened = !flagsOpened)" EndIcon="@(flagsOpened ? Icons.Material.Filled.ArrowDropUp : Icons.Material.Filled.ArrowDropDown)">Filter</MudButton>
+                            <MudPopover Open="flagsOpened" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft">
+                                <MudPaper Outlined="true" Class="px-4 py-4" MinWidth="200px">
+                                    @foreach (var fi in flagsFilter.Keys)
+                                    {
+                                        <MudCheckBox @bind-Checked="flagsFilter[fi]" Color="@Color.Secondary" TriState="true">@queryResult.Columns[fi].Name</MudCheckBox>
+                                    }
+                                    <MudButton OnClick="@(() => { foreach(var f in flagsFilter){ flagsFilter[f.Key] = null;} })">Reset</MudButton>
+                                </MudPaper>
+                            </MudPopover>
+                        </div>
+                    }
+                    <MudTextField DebounceInterval="300" @bind-Value="searchString" Placeholder="Search by text or ID" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true" Style="width:350px"></MudTextField>
+                    </div>
                 </ToolBarContent>
                 <HeaderContent>
                     @for (int i = 0; i < queryResult.Columns.Length; i++)
@@ -108,6 +125,9 @@
     private string errorMsg = "No result";
     private string searchString = "";
     private bool inProgress = false;
+
+    public bool flagsOpened = false;
+    private Dictionary<int, bool?> flagsFilter = null;
 
     private string[] dbList = { };
     private string SQL = "";
@@ -191,6 +211,7 @@
                 else
                 {
                     ConvertJsonElements();
+                    flagsFilter = queryResult.Columns.Select((c, i) => new { i, c.TypeName }).Where(c => c.TypeName == typeof(bool).ToString()).ToDictionary(c => c.i, c => (bool?)null);
                 }
             }
             else
@@ -203,9 +224,9 @@
             if (changes)
             {
                 await localStorage.SetAsync("SQLQuery_SQL", SQL);
-                
+
             }
-            await localStorage.SetAsync("SQLQuery_currentDB", database);            
+            await localStorage.SetAsync("SQLQuery_currentDB", database);
         }
         catch (HttpRequestException exc)
         {
@@ -254,24 +275,25 @@
 
     private bool FilterFunc(object[] row)
     {
+        bool searchResult = false;
 
         if (string.IsNullOrWhiteSpace(searchString))
-            return true;
+            searchResult = true;
 
-        if (Int32.TryParse(searchString, out int num))
+        if (!searchResult && Int32.TryParse(searchString, out int num))
         {
             if (row.Any(v => (v is int) && (int)v == num))
             {
-                return true;
+                searchResult = true;
             }
         }
 
-        if (row.Any(v => (v is string) && ((string)v).Contains(searchString, StringComparison.CurrentCultureIgnoreCase)))
+        if (!searchResult && !row.Any(v => (v is string) && ((string)v).Contains(searchString, StringComparison.CurrentCultureIgnoreCase)))
         {
-            return true;
+            return false;
         }
 
-        return false;
+        return flagsFilter.Where(fv => fv.Value.HasValue).All(fv => (bool)row[fv.Key] == fv.Value);
     }
 
     private async Task CopyToClipboard(string text)
