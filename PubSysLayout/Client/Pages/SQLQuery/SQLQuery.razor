@@ -13,11 +13,44 @@
 @inject MudBlazor.ISnackbar snackBar
 @inject LocalStorage localStorage
 @inject NavigationManager uriHelper
+@inject IDialogService DialogService
 
+
+<style>
+    .valTD
+    {
+        max-width: 400px;
+        overflow-x: hidden;
+        white-space: nowrap;
+        position: relative
+    }
+
+    .valTD .btnMore {
+        display: none;
+        position: absolute;
+        z-index:100;
+        right:2px;
+        top:7px;
+        width:40px;
+        height:20px;
+        border-radius: 4px;
+        background-color: #e0e0e0;
+        padding-left:14px;
+        cursor:pointer;
+    }
+
+    .valTD:hover .btnMore {
+        display: block
+    }
+
+    .btnMore:hover {
+        background-color: #b0b0b0;
+    }
+</style>
 
 <PageTitle>SQL query – @database</PageTitle>
 
-<MudTabs Elevation="5" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6" @ref="tabs" KeepPanelsAlive="true" ActivePanelIndexChanged="@(_ => flagsOpened = false)">
+<MudTabs Elevation="5" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6" @ref="tabs" KeepPanelsAlive="true" @onclick="() => flagsFilterOpened = false ">
     <MudTabPanel Text="Query" Icon="@Icons.Material.Filled.Build">
         <div class="d-flex" style="max-width:600px;margin-bottom:10px">
             <MudSelect T="string" Label="Database" AnchorOrigin="Origin.BottomCenter" @bind-Value="database" FullWidth="false" Variant="Variant.Outlined" Class="mr-6">
@@ -41,7 +74,7 @@
                   T="object[]">
                 <ToolBarContent>
                     <MudTooltip Text="Copy tabular data to clipboard">
-                        <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Medium" IconSize="Size.Medium" Class="mt-4 mb-4 ml-3" OnClick='async () => await CopyToClipboard(GetTableText("\t"))' Disabled="@(queryResult == null || queryResult.Columns.Length == 0)" />
+                        <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Medium" IconSize="Size.Medium" Class="mt-4 mb-4 ml-3" OnClick='async () => await CopyToClipboard(GetTableText("\t"), "Tabular data was copied to clipboard")' Disabled="@(queryResult == null || queryResult.Columns.Length == 0)" />
                     </MudTooltip>
                     <MudTooltip Text="Save query and create a shareable link">
                         <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Share" Size="Size.Medium" IconSize="Size.Medium" Class="mt-4 mb-4 ml-3" OnClick='async () => await Save()' Disabled="@(String.IsNullOrWhiteSpace(SQL))" />
@@ -51,8 +84,8 @@
                     @if (flagsFilter.Count > 0)
                     {
                         <div class="d-flex" style="width:130px; padding-bottom: 2px" @onclick:stopPropagation="true">
-                            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => flagsOpened = !flagsOpened)" EndIcon="@(flagsOpened ? Icons.Material.Filled.ArrowDropUp : Icons.Material.Filled.ArrowDropDown)">Filter</MudButton>
-                            <MudPopover Open="flagsOpened" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft">
+                            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => flagsFilterOpened = !flagsFilterOpened)" EndIcon="@(flagsFilterOpened ? Icons.Material.Filled.ArrowDropUp : Icons.Material.Filled.ArrowDropDown)">Filter</MudButton>
+                            <MudPopover Open="flagsFilterOpened" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft">
                                 <MudPaper Outlined="true" Class="px-4 py-4" MinWidth="200px">
                                     @foreach (var fi in flagsFilter.Keys)
                                     {
@@ -81,7 +114,7 @@
                 <RowTemplate>
                     @foreach (var val in context)
                     {
-                        <MudTd Style="max-width: 400px;overflow-x: hidden;white-space: nowrap" title="@(val is String && ((string)val).Length > 50 ? val.ToString(): null)">
+                        <MudTd Class="valTD">
                             @if (val is String && ((string)val).StartsWith("http"))
                             {
                                 <a href="@val" title="@val" target="_blank"><MudIcon Icon="@Icons.Material.Filled.Forward" Color="Color.Primary" Size="Size.Small" Class="mr-3 mb-n1" /></a>
@@ -98,6 +131,10 @@
                             {
                                 @Format(val)
                             }
+                            @if (val is String && ((string)val).Length > 50)
+                            {
+                                <div class="btnMore" title="@val" @onclick="() => { showMoreText = val.ToString(); showMore = true; }">...</div>
+                            }
                         </MudTd>
                     }
                     <MudTd />
@@ -106,6 +143,16 @@
                     <MudTablePager PageSizeOptions="new int[]{50, 100, 200, 500, 1000}" />
                 </PagerContent>
             </MudTable>
+            <MudDialog @bind-IsVisible="showMore" Options="showMoreDialogOptions">
+                <DialogContent>
+                    <MudPaper Elevation="0" Class="mt-4">
+                        <MudTextField T="string" Variant="Variant.Filled" Text="@showMoreText" Lines="25" AutoFocus="true" ReadOnly="true" />
+                    </MudPaper>
+                </DialogContent>
+                <DialogActions>
+                    <MudButton Variant="Variant.Filled" IconColor="Color.Primary" Color="Color.Default" OnClick='async () => await CopyToClipboard(showMoreText, "Text was copied to clipboard")' Class="ml-auto mr-4" StartIcon="@Icons.Material.Filled.ContentCopy">Copy to clipboard</MudButton>
+                </DialogActions>
+            </MudDialog>
         }
         else if (errorMsg != "")
         {
@@ -117,20 +164,25 @@
 <MudOverlay Visible="@inProgress" DarkBackground="true" AutoClose="false" />
 
 @code {
-    MudTable<object[]> mudTable;
-    MudTabs tabs;
+    private MudTable<object[]> mudTable;
+    private MudTabs tabs;
     private ElementReference textarea;
-
-    private QueryResult queryResult = null;
-    private string errorMsg = "No result";
-    private string searchString = "";
-    private bool inProgress = false;
-
-    public bool flagsOpened = false;
-    private Dictionary<int, bool?> flagsFilter = null;
 
     private string[] dbList = { };
     private string SQL = "";
+
+    private QueryResult queryResult = null;
+    private string errorMsg = "No result";
+    private bool inProgress = false;
+
+    private string searchString = "";
+
+    public bool flagsFilterOpened = false;
+    private Dictionary<int, bool?> flagsFilter = null;
+
+    bool showMore = false;
+    string showMoreText = "";
+    private DialogOptions showMoreDialogOptions = new() { FullWidth = true, CloseOnEscapeKey = true, DisableBackdropClick = false, CloseButton = true, NoHeader = false, MaxWidth = MaxWidth.Large };
 
     [Parameter]
     [SupplyParameterFromQuery(Name = "db")]
@@ -296,10 +348,10 @@
         return flagsFilter.Where(fv => fv.Value.HasValue).All(fv => (bool)row[fv.Key] == fv.Value);
     }
 
-    private async Task CopyToClipboard(string text)
+    private async Task CopyToClipboard(string text, string msg)
     {
         await js.InvokeVoidAsync("navigator.clipboard.writeText", text);
-        snackBar.Add($"Tabular data was copied to clipboard", Severity.Success);
+        snackBar.Add(msg, Severity.Success);
     }
 
     private string GetTableText(string divider)
