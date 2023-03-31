@@ -18,6 +18,20 @@ namespace MudBlazor
         //        .GetField("<Context>k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic )
         //        .SetValue(this, new TableContextFix<T>());
         //}
+
+        public bool StopRender = false;
+
+        protected override bool ShouldRender()
+        {
+            if (StopRender)
+            {
+                return false;
+            }
+            else
+            { 
+                return base.ShouldRender();
+            }
+        }
     }
 
     //public class TableContextFix<T> : TableContext<T>

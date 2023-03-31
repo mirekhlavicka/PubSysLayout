@@ -47,6 +47,8 @@ builder.Services.AddDataProtection()
       .PersistKeysToFileSystem(new DirectoryInfo(keysDirectoryPath))
       .SetApplicationName("PubSysLayout");
 
+string basePath = builder.Configuration.GetValue<string>("basePath") ?? String.Empty;
+
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddCookie(options =>
     {
@@ -54,11 +56,13 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
         options.SlidingExpiration = true;
         options.AccessDeniedPath = "/Forbidden/";
         options.LoginPath = "/Login";
+        //options.Cookie.IsEssential = true;
+        options.Cookie.Path = $"{basePath}; priority=high";
+        //options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
     });
 
 var app = builder.Build();
 
-string basePath = builder.Configuration.GetValue<string>("basePath") ?? String.Empty;
 if (String.IsNullOrEmpty(basePath) == false)
 {
     app.UsePathBase(basePath);

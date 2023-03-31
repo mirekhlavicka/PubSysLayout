@@ -67,7 +67,7 @@
     <MudTabPanel Text="Results" Icon="@Icons.Material.Filled.Dataset">
         @if (queryResult != null && queryResult.Columns.Length > 0)
         {
-            <MudTable @ref="mudTable" Items="@queryResult.Rows" RowsPerPage="50" SortLabel="Sort By" AllowUnsorted="true" Virtualize="false"
+            <MudTableFix @ref="mudTable" Items="@queryResult.Rows" RowsPerPage="50" SortLabel="Sort By" AllowUnsorted="true" Virtualize="false"
                   Hover="true" FixedHeader="true" FixedFooter="true" HorizontalScrollbar="true" Dense="true" Bordered="true" Striped="true"
                   Height="calc(100vh - 323px)" HeaderClass="table-head-bordered" FooterClass="table-foot-bordered" Elevation="2"
                   Filter="new Func<object[],bool>(FilterFunc)"
@@ -133,7 +133,7 @@
                             }
                             @if (val is String && ((string)val).Length > 50)
                             {
-                                <div class="btnMore" title="@val" @onclick="() => { showMoreText = val.ToString(); showMore = true; }">...</div>
+                                <div class="btnMore" title="@val" @onclick="async () => { mudTable.StopRender = true; showMoreText = val.ToString(); showMore = true; await Task.Delay(300); mudTable.StopRender =false; await focusShowMoreDialog.FocusAsync();}">...</div>
                             }
                         </MudTd>
                     }
@@ -142,12 +142,13 @@
                 <PagerContent>
                     <MudTablePager PageSizeOptions="new int[]{50, 100, 200, 500, 1000}" />
                 </PagerContent>
-            </MudTable>
+            </MudTableFix>
             <MudDialog @bind-IsVisible="showMore" Options="showMoreDialogOptions">
                 <DialogContent>
                     <MudPaper Elevation="0" Class="mt-4">
-                        <MudTextField T="string" Variant="Variant.Filled" Text="@showMoreText" Lines="25" AutoFocus="true" ReadOnly="true" />
+                        <MudTextField T="string" Variant="Variant.Filled"  @bind-Value="showMoreText" Lines="25" AutoFocus="false" ReadOnly="true" />
                     </MudPaper>
+                    <div class="fixed pointer-events-none" tabindex="-1" @ref="focusShowMoreDialog"></div>
                 </DialogContent>
                 <DialogActions>
                     <MudButton Variant="Variant.Filled" IconColor="Color.Primary" Color="Color.Default" OnClick='async () => await CopyToClipboard(showMoreText, "Text was copied to clipboard")' Class="ml-auto mr-4" StartIcon="@Icons.Material.Filled.ContentCopy">Copy to clipboard</MudButton>
@@ -164,7 +165,7 @@
 <MudOverlay Visible="@inProgress" DarkBackground="true" AutoClose="false" />
 
 @code {
-    private MudTable<object[]> mudTable;
+    private MudTableFix<object[]> mudTable;
     private MudTabs tabs;
     private ElementReference textarea;
 
@@ -183,6 +184,7 @@
     bool showMore = false;
     string showMoreText = "";
     private DialogOptions showMoreDialogOptions = new() { FullWidth = true, CloseOnEscapeKey = true, DisableBackdropClick = false, CloseButton = true, NoHeader = false, MaxWidth = MaxWidth.Large };
+    ElementReference focusShowMoreDialog;
 
     [Parameter]
     [SupplyParameterFromQuery(Name = "db")]
@@ -320,8 +322,7 @@
         {
             SavedSQLName = await res.Content.ReadAsStringAsync();
             string uri = uriHelper.ToAbsoluteUri($"./sqlquery?db={database}&sql={SavedSQLName}").ToString();
-            await js.InvokeVoidAsync("navigator.clipboard.writeText", uri);
-            snackBar.Add($"{uri} was copied to clipboard", Severity.Success);
+            await CopyToClipboard(uri, $"{uri} was copied to clipboard");
         }
     }
 
