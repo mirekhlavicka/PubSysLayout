@@ -65,12 +65,7 @@ namespace PubSysLayout.Server.Controllers
         [HttpPost("save")]
         public IActionResult Save(Query query, string name)
         {
-            var directoryName = _configuration.GetValue<string>("SQLQuery:savedSQLDirectoryName");
-            var directoryPath = Path.Combine(_environment.ContentRootPath, directoryName);
-            if (!Directory.Exists(directoryPath))
-            {
-                Directory.CreateDirectory(directoryPath);
-            }
+            string directoryPath = GetDirectoryPath();
 
             if (!String.IsNullOrEmpty(name))
             {
@@ -106,12 +101,7 @@ namespace PubSysLayout.Server.Controllers
         [HttpGet("savedsql")]
         public string GetSavedSQL(string name)
         {
-            var directoryName = _configuration.GetValue<string>("SQLQuery:savedSQLDirectoryName");
-            var directoryPath = Path.Combine(_environment.ContentRootPath, directoryName);
-            if (!Directory.Exists(directoryPath))
-            {
-                return "";
-            }
+            string directoryPath = GetDirectoryPath();
 
             string SQL = "";
             try
@@ -121,6 +111,22 @@ namespace PubSysLayout.Server.Controllers
             catch
             { }
             return SQL;
+        }
+
+        [HttpPost("favorites")]
+        public IActionResult SaveFavorites([FromBody] object data)
+        {
+            string directoryPath = GetDirectoryPath();
+            System.IO.File.WriteAllText(Path.Combine(directoryPath, $"{User.Identity.Name}.json"), data.ToString());
+            return Ok();
+        }
+
+        [HttpGet("favorites")]
+        public string GetFavorites()
+        {
+            string directoryPath = GetDirectoryPath();
+            string res = System.IO.File.ReadAllText(Path.Combine(directoryPath, $"{User.Identity.Name}.json"));
+            return res;
         }
 
         [HttpGet("dblist")]
@@ -139,6 +145,17 @@ namespace PubSysLayout.Server.Controllers
         public string GetDefaultDB()
         {
             return _configuration.GetValue<string>("SQLQuery:defaultDB");
+        }
+
+        private string GetDirectoryPath()
+        {
+            var directoryName = _configuration.GetValue<string>("SQLQuery:savedSQLDirectoryName");
+            var directoryPath = Path.Combine(_environment.ContentRootPath, directoryName);
+            if (!Directory.Exists(directoryPath))
+            {
+                Directory.CreateDirectory(directoryPath);
+            }
+            return directoryPath;
         }
 
         private object[][] ConvertToArray(DataTable dataTable)
