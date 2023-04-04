@@ -72,41 +72,27 @@ namespace PubSysLayout.Server.Controllers
                 try
                 {
                     string SQL = System.IO.File.ReadAllText(Path.Combine(directoryPath, $"{name}.sql"));
-
                     if (SQL == query.SQL)
                     {
                         return Ok(name);
                     }
-                    else
-                    {
-                        name = string.Empty;
-                    }
                 }
                 catch
-                { 
-                    name = string.Empty;
-                }
+                {}
             }
 
-            if (String.IsNullOrEmpty(name))
-            {
-                name = Guid.NewGuid().ToString("n").Substring(0, 12);
-            }
-
+            name = Guid.NewGuid().ToString("n").Substring(0, 12);
             System.IO.File.WriteAllText(Path.Combine(directoryPath, $"{name}.sql"), query.SQL);
-
             return Ok(name);
         }
 
         [HttpGet("savedsql")]
         public string GetSavedSQL(string name)
         {
-            string directoryPath = GetDirectoryPath();
-
             string SQL = "";
             try
             {
-                SQL = System.IO.File.ReadAllText(Path.Combine(directoryPath, $"{name}.sql"));
+                SQL = System.IO.File.ReadAllText(Path.Combine(GetDirectoryPath(), $"{name}.sql"));
             }
             catch
             { }
@@ -116,17 +102,22 @@ namespace PubSysLayout.Server.Controllers
         [HttpPost("favorites")]
         public IActionResult SaveFavorites([FromBody] object data)
         {
-            string directoryPath = GetDirectoryPath();
-            System.IO.File.WriteAllText(Path.Combine(directoryPath, $"{User.Identity.Name}.json"), data.ToString());
+            System.IO.File.WriteAllText(Path.Combine(GetDirectoryPath(), $"{User.Identity.Name}.json"), data.ToString());
             return Ok();
         }
 
         [HttpGet("favorites")]
         public string GetFavorites()
         {
-            string directoryPath = GetDirectoryPath();
-            string res = System.IO.File.ReadAllText(Path.Combine(directoryPath, $"{User.Identity.Name}.json"));
-            return res;
+            try
+            {
+                string res = System.IO.File.ReadAllText(Path.Combine(GetDirectoryPath(), $"{User.Identity.Name}.json"));
+                return res;
+            }
+            catch 
+            {
+                return "{}";
+            }
         }
 
         [HttpGet("dblist")]

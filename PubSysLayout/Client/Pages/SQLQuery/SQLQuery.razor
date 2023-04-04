@@ -48,17 +48,17 @@
     }
 
     .mud-table-dense * .mud-table-row .mud-table-cell {
-        padding-inline-end: 0px;
+        padding-inline-end: 5px;
     }
 </style>
 
-<PageTitle>SQL query – @database</PageTitle>
+<PageTitle>SQL query – @Database</PageTitle>
 
 <MudTabs Elevation="5" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6" @ref="tabs" KeepPanelsAlive="true" @onclick="() => flagsFilterOpened = false ">
     <MudTabPanel Text="Query" Icon="@Icons.Material.Filled.Build">
         <div class="d-flex mb-4">
             <div class="d-flex" style="max-width:600px;flex-grow:3">
-                <MudSelect T="string" Label="Database" AnchorOrigin="Origin.BottomCenter" @bind-Value="database" FullWidth="false" Variant="Variant.Outlined" Class="mr-6">
+                <MudSelect T="string" Label="Database" AnchorOrigin="Origin.BottomCenter" @bind-Value="Database" FullWidth="false" Variant="Variant.Outlined" Class="mr-6">
                     @foreach (string db in dbList)
                     {
                         <MudSelectItem Value="@db">@db</MudSelectItem>
@@ -67,14 +67,15 @@
                 <MudFab OnClick="async () => await LoadData()" StartIcon="@Icons.Material.Filled.PlayArrow" Color="Color.Default" IconColor="Color.Secondary" IconSize="Size.Large" Size="Size.Large" Label="Run&nbsp;" DisableElevation="true" accesskey="r" Style="margin-top:10px"></MudFab>
             </div>
             <MudSpacer />
-            <MudTextField @bind-Value="SavedSQL_name" Label="Save query to favorites" Variant="Variant.Text"></MudTextField>
-            <MudFab Icon="@Icons.Material.Filled.Save" Size="Size.Small" OnClick="SaveToFavorites" IconColor="Color.Primary" DisableElevation="true" Class="ml-2 mt-3" Title="Save to favorites"></MudFab>
-            <MudFab Icon="@Icons.Material.Filled.Delete" Size="Size.Small" OnClick="RemoveFromFavorites" IconColor="Color.Secondary" DisableElevation="true" Class="ml-2 mt-3" Title="Remove from favorites"></MudFab>
+            <MudFab OnClick="async () => await NewQuery()" StartIcon="@Icons.Material.Filled.Clear" Color="Color.Default" IconColor="Color.Secondary" IconSize="Size.Large" Size="Size.Large" Label="New query" DisableElevation="true" Style="margin-top:10px"></MudFab>
             <MudSpacer />
-            <MudMenu Label="Favorites" Dense="true" Variant="Variant.Filled" EndIcon="@Icons.Material.Filled.KeyboardArrowDown" Color="Color.Default" IconColor="Color.Primary" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Class="ml-auto">
-                @foreach (var item in SavedSQL.OrderBy(i => i.Key))
+            <MudTextField @bind-Value="favorite_name" Label="Save query to favorites" Variant="Variant.Text" Immediate="true"></MudTextField>
+            <MudFab Icon="@Icons.Material.Filled.Save" Size="Size.Small" OnClick="AddToFavorites" IconColor="Color.Primary" DisableElevation="true" Class="ml-2 mt-3" Title="Save to favorites" Disabled="@(String.IsNullOrWhiteSpace(favorite_name))"></MudFab>
+            <MudFab Icon="@Icons.Material.Filled.Delete" Size="Size.Small" OnClick="RemoveFromFavorites" IconColor="Color.Secondary" DisableElevation="true" Class="ml-2 mt-3 mr-10" Title="Remove from favorites" Disabled="@(String.IsNullOrWhiteSpace(favorite_name))"></MudFab>
+            <MudMenu Label="Favorites" Dense="true" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.StarBorder" EndIcon="@Icons.Material.Filled.KeyboardArrowDown" Color="Color.Default" IconColor="Color.Primary" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Class="ml-auto">
+                @foreach (var item in favorites.OrderBy(i => i.Key))
                 {
-                    <MudMenuItem OnClick="@(() => LoadSQL(item.Value, item.Key))">@item.Key</MudMenuItem>
+                    <MudMenuItem OnClick="@(() => LoadFavoriteSQL(item.Value, item.Key))">@item.Key</MudMenuItem>
                 }
             </MudMenu>
         </div>
@@ -94,7 +95,7 @@
                         <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Medium" IconSize="Size.Medium" Class="mt-4 mb-4 ml-3" OnClick='async () => await CopyToClipboard(GetTableText("\t"), "Tabular data was copied to clipboard")' Disabled="@(queryResult == null || queryResult.Columns.Length == 0)" />
                     </MudTooltip>
                     <MudTooltip Text="Save query and create a shareable link">
-                        <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Share" Size="Size.Medium" IconSize="Size.Medium" Class="mt-4 mb-4 ml-3" OnClick='async () => await Save()' Disabled="@(String.IsNullOrWhiteSpace(SQL))" />
+                        <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Share" Size="Size.Medium" IconSize="Size.Medium" Class="mt-4 mb-4 ml-3" OnClick='async () => await SaveSQL(false)' Disabled="@(String.IsNullOrWhiteSpace(SQL))" />
                     </MudTooltip>
                     <MudSpacer />
                     <div class="d-flex">
@@ -208,45 +209,47 @@
     bool showMore = false;
     string showMoreText = "";
     private DialogOptions showMoreDialogOptions = new() { FullWidth = true, CloseOnEscapeKey = true, DisableBackdropClick = false, CloseButton = true, NoHeader = false, MaxWidth = MaxWidth.Large };
-    ElementReference focusShowMoreDialog;
+    private ElementReference focusShowMoreDialog;
+
+    private string favorite_name = "";
+    private Dictionary<string, string> favorites = new Dictionary<string, string>();
 
     [Parameter]
     [SupplyParameterFromQuery(Name = "db")]
-    public string database { get; set; } = null;
+    public string Database { get; set; } = null;
 
     [Parameter]
     [SupplyParameterFromQuery(Name = "sql")]
     public string SavedSQL_ID { get; set; } = null;
 
-    private string SavedSQL_name = "";
-
-    Dictionary<string, string> SavedSQL = new Dictionary<string, string>()
-    /*{
-        ["Articles with body and EDIT"] = "ecbac45c8436",
-        ["Article types"] = "38b3f1dd619d",
-        ["Poradna"] = "16354a5d3a3c",
-        ["Tags"] = "4055012c04f2"
-    }*/;
-
     protected override async Task OnInitializedAsync()
     {
         dbList = await Http.GetFromJsonAsync<string[]>("api/sqlquery/dblist");
 
-        if (!String.IsNullOrEmpty(database))
+        if (!String.IsNullOrEmpty(Database))
         {
-            database = dbList.FirstOrDefault(s => String.Equals(s, database, StringComparison.OrdinalIgnoreCase));
+            Database = dbList.FirstOrDefault(s => String.Equals(s, Database, StringComparison.OrdinalIgnoreCase));
         }
 
-        if (String.IsNullOrEmpty(database))
+        if (String.IsNullOrEmpty(Database))
         {
-            database = await localStorage.GetAsync<string>("SQLQuery_currentDB");
-            if (String.IsNullOrEmpty(database))
+            Database = await localStorage.GetAsync<string>("SQLQuery_currentDB");
+            if (String.IsNullOrEmpty(Database))
             {
-                database = await Http.GetStringAsync("api/sqlquery/defaultdb");
+                Database = await Http.GetStringAsync("api/sqlquery/defaultdb");
             }
         }
 
-        SavedSQL = await Http.GetFromJsonAsync<Dictionary<string, string>>("api/sqlquery/favorites");
+        if (String.IsNullOrEmpty(SavedSQL_ID))
+        {
+            SavedSQL_ID = await localStorage.GetAsync<string>("SQLQuery_savedSQL_ID");
+        }
+
+        favorites = await Http.GetFromJsonAsync<Dictionary<string, string>>("api/sqlquery/favorites");
+        if (!String.IsNullOrEmpty(SavedSQL_ID) && favorites.Values.Contains(SavedSQL_ID))
+        {
+            favorite_name = favorites.Keys.FirstOrDefault(n => favorites[n] == SavedSQL_ID);
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -266,6 +269,7 @@
                     SQL = await Http.GetStringAsync("api/sqlquery/defaultsql");
                 }
             }
+
             await js.InvokeVoidAsync("codemirror.create", textarea, SQL, "100%", "calc(100vh - 280px)", "text/x-mssql");
         }
     }
@@ -285,7 +289,7 @@
         {
             var res = (await Http.PostAsJsonAsync("api/sqlquery", new Query
                 {
-                    Database = database,
+                    Database = Database,
                     SQL = SQL
                 }));
 
@@ -308,14 +312,7 @@
                 errorMsg = await res.Content.ReadAsStringAsync();
                 queryResult = null;
             }
-
-            bool changes = await js.InvokeAsync<bool>("codemirror.getChanges", "taSQL");
-            if (changes)
-            {
-                await localStorage.SetAsync("SQLQuery_SQL", SQL);
-
-            }
-            await localStorage.SetAsync("SQLQuery_currentDB", database);
+            await SaveToLocalStorage();
         }
         catch (HttpRequestException exc)
         {
@@ -326,25 +323,14 @@
         tabs.ActivatePanel(1);
     }
 
-    private void ConvertJsonElements()
+    protected async Task SaveToLocalStorage()
     {
-        foreach (var row in queryResult.Rows)
-        {
-            for (int p = 0; p < row.Length; p++)
-            {
-                try
-                {
-                    row[p] = ((JsonElement)(row[p])).Deserialize(Type.GetType(queryResult.Columns[p].TypeName));
-                }
-                catch
-                {
-                    row[p] = String.Empty;
-                }
-            }
-        }
+        await localStorage.SetAsync("SQLQuery_SQL", SQL);
+        await localStorage.SetAsync("SQLQuery_currentDB", Database);
+        await localStorage.SetAsync("SQLQuery_savedSQL_ID", SavedSQL_ID);
     }
 
-    protected async Task Save(bool silent = false)
+    protected async Task SaveSQL(bool silent)
     {
         SQL = await js.InvokeAsync<string>("codemirror.getValue", "taSQL");
         var res = (await Http.PostAsJsonAsync($"api/sqlquery/save?name={SavedSQL_ID}", new Query
@@ -356,9 +342,10 @@
         if (res.IsSuccessStatusCode)
         {
             SavedSQL_ID = await res.Content.ReadAsStringAsync();
+            await SaveToLocalStorage();
             if (!silent)
             {
-                string uri = uriHelper.ToAbsoluteUri($"./sqlquery?db={database}&sql={SavedSQL_ID}").ToString();
+                string uri = uriHelper.ToAbsoluteUri($"./sqlquery?db={Database}&sql={SavedSQL_ID}").ToString();
                 await CopyToClipboard(uri, $"{uri} was copied to clipboard");
             }
         }
@@ -366,30 +353,44 @@
 
     protected async Task SaveFavorites()
     {
-        await Http.PostAsJsonAsync("api/sqlquery/favorites", SavedSQL);
+        await Http.PostAsJsonAsync("api/sqlquery/favorites", favorites);
     }
 
-    protected async Task SaveToFavorites()
+    protected async Task AddToFavorites()
     {
-        if (String.IsNullOrWhiteSpace(SavedSQL_name))
-        {
-            return; 
-        }
+        await SaveSQL(true);
 
-        await Save(true);
-
-        if (SavedSQL.ContainsKey(SavedSQL_name))
+        if (favorites.ContainsKey(favorite_name))
         {
-            SavedSQL[SavedSQL_name] = SavedSQL_ID; //!!! warn rewrite if else SavedSQL_ID
+            if (favorites[favorite_name] != SavedSQL_ID)
+            {
+                if ((await DialogService.ShowMessageBox(
+                    "Warning",
+                    $"Do you want to change SQL of \"{favorite_name}\" ?",
+                    yesText: "Change!", cancelText: "Cancel") != null))
+                {
+                    favorites[favorite_name] = SavedSQL_ID; 
+                    snackBar.Add($"\"{favorite_name}\" was changed", Severity.Success);
+                }
+            }
+            else
+            {
+                snackBar.Add($"No changes", Severity.Warning);
+            }
         }
         else
         {
-            if (SavedSQL.Values.Contains(SavedSQL_ID))
+            if (favorites.Values.Contains(SavedSQL_ID))
             {
-                string oldName = SavedSQL.Keys.FirstOrDefault(n => SavedSQL[n] == SavedSQL_ID);
-                SavedSQL.Remove(oldName);
+                string oldName = favorites.Keys.FirstOrDefault(n => favorites[n] == SavedSQL_ID);
+                favorites.Remove(oldName);
+                snackBar.Add($"\"{oldName}\" was renamed to \"{favorite_name}\"", Severity.Success);
             }
-            SavedSQL.Add(SavedSQL_name, SavedSQL_ID);
+            else
+            {
+                snackBar.Add($"\"{favorite_name}\" was added to favorites", Severity.Success);
+            }
+            favorites.Add(favorite_name, SavedSQL_ID);
         }
 
         await SaveFavorites();
@@ -397,31 +398,43 @@
 
     protected async Task RemoveFromFavorites()
     {
-        if (String.IsNullOrWhiteSpace(SavedSQL_name))
-        {
-            return;
-        }
-
-        if (SavedSQL.ContainsKey(SavedSQL_name))
+        if (favorites.ContainsKey(favorite_name))
         {
             if ((await DialogService.ShowMessageBox(
                 "Warning",
-                $"Do you want to remove \"{SavedSQL_name}\" from favorites ?",
+                $"Do you want to remove \"{favorite_name}\" from favorites ?",
                 yesText: "Remove!", cancelText: "Cancel") != null))
             {
-                SavedSQL.Remove(SavedSQL_name);
-                SavedSQL_name = "";
+                snackBar.Add($"\"{favorite_name}\" was removed from favorites", Severity.Success);
+                favorites.Remove(favorite_name);
+                favorite_name = "";
                 await SaveFavorites();
             }
         }
+        else
+        {
+            snackBar.Add($"\"{favorite_name}\" was not found in favorites", Severity.Warning);
+        }
     }
 
-    protected async Task LoadSQL(string id, string name)
+    protected async Task LoadFavoriteSQL(string id, string name)
     {
         SavedSQL_ID = id;
-        SavedSQL_name = name;
+        favorite_name = name;
         SQL = await Http.GetStringAsync($"api/sqlquery/savedsql?name={SavedSQL_ID}");
         await js.InvokeAsync<string>("codemirror.setValue", "taSQL", SQL);
+        queryResult = null;
+        errorMsg = "No result";
+        await SaveToLocalStorage();
+    }
+
+    protected async Task NewQuery()
+    {
+        SavedSQL_ID = "";
+        favorite_name = "";
+        SQL = "";
+        await js.InvokeAsync<string>("codemirror.setValue", "taSQL", SQL);
+        await SaveToLocalStorage();
         queryResult = null;
         errorMsg = "No result";
     }
@@ -447,6 +460,24 @@
         }
 
         return flagsFilter.Where(fv => fv.Value.HasValue).All(fv => (bool)row[fv.Key] == fv.Value);
+    }
+
+    private void ConvertJsonElements()
+    {
+        foreach (var row in queryResult.Rows)
+        {
+            for (int p = 0; p < row.Length; p++)
+            {
+                try
+                {
+                    row[p] = ((JsonElement)(row[p])).Deserialize(Type.GetType(queryResult.Columns[p].TypeName));
+                }
+                catch
+                {
+                    row[p] = String.Empty;
+                }
+            }
+        }
     }
 
     private async Task CopyToClipboard(string text, string msg)
