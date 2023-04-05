@@ -78,7 +78,7 @@ namespace PubSysLayout.Server.Controllers
                     {
                         if (readOnly && !isReadOnly)
                         {
-                            System.IO.File.SetAttributes(Path.Combine(directoryPath, $"{name}.sql"), FileAttributes.ReadOnly);
+                            System.IO.File.SetAttributes(filePath, FileAttributes.ReadOnly);
                         }
                         return Ok(name);
                     }
