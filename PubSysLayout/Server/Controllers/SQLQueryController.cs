@@ -28,7 +28,7 @@ namespace PubSysLayout.Server.Controllers
         {
             foreach (string s in _configuration.GetSection("SQLQuery:disabledCommands").Get<string[]>())
             {
-                if (Regex.Match(query.SQL, s + "(?=\\s)", RegexOptions.IgnoreCase).Success)
+                if (Regex.Match(query.SQL, s + "(?=\\s(?!@))", RegexOptions.IgnoreCase).Success)
                 {
                     return BadRequest("Invalid command");
                 }
@@ -63,7 +63,7 @@ namespace PubSysLayout.Server.Controllers
         }
 
         [HttpPost("save")]
-        public IActionResult Save(Query query, string name)
+        public IActionResult Save(Query query, string name, bool readOnly)
         {
             string directoryPath = GetDirectoryPath();
 
@@ -71,18 +71,38 @@ namespace PubSysLayout.Server.Controllers
             {
                 try
                 {
-                    string SQL = System.IO.File.ReadAllText(Path.Combine(directoryPath, $"{name}.sql"));
+                    string filePath = Path.Combine(directoryPath, $"{name}.sql");
+                    bool isReadOnly = ((System.IO.File.GetAttributes(filePath) & FileAttributes.ReadOnly) == FileAttributes.ReadOnly);
+                    string SQL = System.IO.File.ReadAllText(filePath);
                     if (SQL == query.SQL)
                     {
+                        if (readOnly && !isReadOnly)
+                        {
+                            System.IO.File.SetAttributes(Path.Combine(directoryPath, $"{name}.sql"), FileAttributes.ReadOnly);
+                        }
                         return Ok(name);
+                    }
+                    else if (isReadOnly) 
+                    {
+                        name = null;
                     }
                 }
                 catch
-                {}
+                {
+                    name= null;
+                }
             }
 
-            name = Guid.NewGuid().ToString("n").Substring(0, 12);
+            if (String.IsNullOrEmpty(name))
+            {
+                name = Guid.NewGuid().ToString("n").Substring(0, 12);
+            }
+            
             System.IO.File.WriteAllText(Path.Combine(directoryPath, $"{name}.sql"), query.SQL);
+            if (readOnly)
+            {
+                System.IO.File.SetAttributes(Path.Combine(directoryPath, $"{name}.sql"), FileAttributes.ReadOnly);
+            }
             return Ok(name);
         }
 

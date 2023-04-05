@@ -54,7 +54,7 @@
 
 <PageTitle>SQL query – @Database</PageTitle>
 
-<MudTabs Elevation="5" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6" @ref="tabs" KeepPanelsAlive="true" @onclick="() => flagsFilterOpened = false ">
+<MudTabs Elevation="5" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6" @ref="tabs" KeepPanelsAlive="true" @onclick="() => flagsFilterOpened = false " ActivePanelIndexChanged="(index) => {if(mudTable != null && !flagsFilterOpened){ mudTable.StopRender = (index == 0);}}">
     <MudTabPanel Text="Query" Icon="@Icons.Material.Filled.Build">
         <div class="d-flex mb-4">
             <div class="d-flex" style="max-width:600px;flex-grow:3">
@@ -75,7 +75,7 @@
             <MudMenu Label="Favorites" Dense="true" Variant="Variant.Filled" StartIcon="@Icons.Material.Filled.StarBorder" EndIcon="@Icons.Material.Filled.KeyboardArrowDown" Color="Color.Default" IconColor="Color.Primary" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight" Class="ml-auto">
                 @foreach (var item in favorites.OrderBy(i => i.Key))
                 {
-                    <MudMenuItem OnClick="@(() => LoadFavoriteSQL(item.Value, item.Key))">@item.Key</MudMenuItem>
+                    <MudMenuItem OnClick="@(() => LoadFavoriteSQL(item.Value, item.Key))" OnTouch="@(() => LoadFavoriteSQL(item.Value, item.Key))">@item.Key</MudMenuItem>
                 }
             </MudMenu>
         </div>
@@ -95,7 +95,7 @@
                         <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Medium" IconSize="Size.Medium" Class="mt-4 mb-4 ml-3" OnClick='async () => await CopyToClipboard(GetTableText("\t"), "Tabular data was copied to clipboard")' Disabled="@(queryResult == null || queryResult.Columns.Length == 0)" />
                     </MudTooltip>
                     <MudTooltip Text="Save query and create a shareable link">
-                        <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Share" Size="Size.Medium" IconSize="Size.Medium" Class="mt-4 mb-4 ml-3" OnClick='async () => await SaveSQL(false)' Disabled="@(String.IsNullOrWhiteSpace(SQL))" />
+                        <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Share" Size="Size.Medium" IconSize="Size.Medium" Class="mt-4 mb-4 ml-3" OnClick='async () => await SaveSQL(true)' Disabled="@(String.IsNullOrWhiteSpace(SQL))" />
                     </MudTooltip>
                     <MudSpacer />
                     <div class="d-flex">
@@ -330,10 +330,10 @@
         await localStorage.SetAsync("SQLQuery_savedSQL_ID", SavedSQL_ID);
     }
 
-    protected async Task SaveSQL(bool silent)
+    protected async Task SaveSQL(bool share)
     {
         SQL = await js.InvokeAsync<string>("codemirror.getValue", "taSQL");
-        var res = (await Http.PostAsJsonAsync($"api/sqlquery/save?name={SavedSQL_ID}", new Query
+        var res = (await Http.PostAsJsonAsync($"api/sqlquery/save?name={SavedSQL_ID}&readonly={share}", new Query
             {
                 Database = "",
                 SQL = SQL
@@ -343,7 +343,7 @@
         {
             SavedSQL_ID = await res.Content.ReadAsStringAsync();
             await SaveToLocalStorage();
-            if (!silent)
+            if (share)
             {
                 string uri = uriHelper.ToAbsoluteUri($"./sqlquery?db={Database}&sql={SavedSQL_ID}").ToString();
                 await CopyToClipboard(uri, $"{uri} was copied to clipboard");
@@ -358,25 +358,12 @@
 
     protected async Task AddToFavorites()
     {
-        await SaveSQL(true);
+        await SaveSQL(false);
 
         if (favorites.ContainsKey(favorite_name))
         {
-            if (favorites[favorite_name] != SavedSQL_ID)
-            {
-                if ((await DialogService.ShowMessageBox(
-                    "Warning",
-                    $"Do you want to change SQL of \"{favorite_name}\" ?",
-                    yesText: "Change!", cancelText: "Cancel") != null))
-                {
-                    favorites[favorite_name] = SavedSQL_ID; 
-                    snackBar.Add($"\"{favorite_name}\" was changed", Severity.Success);
-                }
-            }
-            else
-            {
-                snackBar.Add($"No changes", Severity.Warning);
-            }
+            favorites[favorite_name] = SavedSQL_ID;
+            snackBar.Add($"\"{favorite_name}\" was saved", Severity.Success);
         }
         else
         {
