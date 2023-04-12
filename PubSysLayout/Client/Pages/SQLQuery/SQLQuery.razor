@@ -92,7 +92,7 @@
                   T="object[]">
                 <ToolBarContent>
                     <MudTooltip Text="Copy tabular data to clipboard">
-                        <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Medium" IconSize="Size.Medium" Class="mt-4 mb-4 ml-3" OnClick='async () => await CopyToClipboard(GetTableText("\t"), "Tabular data was copied to clipboard")' Disabled="@(queryResult == null || queryResult.Columns.Length == 0)" />
+                        <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Medium" IconSize="Size.Medium" Class="mt-4 mb-4 ml-3" OnClick='async () => await CopyToClipboard(GetTableText(), "Tabular data was copied to clipboard")' Disabled="@(queryResult == null || queryResult.Columns.Length == 0)" />
                     </MudTooltip>
                     <MudTooltip Text="Save query and create a shareable link">
                         <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Share" Size="Size.Medium" IconSize="Size.Medium" Class="mt-4 mb-4 ml-3" OnClick='async () => await SaveSQL(true)' Disabled="@(String.IsNullOrWhiteSpace(SQL))" />
@@ -473,11 +473,11 @@
         snackBar.Add(msg, Severity.Success);
     }
 
-    private string GetTableText(string divider)
+    private string GetTableText(string divider = "\t", string qualifier = "\"")
     {
-        string th = String.Join(divider, queryResult.Columns.Select(c => c.Name));
-        string td = String.Join("\"\n\"", queryResult.Rows.Select(r => String.Join($"\"{divider}\"", r)));
-        return $"{th}\n\"{td}";
+        string th = String.Join($"{qualifier}{divider}{qualifier}", queryResult.Columns.Select(c => c.Name));
+        string td = String.Join($"{qualifier}\n{qualifier}", queryResult.Rows.Select(r => String.Join($"{qualifier}{divider}{qualifier}", r.Select(v => v.ToString().Replace(qualifier, qualifier + qualifier)))));
+        return $"{qualifier}{th}{qualifier}\n{qualifier}{td}{qualifier}";
     }
 
     private string Format(object val)
