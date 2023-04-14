@@ -476,7 +476,7 @@
     private string GetTableText(string divider = "\t", string qualifier = "\"")
     {
         string th = String.Join($"{qualifier}{divider}{qualifier}", queryResult.Columns.Select(c => c.Name));
-        string td = String.Join($"{qualifier}\n{qualifier}", queryResult.Rows.Select(r => String.Join($"{qualifier}{divider}{qualifier}", r.Select(v => v.ToString().Replace(qualifier, qualifier + qualifier)))));
+        string td = String.Join($"{qualifier}\n{qualifier}", queryResult.Rows.Select(r => String.Join($"{qualifier}{divider}{qualifier}", r.Select(v => v.ToString().Replace(qualifier, $"{qualifier}{qualifier}").Replace(divider, "")))));
         return $"{qualifier}{th}{qualifier}\n{qualifier}{td}{qualifier}";
     }
 

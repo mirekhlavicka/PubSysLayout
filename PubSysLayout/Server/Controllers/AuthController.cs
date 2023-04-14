@@ -43,7 +43,7 @@ namespace PubSysLayout.Server.Controllers
                 new Claim(ClaimTypes.Name, lr.userName),
                 //new Claim(ClaimTypes.NameIdentifier, user.IdUser.ToString()),
                 //new Claim("FullName", user.FullName),
-                new Claim(ClaimTypes.Role, "Administrator")
+                new Claim(ClaimTypes.Role, lr.userName.ToLower() == "admin" ? "Administrator" : "User")
             }, "Cookies");
 
             var claimsPrincipal = new ClaimsPrincipal(claimsIdentity);
@@ -99,10 +99,10 @@ namespace PubSysLayout.Server.Controllers
                 }
 
                 // Uncomment this code if you want to send additional claims to the client.
-                //foreach (var claim in claimsPrincipal.Claims.Except(nameClaims))
-                //{
-                //    claims.Add(new ClaimValue(claim.Type, claim.Value));
-                //}
+                foreach (var claim in claimsPrincipal.Claims.Except(nameClaims))
+                {
+                    claims.Add(new ClaimValue(claim.Type, claim.Value));
+                }
 
                 userInfo.Claims = claims;
             }
