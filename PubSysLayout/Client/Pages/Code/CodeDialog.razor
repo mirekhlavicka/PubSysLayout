@@ -44,6 +44,7 @@
 
     [Parameter] public string Code { get; set; } = "";
     [Parameter] public string Path { get; set; } = "";
+    [Parameter] public Func<string, string, Task<bool>> SaveCode { get; set; } = null;
     [Parameter] public string Ext { get; set; } = "";
 
     private ElementReference textarea;
@@ -80,18 +81,29 @@
         }
     }
 
-    private async Task Save()
+    private async Task<bool> Save()
     {        
         Code = await js.InvokeAsync<string>("codemirror.getValue", "dlgCode");
 
-        await Http.PutAsJsonAsync($"api/code?ftp={WebUtility.UrlEncode(currentDB.FTP)}", new
+        if (!String.IsNullOrEmpty(Path))
         {
-            Path = Path,
-            Code = Code
-        });
+            await Http.PutAsJsonAsync($"api/code?ftp={WebUtility.UrlEncode(currentDB.FTP)}", new
+            {
+                Path = Path,
+                Code = Code
+            });
+            snackBar.Add($"{Path} saved", Severity.Success);
+        }
+        if (SaveCode != null)
+        {
+            if (!await SaveCode(Code, MudDialog.Title))
+            {
+                return false;
+            }
+        }
 
-        snackBar.Add($"{Path} saved", Severity.Success);
         await js.InvokeAsync<bool>("codemirror.setChanges", "dlgCode", false);
+        return true;
     }
 
     private async void KeyDown(KeyboardEventArgs  e)
@@ -132,7 +144,10 @@
 
             if (res.Value)
             {
-                await Save();
+                if (!await Save())
+                {
+                    return;
+                }
             }
 
             MudDialog.Cancel();

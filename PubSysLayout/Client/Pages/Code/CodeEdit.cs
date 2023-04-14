@@ -77,5 +77,27 @@ namespace PubSysLayout.Client.Pages.Code
 
             await dialog.Result;
         }
+
+        public async Task EditSQL(string database, string name, string code, Func<string, string, Task<bool>> saveCode)
+        {
+
+            var dialog = DialogService.Show<CodeDialog>($"{database}/{name}" ,
+                new DialogParameters
+                {
+                    ["Code"] = code,
+                    ["Path"] = "",
+                    ["Ext"] = ".sql",
+                    ["SaveCode"] = saveCode
+                },
+                new DialogOptions()
+                {
+                    MaxWidth = MaxWidth.ExtraExtraLarge,
+                    FullWidth = true,
+                    CloseButton = false,
+                    CloseOnEscapeKey = false
+                });
+
+            await dialog.Result;
+        }
     }
 }
