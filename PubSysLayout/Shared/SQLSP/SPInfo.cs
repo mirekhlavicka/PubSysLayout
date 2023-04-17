@@ -13,6 +13,7 @@ namespace PubSysLayout.Shared.SQLSP
         public string Name { get; set; }
         public DateTime CreateDate { get; set; }
         public DateTime ModifyDate { get; set; }
+        public string Type { get; set; }
         public string Code { get; set; }
     }
 }

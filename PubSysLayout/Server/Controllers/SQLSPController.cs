@@ -26,20 +26,24 @@ namespace PubSysLayout.Server.Controllers
         }
 
         [HttpGet]
-        public ActionResult<IEnumerable<SPInfo>> GetSPList(string search, string database)
+        public ActionResult<IEnumerable<SPInfo>> GetSPList(string search, bool incode, string database)
         {
+            string SQL =
+                @"SELECT
+	                object_id, name, create_date, modify_date, type
+                FROM
+	                sys.objects
+                WHERE
+                    type in ('P','FN','IF','TF','TR') AND
+	                (name LIKE '%' + @search + '%'{0})
+                ORDER BY
+	                name";
+
             using (var conn = new SqlConnection(String.Format(_configuration.GetConnectionString("PubSysDefault"), database)))
             {
                 try
                 {
-                    using (var cmd = new SqlCommand(@"SELECT 
-	                                                    object_id, name, create_date, modify_date
-                                                    FROM
-	                                                    sys.procedures
-                                                    WHERE  
-	                                                    name LIKE '%' + @search + '%'
-                                                    ORDER BY
-	                                                    name", conn))
+                    using (var cmd = new SqlCommand(String.Format(SQL, incode ? " OR Object_definition(object_id) LIKE '%' + @search + '%'" : ""), conn))
                     {
                         cmd.CommandType = CommandType.Text;
                         cmd.Parameters.Add("@search", SqlDbType.NVarChar, 256).Value = search;
@@ -52,6 +56,7 @@ namespace PubSysLayout.Server.Controllers
                                 Database = database,
                                 ObjectId = dr.Field<int>("object_id"),
                                 Name = dr.Field<string>("name"),
+                                Type = dr.Field<string>("type"), 
                                 CreateDate = dr.Field<DateTime>("create_date"),
                                 ModifyDate = dr.Field<DateTime>("modify_date")
 
@@ -97,7 +102,7 @@ namespace PubSysLayout.Server.Controllers
 
                 try
                 {
-                    sp.Code = Regex.Replace(sp.Code, @"CREATE(\s+)PROCEDURE", "ALTER$1PROCEDURE", RegexOptions.IgnoreCase);
+                    sp.Code = Regex.Replace(sp.Code, @"CREATE(\s+)(PROCEDURE|FUNCTION|TRIGGER)", "ALTER$1$2", RegexOptions.IgnoreCase);
                     using (var cmd = new SqlCommand(sp.Code, conn))
                     {
                         cmd.CommandType = CommandType.Text;                        

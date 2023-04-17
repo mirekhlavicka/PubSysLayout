@@ -58,12 +58,12 @@
     <MudTabPanel Text="Query" Icon="@Icons.Material.Filled.Build">
         <div class="d-flex mb-4">
             <div class="d-flex" style="max-width:600px;flex-grow:3">
-                <MudSelect T="string" Label="Database" AnchorOrigin="Origin.BottomCenter" @bind-Value="Database" FullWidth="false" Variant="Variant.Outlined" Class="mr-6">
-                    @foreach (string db in dbList)
+                <MudAutocomplete T="string" Label="Database" AnchorOrigin="Origin.BottomCenter" @bind-Value="Database" FullWidth="false" Variant="Variant.Outlined" Class="mr-6" SearchFunc="@SearchDB" Clearable="true" spellcheck="false" MaxItems="100">
+@*                    @foreach (string db in dbList)
                     {
                         <MudSelectItem Value="@db">@db</MudSelectItem>
                     }
-                </MudSelect>
+*@                </MudAutocomplete>
                 <MudFab OnClick="async () => await LoadData()" StartIcon="@Icons.Material.Filled.PlayArrow" Color="Color.Default" IconColor="Color.Secondary" IconSize="Size.Large" Size="Size.Large" Label="Run&nbsp;" DisableElevation="true" accesskey="r" Style="margin-top:10px"></MudFab>
             </div>
             <MudSpacer />
@@ -491,5 +491,12 @@
             default:
                 return val.ToString();
         }
+    }
+
+    private async Task<IEnumerable<string>> SearchDB(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+            return dbList;
+        return dbList.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase));
     }
 }

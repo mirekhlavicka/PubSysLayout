@@ -34,66 +34,60 @@
                 <MudText Typo="Typo.h6">Stored procedures</MudText>
             </MudBadge>
             <MudSpacer />
-            <MudSelect T="string" Label="Database" AnchorOrigin="Origin.BottomCenter" FullWidth="false" Variant="Variant.Outlined" Class="mr-6" Value="database" ValueChanged="SetDB">
-                @foreach (string db in dbList)
-                {
-                    <MudSelectItem Value="@db">@db</MudSelectItem>
-                }
-            </MudSelect>
+            <MudAutocomplete T="string" Label="Database" AnchorOrigin="Origin.BottomCenter" FullWidth="false" Variant="Variant.Outlined" Class="mr-6" Value="database" ValueChanged="SetDB" SearchFunc="@SearchDB" Clearable="true" spellcheck="false" MaxItems="100" />
             <MudSpacer />
-            <MudTextField T="string" ValueChanged="@(s => OnSearch(s))" DebounceInterval="500" Placeholder="Type to search" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true" spellcheck="false"></MudTextField>
+            <MudSwitch Label="Search in code" Color="Color.Info" T="bool" Checked="@searchInCode" CheckedChanged='@((b) => OnSearch(searchString, b))' Class="mt-2" />
+            <MudTextField T="string" Value="searchString" ValueChanged="@(s => OnSearch(s, searchInCode))" DebounceInterval="500" Placeholder="Type to search" Variant="Variant.Outlined" Margin="Margin.Normal" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-3" Clearable="true" AutoFocus="true" spellcheck="false"></MudTextField>
         </ToolBarContent>
         <HeaderContent>
             <MudTh><MudTableSortLabel SortLabel="Name" T="SPInfo" InitialDirection="SortDirection.Ascending">Name</MudTableSortLabel></MudTh>
             <MudTh><MudTableSortLabel SortLabel="Create date" T="SPInfo">Create date</MudTableSortLabel></MudTh>
             <MudTh><MudTableSortLabel SortLabel="Modify date" T="SPInfo">Modify date</MudTableSortLabel></MudTh>
+            <MudTh><MudTableSortLabel SortLabel="Type" T="SPInfo">Type</MudTableSortLabel></MudTh>
         </HeaderContent>
         <RowTemplate>
             <MudTd DataLabel="Name"><MudHighlighter Text="@context.Name" HighlightedText="@searchString" /></MudTd>
             <MudTd DataLabel="Create date">@context.CreateDate</MudTd>
             <MudTd DataLabel="Modify date">@context.ModifyDate</MudTd>
+            <MudTd DataLabel="Type">@context.Type</MudTd>
         </RowTemplate>
         <NoRecordsContent>
-            <MudText>No matching records found</MudText>
+            <MudText>@(searchString == null || searchString.Length < 3 ? "Type at least 3 characters" : "No matching name found")</MudText>
         </NoRecordsContent>
         <LoadingContent>
             <MudText>Loading...</MudText>
         </LoadingContent>
-        @*    <PagerContent>
-        <MudTablePager />
-        </PagerContent>*@
     </MudTableFix>
 </MudContainer>
 
-@code {
+    @code {
     MudTable<SPInfo> mudTable;
     private string[] dbList = { };
     private string database = "";
 
     private List<SPInfo> items;
-
     private int totalItems;
-    private string searchString = null;
-    private string lastEditName = null;
 
+    private string searchString = null;
+    private bool searchInCode = false;
+    private string lastEditName = null;
 
     protected override async Task OnInitializedAsync()
     {
         dbList = await Http.GetFromJsonAsync<string[]>("api/sqlquery/dblist");
 
-        /*if (!String.IsNullOrEmpty(database))
-            {
-            database = dbList.FirstOrDefault(s => String.Equals(s, database, StringComparison.OrdinalIgnoreCase));
-        }*/
-
         if (String.IsNullOrEmpty(database))
         {
-            database = await localStorage.GetAsync<string>("SQLQuery_currentDB");
+            database = await localStorage.GetAsync<string>("SQLSP_currentDB");
             if (String.IsNullOrEmpty(database))
             {
-                database = await Http.GetStringAsync("api/sqlquery/defaultdb");
+                database = dbList.FirstOrDefault();
             }
         }
+
+        searchString = await localStorage.GetAsync<string>("SQLSP_searchString");
+        searchInCode = await localStorage.GetAsync<bool>("SQLSP_searchInCode");
+        await mudTable.ReloadServerData();
     }
 
     private async void RowClicked(TableRowClickEventArgs<SPInfo> i)
@@ -119,6 +113,14 @@
         }
     }
 
+    protected async Task SaveToLocalStorage()
+    {
+        await localStorage.SetAsync("SQLSP_currentDB", database);
+        await localStorage.SetAsync("SQLSP_searchString", searchString);
+        await localStorage.SetAsync("SQLSP_searchInCode", searchInCode);
+    }
+
+
     private string SelectedRowClassFunc(SPInfo element, int rowNumber)
     {
         if (mudTable.SelectedItem != null && mudTable.SelectedItem.Equals(element))
@@ -133,12 +135,12 @@
 
     private async Task<TableData<SPInfo>> ServerReload(TableState state)
     {
-        if (String.IsNullOrEmpty(searchString) || searchString.Length < 3)
+        if (String.IsNullOrEmpty(searchString) || String.IsNullOrEmpty(database) || searchString.Length < 3)
         {
             return new TableData<SPInfo>() { TotalItems = 0, Items = new SPInfo[] { } };
         }
 
-        IEnumerable<SPInfo> data = await Http.GetFromJsonAsync<List<SPInfo>>($"api/sqlsp?database={database}&search={searchString}");
+        IEnumerable<SPInfo> data = await Http.GetFromJsonAsync<List<SPInfo>>($"api/sqlsp?database={database}&search={searchString}&incode={searchInCode}");
 
         switch (state.SortLabel)
         {
@@ -151,17 +153,23 @@
             case "Modify date":
                 data = data.OrderByDirection(state.SortDirection, o => o.ModifyDate);
                 break;
+            case "Type":
+                data = data.OrderByDirection(state.SortDirection, o => o.Type);
+                break;
         }
 
-        totalItems = data.Count();
-        items = data/*.Skip(state.Page * state.PageSize).Take(state.PageSize)*/.ToList();
+        items = data.ToList();
+        totalItems = items.Count();
+
         return new TableData<SPInfo>() { TotalItems = totalItems, Items = items };
     }
 
-    private void OnSearch(string text)
+    private async Task OnSearch(string text, bool inCode)
     {
         searchString = text;
-        mudTable.ReloadServerData();
+        searchInCode = inCode;
+        await mudTable.ReloadServerData();
+        await SaveToLocalStorage();
     }
 
     private async Task SetDB(string db)
@@ -172,6 +180,13 @@
         {
                 mudTable.SelectedItem = items.FirstOrDefault( sp => sp.Name == lastEditName);
         }
-        StateHasChanged();
+        await SaveToLocalStorage();
+    }
+
+    private async Task<IEnumerable<string>> SearchDB(string value)
+    {
+        if (string.IsNullOrEmpty(value))
+            return dbList;
+        return dbList.Where(x => x.Contains(value, StringComparison.InvariantCultureIgnoreCase));
     }
 }
