@@ -26,7 +26,7 @@ namespace PubSysLayout.Server.Controllers
         }
 
         [HttpGet]
-        public ActionResult<IEnumerable<SPInfo>> GetSPList(string search, bool incode, string database)
+        public ActionResult<IEnumerable<SPInfo>> GetSPList(string search, bool incode, string searchtypes, string database)
         {
             string SQL =
                 @"SELECT
@@ -34,8 +34,8 @@ namespace PubSysLayout.Server.Controllers
                 FROM
 	                sys.objects
                 WHERE
-                    type in ('P','FN','IF','TF','TR') AND
-	                (name LIKE '%' + @search + '%'{0})
+                    type in ('{0}') AND
+	                (name LIKE '%' + @search + '%'{1})
                 ORDER BY
 	                name";
 
@@ -43,7 +43,9 @@ namespace PubSysLayout.Server.Controllers
             {
                 try
                 {
-                    using (var cmd = new SqlCommand(String.Format(SQL, incode ? " OR Object_definition(object_id) LIKE '%' + @search + '%'" : ""), conn))
+                    using (var cmd = new SqlCommand(String.Format(SQL, 
+                        String.Join("','", searchtypes.Split(',')), 
+                        incode ? " OR Object_definition(object_id) LIKE '%' + @search + '%'" : ""), conn))
                     {
                         cmd.CommandType = CommandType.Text;
                         cmd.Parameters.Add("@search", SqlDbType.NVarChar, 256).Value = search;

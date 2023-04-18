@@ -22,22 +22,36 @@
         }
 </style>
 
-<PageTitle>Stored procedures – @database</PageTitle>
+<PageTitle>SQL programmability objects – @database</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8">
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-8" @onclick="() => searchSQLObjectTypesOpened = false ">
     <MudTableFix @ref="mudTable" ServerData="@(new Func<TableState, Task<TableData<SPInfo>>>(ServerReload))"
                  Dense="true" Hover="true" SortLabel="Sort By" AllowUnsorted="false" Elevation="5" RowsPerPage="0" FixedHeader="true" FixedFooter="true" Height="calc(100vh - 190px)"
                  RowClassFunc="@SelectedRowClassFunc"
                  RowClass="cursor-pointer" OnRowClick="RowClicked" Virtualize="false" T="SPInfo">
         <ToolBarContent>
             <MudBadge Content='@($"{totalItems}")' Color="Color.Info" Overlap="false" Class="mt-3">
-                <MudText Typo="Typo.h6">Stored procedures</MudText>
+                <MudText Typo="Typo.h6">Programmability objects</MudText>
             </MudBadge>
             <MudSpacer />
             <MudAutocomplete T="string" Label="Database" AnchorOrigin="Origin.BottomCenter" FullWidth="false" Variant="Variant.Outlined" Class="mr-6" Value="database" ValueChanged="SetDB" SearchFunc="@SearchDB" Clearable="true" spellcheck="false" MaxItems="100" />
             <MudSpacer />
             <MudSwitch Label="Search in code" Color="Color.Info" T="bool" Checked="@searchInCode" CheckedChanged='@((b) => OnSearch(searchString, b))' Class="mt-2" />
             <MudTextField T="string" Value="searchString" ValueChanged="@(s => OnSearch(s, searchInCode))" DebounceInterval="500" Placeholder="Type to search" Variant="Variant.Outlined" Margin="Margin.Normal" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-3" Clearable="true" AutoFocus="true" spellcheck="false"></MudTextField>
+            <div class="d-flex" style="width:60px; margin-left: 10px" @onclick:stopPropagation="true">
+                <MudTooltip Text="Set searched object types">
+                    <MudIconButton OnClick="@(() => searchSQLObjectTypesOpened = !searchSQLObjectTypesOpened)" Icon="@Icons.Material.Filled.Settings"></MudIconButton>
+                </MudTooltip>
+                <MudPopover Open="searchSQLObjectTypesOpened" AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+                    <MudPaper Outlined="true" Class="px-4 py-4" MinWidth="200px">
+                        @foreach (var ot in SQLObjectTypes)
+                        {
+                            <MudCheckBox Checked="@((bool)ot[2])" T="bool" CheckedChanged="async (ch) => {ot[2] =  ch; await SetSearchSQLObjectTypes();}">@ot[1] (@ot[0])</MudCheckBox>
+                        }
+                        <MudButton Variant="Variant.Filled" Size="Size.Small" DisableElevation="true" StartIcon="@Icons.Material.Filled.Refresh" OnClick="@(async () => {searchSQLObjectTypesOpened = false; await mudTable.ReloadServerData(); } )">Update</MudButton>
+                    </MudPaper>
+                </MudPopover>
+            </div>
         </ToolBarContent>
         <HeaderContent>
             <MudTh><MudTableSortLabel SortLabel="Name" T="SPInfo" InitialDirection="SortDirection.Ascending">Name</MudTableSortLabel></MudTh>
@@ -72,6 +86,17 @@
     private bool searchInCode = false;
     private string lastEditName = null;
 
+    private bool searchSQLObjectTypesOpened = false;
+    private string searchSQLObjectTypes = "";
+    private object[][] SQLObjectTypes = 
+    {
+        new object[]{ "P", "Stored Procedure", true},
+        new object[]{"FN", "Scalar function", true},
+        new object[]{"IF", "Inline table-valued function", true},
+        new object[]{"TF", "Table-valued-function", true},
+        new object[]{"TR", "DML trigger", true}
+    };
+
     protected override async Task OnInitializedAsync()
     {
         dbList = await Http.GetFromJsonAsync<string[]>("api/sqlquery/dblist");
@@ -87,6 +112,24 @@
 
         searchString = await localStorage.GetAsync<string>("SQLSP_searchString");
         searchInCode = await localStorage.GetAsync<bool>("SQLSP_searchInCode");
+        searchSQLObjectTypes = await localStorage.GetAsync<string>("SQLSP_searchSQLObjectTypes");
+
+        if (!String.IsNullOrEmpty(searchSQLObjectTypes))
+        {
+            foreach (var ot in SQLObjectTypes)
+            {
+                ot[2] = false;
+            }
+            foreach (var id in searchSQLObjectTypes.Split(','))
+            {
+                SQLObjectTypes.Single(ot => (string)ot[0] == id)[2] = true;
+            }
+        }
+        else
+        {
+            await SetSearchSQLObjectTypes();
+        }
+
         await mudTable.ReloadServerData();
     }
 
@@ -118,6 +161,7 @@
         await localStorage.SetAsync("SQLSP_currentDB", database);
         await localStorage.SetAsync("SQLSP_searchString", searchString);
         await localStorage.SetAsync("SQLSP_searchInCode", searchInCode);
+        await localStorage.SetAsync("SQLSP_searchSQLObjectTypes", searchSQLObjectTypes);
     }
 
 
@@ -135,12 +179,12 @@
 
     private async Task<TableData<SPInfo>> ServerReload(TableState state)
     {
-        if (String.IsNullOrEmpty(searchString) || String.IsNullOrEmpty(database) || searchString.Length < 3)
+        if (String.IsNullOrEmpty(searchString) || String.IsNullOrEmpty(database) || String.IsNullOrEmpty(searchSQLObjectTypes)  || searchString.Length < 3)
         {
             return new TableData<SPInfo>() { TotalItems = 0, Items = new SPInfo[] { } };
         }
 
-        IEnumerable<SPInfo> data = await Http.GetFromJsonAsync<List<SPInfo>>($"api/sqlsp?database={database}&search={searchString}&incode={searchInCode}");
+        IEnumerable<SPInfo> data = await Http.GetFromJsonAsync<List<SPInfo>>($"api/sqlsp?database={database}&search={searchString}&incode={searchInCode}&searchtypes={searchSQLObjectTypes}");
 
         switch (state.SortLabel)
         {
@@ -178,8 +222,14 @@
         await mudTable.ReloadServerData();
         if (!String.IsNullOrEmpty(lastEditName))
         {
-                mudTable.SelectedItem = items.FirstOrDefault( sp => sp.Name == lastEditName);
+            mudTable.SelectedItem = items.FirstOrDefault( sp => sp.Name == lastEditName);
         }
+        await SaveToLocalStorage();
+    }
+
+    private async Task SetSearchSQLObjectTypes()
+    {
+        searchSQLObjectTypes = String.Join(',', SQLObjectTypes.Where(ot => (bool)ot[2]).Select(ot => (string)ot[0]));
         await SaveToLocalStorage();
     }
 
