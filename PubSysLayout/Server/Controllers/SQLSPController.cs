@@ -86,7 +86,7 @@ namespace PubSysLayout.Server.Controllers
                         cmd.CommandType = CommandType.Text;
                         cmd.Parameters.Add("@object_id", SqlDbType.Int).Value = object_id;
                         conn.Open();
-                        return Ok((string)cmd.ExecuteScalar());
+                        return Ok(Regex.Replace((string)cmd.ExecuteScalar(), @"CREATE(\s+)(PROCEDURE|FUNCTION|TRIGGER|VIEW)", "ALTER$1$2", RegexOptions.IgnoreCase));
                     }
                 }
                 catch (Exception ex)
@@ -104,7 +104,6 @@ namespace PubSysLayout.Server.Controllers
 
                 try
                 {
-                    sp.Code = Regex.Replace(sp.Code, @"CREATE(\s+)(PROCEDURE|FUNCTION|TRIGGER)", "ALTER$1$2", RegexOptions.IgnoreCase);
                     using (var cmd = new SqlCommand(sp.Code, conn))
                     {
                         cmd.CommandType = CommandType.Text;                        

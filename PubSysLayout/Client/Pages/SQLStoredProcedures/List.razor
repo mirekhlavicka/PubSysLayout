@@ -48,7 +48,7 @@
                         {
                             <MudCheckBox Checked="@((bool)ot[2])" T="bool" CheckedChanged="async (ch) => {ot[2] =  ch; await SetSearchSQLObjectTypes();}">@ot[1] (@ot[0])</MudCheckBox>
                         }
-                        <MudButton Variant="Variant.Filled" Size="Size.Small" DisableElevation="true" StartIcon="@Icons.Material.Filled.Refresh" OnClick="@(async () => {searchSQLObjectTypesOpened = false; await mudTable.ReloadServerData(); } )">Update</MudButton>
+                        <MudButton Variant="Variant.Filled" Size="Size.Small" DisableElevation="true" StartIcon="@Icons.Material.Filled.Refresh" OnClick="@(async () => {searchSQLObjectTypesOpened = false; await mudTable.ReloadServerData(); } )" Class="mt-4">Update</MudButton>
                     </MudPaper>
                 </MudPopover>
             </div>
@@ -66,7 +66,7 @@
             <MudTd DataLabel="Type">@context.Type</MudTd>
         </RowTemplate>
         <NoRecordsContent>
-            <MudText>@(searchString == null || searchString.Length < 3 ? "Type at least 3 characters" : "No matching name found")</MudText>
+            <MudText>@(searchString == null || searchString.Length < 2 ? "Type at least two characters" : "No matching name found")</MudText>
         </NoRecordsContent>
         <LoadingContent>
             <MudText>Loading...</MudText>
@@ -94,7 +94,8 @@
         new object[]{"FN", "Scalar function", true},
         new object[]{"IF", "Inline table-valued function", true},
         new object[]{"TF", "Table-valued-function", true},
-        new object[]{"TR", "DML trigger", true}
+        new object[]{"TR", "DML trigger", true},
+        new object[]{ "V", "View", true}
     };
 
     protected override async Task OnInitializedAsync()
@@ -179,7 +180,7 @@
 
     private async Task<TableData<SPInfo>> ServerReload(TableState state)
     {
-        if (String.IsNullOrEmpty(searchString) || String.IsNullOrEmpty(database) || String.IsNullOrEmpty(searchSQLObjectTypes)  || searchString.Length < 3)
+        if (String.IsNullOrEmpty(searchString) || String.IsNullOrEmpty(database) || String.IsNullOrEmpty(searchSQLObjectTypes)  || searchString.Length < 2)
         {
             return new TableData<SPInfo>() { TotalItems = 0, Items = new SPInfo[] { } };
         }
