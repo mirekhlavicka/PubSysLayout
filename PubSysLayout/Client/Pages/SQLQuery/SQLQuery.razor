@@ -162,7 +162,9 @@
                             }
                         </MudTd>
                     }
-                    <MudTd />
+                    <MudTd DataLabel="">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" @onclick="@(()=>OpenEditRowDialog(@context))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text" Title="Edit row" />
+                    </MudTd>
                 </RowTemplate>
                 <PagerContent>
                     <MudTablePager PageSizeOptions="new int[]{50, 100, 200, 500, 1000}" />
@@ -197,6 +199,7 @@
     private string[] dbList = { };
     private string SQL = "";
 
+    private Query query = null;
     private QueryResult queryResult = null;
     private string errorMsg = "No result";
     private bool inProgress = false;
@@ -287,11 +290,12 @@
         SQL = await js.InvokeAsync<string>("codemirror.getValue", "taSQL");
         try
         {
-            var res = (await Http.PostAsJsonAsync("api/sqlquery", new Query
-                {
-                    Database = Database,
-                    SQL = SQL
-                }));
+            query = new Query
+            {
+                Database = Database,
+                SQL = SQL
+            };
+            var res = (await Http.PostAsJsonAsync("api/sqlquery",query));
 
             if (res.IsSuccessStatusCode)
             {
@@ -425,6 +429,60 @@
         queryResult = null;
         errorMsg = "No result";
     }
+
+    private async void OpenEditRowDialog(object[] row)
+    {
+        var options = new DialogOptions
+            {
+                MaxWidth = MaxWidth.Large,
+                CloseButton = true
+            };
+
+        var parameters = new DialogParameters();
+
+        parameters.Add("Row", row);
+        parameters.Add("QueryResult", queryResult);
+
+        object[] beforeEdit = (object[])row.Clone();
+
+        var result = await DialogService.Show<EditRowDialog>($"{Database} edit row", parameters, options).Result;
+
+        if (!result.Canceled)
+        {
+            query.Row = row;
+            query.Action = "UPDATE";            
+
+            var response = (await Http.PutAsJsonAsync($"api/sqlquery", query));
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var msg = await response.Content.ReadAsStringAsync();
+                await DialogService.ShowMessageBox("Error", msg);
+            }
+            else
+            {
+                snackBar.Add($"Row updated", Severity.Success);
+                /*var updrow = await response.Content.ReadFromJsonAsync<object[]>();
+                for (int p = 0; p < row.Length; p++)
+                {
+                    try
+                    {
+                        row[p] = ((JsonElement)(updrow[p])).Deserialize(Type.GetType(queryResult.Columns[p].TypeName));
+                    }
+                    catch
+                    {
+                        row[p] = String.Empty;
+                    }
+                }*/
+            }
+        }
+        else
+        {
+            beforeEdit.CopyTo(row, 0);
+        }
+        StateHasChanged();
+    }
+
 
     private bool FilterFunc(object[] row)
     {

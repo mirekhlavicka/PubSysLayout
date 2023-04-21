@@ -16,6 +16,7 @@ namespace PubSysLayout.Shared.SQLQuery
     { 
         public string Name { get; set; }
         public string TypeName { get; set; }
+        public bool ReadOnly { get; set; }
     }
 
 }

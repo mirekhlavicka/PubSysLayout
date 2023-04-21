@@ -54,12 +54,14 @@
             </div>
         </ToolBarContent>
         <HeaderContent>
+            <MudTh>Database</MudTh>
             <MudTh><MudTableSortLabel SortLabel="Name" T="SPInfo" InitialDirection="SortDirection.Ascending">Name</MudTableSortLabel></MudTh>
             <MudTh><MudTableSortLabel SortLabel="Create date" T="SPInfo">Create date</MudTableSortLabel></MudTh>
             <MudTh><MudTableSortLabel SortLabel="Modify date" T="SPInfo">Modify date</MudTableSortLabel></MudTh>
             <MudTh><MudTableSortLabel SortLabel="Type" T="SPInfo">Type</MudTableSortLabel></MudTh>
         </HeaderContent>
         <RowTemplate>
+            <MudTd DataLabel="Database">@context.Database</MudTd>
             <MudTd DataLabel="Name"><MudHighlighter Text="@context.Name" HighlightedText="@searchString" /></MudTd>
             <MudTd DataLabel="Create date">@context.CreateDate</MudTd>
             <MudTd DataLabel="Modify date">@context.ModifyDate</MudTd>

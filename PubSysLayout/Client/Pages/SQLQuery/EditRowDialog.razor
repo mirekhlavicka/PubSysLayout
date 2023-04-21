@@ -1,0 +1,64 @@
+﻿@inject HttpClient Http
+@inject IJSRuntime js
+@inject NavigationManager uriHelper
+@inject MudBlazor.ISnackbar snackBar
+@inject IDialogService DialogService
+@inject Clipboard clipboard
+@using PubSysLayout.Shared.Model
+@using PubSysLayout.Shared.SQLQuery;
+
+
+<MudDialog DefaultFocus="DefaultFocus.Element">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Edit" Class="mr-3 mb-n1" />
+            @MudDialog.Title
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudContainer Style="max-height: 500px; overflow-y: scroll">
+            @for (int i = 0; i < Row.Length; i++)
+            {
+                int p = i; //Intermediate counter
+                object val = Row[p];
+                @if (val is string)
+                {
+                    <MudTextField Value="@((string)val)" ValueChanged="(v) => Row[p] = v" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" T="string" ReadOnly="@(QueryResult.Columns[p].ReadOnly)"></MudTextField>
+                }
+                else if (val is int)
+                {
+                    <MudNumericField Value="@((int)val)" ValueChanged="(v) => Row[p] = v" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" T="int" ReadOnly="@(QueryResult.Columns[p].ReadOnly)"></MudNumericField>
+                }
+                else if (val is byte)
+                {
+                    <MudNumericField Value="@((byte)val)" ValueChanged="(v) => Row[p] = v" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" T="byte" ReadOnly="@(QueryResult.Columns[p].ReadOnly)"></MudNumericField>
+                }
+                else if (val is Int16)
+                {
+                    <MudNumericField Value="@((Int16)val)" ValueChanged="(v) => Row[p] = v" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" T="Int16" ReadOnly="@(QueryResult.Columns[p].ReadOnly)"></MudNumericField>
+                }
+                else if (val is bool)
+                {
+                    <MudCheckBox Checked="@((bool)val)" CheckedChanged="(v) => Row[p] = v" Label="@(QueryResult.Columns[p].Name)" T="bool" ReadOnly="@(QueryResult.Columns[p].ReadOnly)"></MudCheckBox>
+                }
+            }
+        </MudContainer>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Filled">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="OK" Variant="Variant.Filled">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public object[] Row { get; set; }
+    [Parameter] public QueryResult QueryResult { get; set; }
+
+    void OK() => MudDialog.Close(DialogResult.Ok(true));
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+}
