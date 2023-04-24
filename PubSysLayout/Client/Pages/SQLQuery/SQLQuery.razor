@@ -97,6 +97,14 @@
                     <MudTooltip Text="Save query and create a shareable link">
                         <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Share" Size="Size.Medium" IconSize="Size.Medium" Class="mt-4 mb-4 ml-3" OnClick='async () => await SaveSQL(true)' Disabled="@(String.IsNullOrWhiteSpace(SQL))" />
                     </MudTooltip>
+                    @if (!String.IsNullOrEmpty(queryResult.TableName))
+                    {
+                        <MudSpacer />
+                        <MudTooltip Text="Add new row">
+                            <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-4 mb-4 ml-3" OnClick='AddNewRow' />
+                        </MudTooltip>
+
+                    }
                     <MudSpacer />
                     <div class="d-flex">
                     @if (flagsFilter.Count > 0)
@@ -163,7 +171,10 @@
                         </MudTd>
                     }
                     <MudTd DataLabel="">
-                        <MudIconButton Icon="@Icons.Material.Filled.Edit" @onclick="@(()=>OpenEditRowDialog(@context))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text" Title="Edit row" />
+                        @if(!String.IsNullOrEmpty(queryResult.TableName))
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.Edit" @onclick="@(()=>OpenEditRowDialog(@context))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text" Title="Edit row" />
+                        }
                     </MudTd>
                 </RowTemplate>
                 <PagerContent>
@@ -430,59 +441,51 @@
         errorMsg = "No result";
     }
 
-    private async void OpenEditRowDialog(object[] row)
+    private async Task OpenEditRowDialog(object[] row)
     {
         var options = new DialogOptions
-            {
-                MaxWidth = MaxWidth.Large,
-                CloseButton = true
-            };
+        {
+            MaxWidth = MaxWidth.Medium,
+            CloseButton = true
+        };
 
         var parameters = new DialogParameters();
 
-        parameters.Add("Row", row);
-        parameters.Add("QueryResult", queryResult);
+        query.Row = row;
+        parameters.Add("Query", query);
+        parameters.Add("QueryResult", queryResult);        
 
-        object[] beforeEdit = (object[])row.Clone();
+        var result = await DialogService.Show<EditRowDialog>($"{Database} - {queryResult.TableName}", parameters, options).Result;
 
-        var result = await DialogService.Show<EditRowDialog>($"{Database} edit row", parameters, options).Result;
-
-        if (!result.Canceled)
-        {
-            query.Row = row;
-            query.Action = "UPDATE";            
-
-            var response = (await Http.PutAsJsonAsync($"api/sqlquery", query));
-
-            if (!response.IsSuccessStatusCode)
-            {
-                var msg = await response.Content.ReadAsStringAsync();
-                await DialogService.ShowMessageBox("Error", msg);
-            }
-            else
-            {
-                snackBar.Add($"Row updated", Severity.Success);
-                /*var updrow = await response.Content.ReadFromJsonAsync<object[]>();
-                for (int p = 0; p < row.Length; p++)
-                {
-                    try
-                    {
-                        row[p] = ((JsonElement)(updrow[p])).Deserialize(Type.GetType(queryResult.Columns[p].TypeName));
-                    }
-                    catch
-                    {
-                        row[p] = String.Empty;
-                    }
-                }*/
-            }
-        }
-        else
-        {
-            beforeEdit.CopyTo(row, 0);
-        }
         StateHasChanged();
     }
 
+    private async Task AddNewRow()
+    {
+        object[] row = queryResult.Columns.Select(c => GetDefault(Type.GetType(c.TypeName))).ToArray();
+
+        await OpenEditRowDialog(row);
+    }
+
+    private object GetDefault(Type type)
+    {
+        if (type == typeof(DateTime))
+        {
+            return DateTime.Now;
+        }
+        else if (type == typeof(string))
+        {
+            return "";
+        }
+        else if (type.IsValueType)
+        {
+            return Activator.CreateInstance(type);
+        }
+        else
+        {
+            return null;
+        }
+    }
 
     private bool FilterFunc(object[] row)
     {

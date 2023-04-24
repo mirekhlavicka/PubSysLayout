@@ -8,6 +8,7 @@ namespace PubSysLayout.Shared.SQLQuery
 {
     public class QueryResult
     {
+        public string TableName { get; set; }
         public QueryResultColumn[] Columns { get; set; }   
         public object[][] Rows { get; set; }
     }
@@ -17,6 +18,7 @@ namespace PubSysLayout.Shared.SQLQuery
         public string Name { get; set; }
         public string TypeName { get; set; }
         public bool ReadOnly { get; set; }
+        public int MaxLength { get; set; }
     }
 
 }

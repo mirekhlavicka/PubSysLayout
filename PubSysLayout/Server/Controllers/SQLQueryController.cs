@@ -47,11 +47,13 @@ namespace PubSysLayout.Server.Controllers
                             adapter.Fill(0, maxRowCount, resultTable);
                             return Ok(new QueryResult
                             {
+                                TableName = resultTable.TableName,
                                 Columns = resultTable.Columns.Cast<DataColumn>().Select(dc => new QueryResultColumn 
                                 { 
                                     Name = dc.ColumnName, 
                                     TypeName = dc.DataType.ToString(),
-                                    ReadOnly = dc.ReadOnly
+                                    ReadOnly = dc.ReadOnly,
+                                    MaxLength = dc.MaxLength
                                 }).ToArray(),
                                 Rows = ConvertToArray(resultTable)
                             });
@@ -76,27 +78,13 @@ namespace PubSysLayout.Server.Controllers
                     {
                         using (var adapter = new SqlDataAdapter(cmd))
                         {
-                            /*conn.Open();
-                            using SqlDataReader dataReader = cmd.ExecuteReader(CommandBehavior.KeyInfo);
-                            DataTable schemaTable = dataReader.GetSchemaTable();
-                            dataReader.Close();
-                            string[] key = schemaTable.AsEnumerable().Where(dr => dr.Field<bool>("IsKey")).Select(dr => dr.Field<string>("ColumnName")).ToArray();*/
-
                             DataSet dataSet = new DataSet();
                             SqlCommandBuilder builder = new SqlCommandBuilder(adapter);
-                            builder.QuotePrefix = "[";
-                            builder.QuoteSuffix = "]";
-
+                            /*builder.QuotePrefix = "[";
+                            builder.QuoteSuffix = "]";*/
                             adapter.MissingSchemaAction = MissingSchemaAction.AddWithKey;
                             adapter.Fill(dataSet);
                             DataTable table = dataSet.Tables[0];
-
-                            string[] key;
-                            using (DataTableReader reader = new DataTableReader(table))
-                            {
-                                DataTable schemaTable = reader.GetSchemaTable();
-                                key = schemaTable.AsEnumerable().Where(dr => dr.Field<bool>("IsKey")).Select(dr => dr.Field<string>("ColumnName")).ToArray();
-                            }
 
                             DataRow srcRow = table.NewRow();
                             for (int i = 0; i < query.Row.Length; i++)
@@ -104,7 +92,7 @@ namespace PubSysLayout.Server.Controllers
                                 srcRow[i] = ((JsonElement)(query.Row[i])).Deserialize(table.Columns[i].DataType);
                             }
                             
-                            DataRow targetRow = table.AsEnumerable().FirstOrDefault(dr => key.All(k => dr[k].Equals(srcRow[k])));
+                            DataRow targetRow = table.AsEnumerable().FirstOrDefault(dr => table.PrimaryKey.All(k => dr[k].Equals(srcRow[k])));
 
                             for (int i = 0; i < query.Row.Length; i++)
                             {
