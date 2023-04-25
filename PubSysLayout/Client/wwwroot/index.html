@@ -30,6 +30,16 @@
             return true;
         }
 
+        window.scrollToElementClass = (elementClass) => {
+            var element = document.querySelector('.' + elementClass);
+            if (!element) {
+                console.warn('element was not found', elementClass);
+                return false;
+            }
+            element.scrollIntoView();
+            return true;
+        }
+
         window.focusAt = (x, y) => {
             const element = document.elementFromPoint(x, y)
             if (element) {

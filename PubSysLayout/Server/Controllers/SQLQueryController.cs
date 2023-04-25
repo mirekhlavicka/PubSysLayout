@@ -91,22 +91,53 @@ namespace PubSysLayout.Server.Controllers
                             {
                                 srcRow[i] = ((JsonElement)(query.Row[i])).Deserialize(table.Columns[i].DataType);
                             }
-                            
-                            DataRow targetRow = table.AsEnumerable().FirstOrDefault(dr => table.PrimaryKey.All(k => dr[k].Equals(srcRow[k])));
 
-                            for (int i = 0; i < query.Row.Length; i++)
+                            if (query.Action == "UPDATE")
                             {
-                                if (table.Columns[i].ReadOnly)
+                                DataRow targetRow = table.AsEnumerable().FirstOrDefault(dr => table.PrimaryKey.All(k => dr[k].Equals(srcRow[k])));
+
+                                if (targetRow == null)
                                 {
-                                    continue;
+                                    table.Rows.Add(srcRow);
+                                    dataSet.AcceptChanges();
+                                    srcRow.SetModified();
                                 }
-                                targetRow[i] = srcRow[i];
+                                else
+                                {
+                                    for (int i = 0; i < query.Row.Length; i++)
+                                    {
+                                        if (table.Columns[i].ReadOnly)
+                                        {
+                                            continue;
+                                        }
+                                        targetRow[i] = srcRow[i];
+                                    }
+                                }
+                            }
+                            else if (query.Action == "INSERT")
+                            {
+                                table.Rows.Add(srcRow);
+
+                                string identity_name = null;
+
+                                try
+                                {
+                                    identity_name = table.Columns.Cast<DataColumn>().SingleOrDefault(c => c.AutoIncrement).ColumnName;
+                                }
+                                catch { }
+
+                                if (identity_name != null)
+                                {
+                                    //https://stackoverflow.com/questions/136536/possible-to-retrieve-identity-column-value-on-insert-using-sqlcommandbuilder-wi
+                                    adapter.InsertCommand = builder.GetInsertCommand().Clone();
+                                    adapter.InsertCommand.CommandText += $"; SELECT {identity_name} = SCOPE_IDENTITY()";
+                                    adapter.InsertCommand.UpdatedRowSource = UpdateRowSource.FirstReturnedRecord;
+                                }
                             }
 
-                            //https://stackoverflow.com/questions/136536/possible-to-retrieve-identity-column-value-on-insert-using-sqlcommandbuilder-wi
                             adapter.Update(dataSet, table.TableName);
                             dataSet.AcceptChanges();
-                            return Ok(/*targetRow.ItemArray*/);
+                            return Ok(query.Action == "INSERT" ? srcRow.ItemArray : null);
                         }
                     }
                 }

@@ -50,6 +50,14 @@
     .mud-table-dense * .mud-table-row .mud-table-cell {
         padding-inline-end: 5px;
     }
+
+    .selected {
+        background-color: #1E88E5 !important;
+    }
+
+        .selected > td, .selected .mud-icon-default {
+            color: white !important;
+        }
 </style>
 
 <PageTitle>SQL query – @Database</PageTitle>
@@ -89,6 +97,7 @@
                   Hover="true" FixedHeader="true" FixedFooter="true" HorizontalScrollbar="true" Dense="true" Bordered="true" Striped="true"
                   Height="calc(100vh - 323px)" HeaderClass="table-head-bordered" FooterClass="table-foot-bordered" Elevation="2"
                   Filter="new Func<object[],bool>(FilterFunc)"
+                  RowClassFunc="@SelectedRowClassFunc"  
                   T="object[]">
                 <ToolBarContent>
                     <MudTooltip Text="Copy tabular data to clipboard">
@@ -101,7 +110,7 @@
                     {
                         <MudSpacer />
                         <MudTooltip Text="Add new row">
-                            <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-4 mb-4 ml-3" OnClick='AddNewRow' />
+                            <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-4 mb-4 ml-3" OnClick='@(()=>OpenEditRowDialog(null))' />
                         </MudTooltip>
 
                     }
@@ -455,36 +464,20 @@
         parameters.Add("Query", query);
         parameters.Add("QueryResult", queryResult);        
 
-        var result = await DialogService.Show<EditRowDialog>($"{Database} - {queryResult.TableName}", parameters, options).Result;
+        mudTable.SelectedItem = row;
+        var result = await DialogService.Show<EditRowDialog>($"{Database} - {queryResult.TableName}{(row == null ? " - new row" : "")}", parameters, options).Result;
+        if (!result.Canceled)
+        { 
+            mudTable.SelectedItem = (object[])result.Data;
 
-        StateHasChanged();
-    }
-
-    private async Task AddNewRow()
-    {
-        object[] row = queryResult.Columns.Select(c => GetDefault(Type.GetType(c.TypeName))).ToArray();
-
-        await OpenEditRowDialog(row);
-    }
-
-    private object GetDefault(Type type)
-    {
-        if (type == typeof(DateTime))
-        {
-            return DateTime.Now;
-        }
-        else if (type == typeof(string))
-        {
-            return "";
-        }
-        else if (type.IsValueType)
-        {
-            return Activator.CreateInstance(type);
-        }
-        else
-        {
-            return null;
-        }
+            StateHasChanged();
+            await Task.Delay(300);
+            
+            mudTable.NavigateTo((int)System.Math.Floor((double)(mudTable.FilteredItems.TakeWhile(r => r != row).Count()) / mudTable.RowsPerPage));
+            
+            await Task.Delay(100);
+            await js.InvokeVoidAsync("scrollToElementClass", "selected");
+        }        
     }
 
     private bool FilterFunc(object[] row)
@@ -551,6 +544,18 @@
                 return ((DateTime)val).ToString("g");
             default:
                 return val.ToString();
+        }
+    }
+
+    private string SelectedRowClassFunc(object[] element, int rowNumber)
+    {
+        if (mudTable.SelectedItem != null && mudTable.SelectedItem.Equals(element))
+        {
+            return "selected";
+        }
+        else
+        {
+            return string.Empty;
         }
     }
 

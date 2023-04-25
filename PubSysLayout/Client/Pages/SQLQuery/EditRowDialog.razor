@@ -6,6 +6,8 @@
 @inject Clipboard clipboard
 @using PubSysLayout.Shared.Model
 @using PubSysLayout.Shared.SQLQuery;
+@using System.ComponentModel;
+@using System.Text.Json;
 
 
 <MudDialog DefaultFocus="DefaultFocus.Element">
@@ -53,6 +55,10 @@
                 {
                     <MudCheckBox Checked="@((bool)val)" CheckedChanged="(v) => editRow[p] = v" Label="@(QueryResult.Columns[p].Name)" T="bool" ReadOnly="@(QueryResult.Columns[p].ReadOnly)"></MudCheckBox>
                 }
+                else
+                {
+                    <MudTextField Value="@(val.ToString())" ValueChanged='async (v) => {try{editRow[p] = TypeDescriptor.GetConverter(type).ConvertFrom(v);} catch(Exception exc){await DialogService.ShowMessageBox(" Error", exc.Message);}}' Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" T="string" ReadOnly="@(QueryResult.Columns[p].ReadOnly)" MaxLength="@(QueryResult.Columns[p].MaxLength)"></MudTextField>
+                }
             }
         </MudContainer>
     </DialogContent>
@@ -73,10 +79,40 @@
 
     protected override void OnInitialized()
     {
-        row = Query.Row;
-        editRow = (object[])Query.Row.Clone();
-        Query.Action = "UPDATE";
-        Query.Row = editRow;
+        if (Query.Row != null)
+        {
+            row = Query.Row;
+            editRow = (object[])Query.Row.Clone();
+            Query.Action = "UPDATE";
+            Query.Row = editRow;
+        }
+        else
+        {
+            row = Query.Row;
+            editRow = QueryResult.Columns.Select(c => GetDefault(Type.GetType(c.TypeName))).ToArray();
+            Query.Action = "INSERT";
+            Query.Row = editRow;
+        }
+    }
+
+    private object GetDefault(Type type)
+    {
+        if (type == typeof(DateTime))
+        {
+            return DateTime.Now;
+        }
+        else if (type == typeof(string))
+        {
+            return "";
+        }
+        else if (type.IsValueType)
+        {
+            return Activator.CreateInstance(type);
+        }
+        else
+        {
+            return null;
+        }
     }
 
     private async Task OK()
@@ -90,21 +126,33 @@
         }
         else
         {
-            editRow.CopyTo(row, 0);
-            snackBar.Add($"Row updated", Severity.Success);
-            MudDialog.Close(DialogResult.Ok(true));
-            /*var updrow = await response.Content.ReadFromJsonAsync<object[]>();
-            for (int p = 0; p < row.Length; p++)
+            if (row != null)
             {
-                try
+                editRow.CopyTo(row, 0);
+                snackBar.Add($"Row updated", Severity.Success);
+            }
+            else
+            {
+                row = editRow;
+                var updrow = await response.Content.ReadFromJsonAsync<object[]>();
+                for (int p = 0; p < row.Length; p++)
                 {
-                    row[p] = ((JsonElement)(updrow[p])).Deserialize(Type.GetType(queryResult.Columns[p].TypeName));
-                }
-                catch
-                {
+                    //try
+                    {
+                        row[p] = ((JsonElement)(updrow[p])).Deserialize(Type.GetType(QueryResult.Columns[p].TypeName));
+                    }
+                    /*catch
+                    {
                     row[p] = String.Empty;
+                }*/
                 }
-            }*/
+                var tmp = QueryResult.Rows.ToList();
+                tmp.Add(row);
+                QueryResult.Rows = tmp.ToArray();
+                snackBar.Add($"Row added", Severity.Success);
+
+            }
+            MudDialog.Close(DialogResult.Ok(row));
         }
     }
 
