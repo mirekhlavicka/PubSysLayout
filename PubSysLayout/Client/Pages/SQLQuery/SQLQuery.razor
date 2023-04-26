@@ -66,12 +66,7 @@
     <MudTabPanel Text="Query" Icon="@Icons.Material.Filled.Build">
         <div class="d-flex mb-4">
             <div class="d-flex" style="max-width:600px;flex-grow:3">
-                <MudAutocomplete T="string" Label="Database" AnchorOrigin="Origin.BottomCenter" @bind-Value="Database" FullWidth="false" Variant="Variant.Outlined" Class="mr-6" SearchFunc="@SearchDB" Clearable="true" spellcheck="false" MaxItems="100">
-@*                    @foreach (string db in dbList)
-                    {
-                        <MudSelectItem Value="@db">@db</MudSelectItem>
-                    }
-*@                </MudAutocomplete>
+                <MudAutocomplete T="string" Label="Database" AnchorOrigin="Origin.BottomCenter" @bind-Value="Database" FullWidth="false" Variant="Variant.Outlined" Class="mr-6" SearchFunc="@SearchDB" Clearable="true" spellcheck="false" MaxItems="100" />
                 <MudFab OnClick="async () => await LoadData()" StartIcon="@Icons.Material.Filled.PlayArrow" Color="Color.Default" IconColor="Color.Secondary" IconSize="Size.Large" Size="Size.Large" Label="Run&nbsp;" DisableElevation="true" accesskey="r" Style="margin-top:10px"></MudFab>
             </div>
             <MudSpacer />
@@ -467,16 +462,21 @@
         mudTable.SelectedItem = row;
         var result = await DialogService.Show<EditRowDialog>($"{Database} - {queryResult.TableName}{(row == null ? " - new row" : "")}", parameters, options).Result;
         if (!result.Canceled)
-        { 
-            mudTable.SelectedItem = (object[])result.Data;
-
+        {
+            row = (object[])result.Data;
+            mudTable.SelectedItem = row;
             StateHasChanged();
-            await Task.Delay(300);
-            
-            mudTable.NavigateTo((int)System.Math.Floor((double)(mudTable.FilteredItems.TakeWhile(r => r != row).Count()) / mudTable.RowsPerPage));
-            
-            await Task.Delay(100);
-            await js.InvokeVoidAsync("scrollToElementClass", "selected");
+            if (row != null)
+            {
+                await Task.Delay(300);
+                int pageIndex = (int)System.Math.Floor((double)(mudTable.FilteredItems.TakeWhile(r => r != row).Count()) / mudTable.RowsPerPage);
+                if (pageIndex != mudTable.CurrentPage)
+                {
+                    mudTable.NavigateTo(pageIndex);
+                    await Task.Delay(100);
+                    await js.InvokeVoidAsync("scrollToElementClass", "selected");
+                }
+            }
         }        
     }
 

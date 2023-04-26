@@ -19,6 +19,7 @@ namespace PubSysLayout.Shared.SQLQuery
         public string TypeName { get; set; }
         public bool ReadOnly { get; set; }
         public int MaxLength { get; set; }
+        public bool AllowDBNull { get; set; }
     }
 
 }

@@ -18,7 +18,7 @@
         </MudText>
     </TitleContent>
     <DialogContent>
-        <MudContainer Style="max-height: 500px; overflow-y: scroll">
+        <MudContainer Style="max-height: calc(100vh - 220px); overflow-y: scroll; padding-right: 12px">
             @for (int i = 0; i < editRow.Length; i++)
             {
                 int p = i; //Intermediate counter
@@ -26,7 +26,7 @@
                 Type type = Type.GetType(QueryResult.Columns[p].TypeName);
                 @if (type == typeof(string))
                 {
-                    <MudTextField Value="@((string)val)" ValueChanged="(v) => editRow[p] = v" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" T="string" ReadOnly="@(QueryResult.Columns[p].ReadOnly)" MaxLength="@(QueryResult.Columns[p].MaxLength)"></MudTextField>
+                    <MudTextField Value="@((string)val)" ValueChanged="(v) => editRow[p] = v" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" T="string" ReadOnly="@(QueryResult.Columns[p].ReadOnly)" MaxLength="@(QueryResult.Columns[p].MaxLength)" Lines="@(QueryResult.Columns[p].MaxLength > 100 ? Math.Min(QueryResult.Columns[p].MaxLength / 100, 5)  : 1)"></MudTextField>
                 }
                 else if (type == typeof(int))
                 {
@@ -47,8 +47,16 @@
                 else if (type == typeof(DateTime))
                 {
                     <div class="d-flex">
-                        <MudDatePicker Date="@(((DateTime)val).Date)" DateChanged="(v) => editRow[p] = (v.Value.Date).Add(((DateTime)editRow[p]).TimeOfDay)" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" ReadOnly="@(QueryResult.Columns[p].ReadOnly)"></MudDatePicker>
-                        <MudTimePicker Time="@(((DateTime)val).TimeOfDay)" TimeChanged="(v) => editRow[p] = ((DateTime)editRow[p]).Date.Add(v.Value)" Label="time" Variant="Variant.Text" ReadOnly="@(QueryResult.Columns[p].ReadOnly)" Class="ml-2"></MudTimePicker>
+                        <MudDatePicker @ref="datePickers[QueryResult.Columns[p].Name]" AutoClose="true" Editable="true" Placeholder="Select Date" Date="@(((DateTime)val).Date)" DateChanged="(v) => {if(v.HasValue) editRow[p] = (v.Value.Date).Add(((DateTime)editRow[p]).TimeOfDay);}" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" ReadOnly="@(QueryResult.Columns[p].ReadOnly)">
+                            <PickerActions>
+                                <MudButton Class="mr-auto align-self-start" OnClick="@(() => {editRow[p] = DateTime.Today; datePickers[QueryResult.Columns[p].Name].Close(); })">Today</MudButton>
+                            </PickerActions>
+                        </MudDatePicker>
+                        <MudTimePicker @ref="timePickers[QueryResult.Columns[p].Name]" AutoClose="true" Editable="true" Placeholder="Select Time" Time="@(((DateTime)val).TimeOfDay)" TimeChanged="(v) => {if(v.HasValue) editRow[p] = ((DateTime)editRow[p]).Date.Add(v.Value); }" Label="time" Variant="Variant.Text" ReadOnly="@(QueryResult.Columns[p].ReadOnly)" Class="ml-4">
+                            <PickerActions>
+                                <MudButton Class="mr-auto align-self-start" OnClick="@(() => {editRow[p] = DateTime.Now; timePickers[QueryResult.Columns[p].Name].Close(); })">Now</MudButton>
+                            </PickerActions>
+                        </MudTimePicker>
                     </div>
                 }
                 else if (type == typeof(bool))
@@ -63,8 +71,9 @@
         </MudContainer>
     </DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel" Variant="Variant.Filled">Cancel</MudButton>
-        <MudButton Color="Color.Primary" OnClick="OK" Variant="Variant.Filled" accesskey="s">Save</MudButton>
+        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Secondary" OnClick="Delete" Class="ml-6" Title="Delete row" Disabled="@(Query.OriginalRow == null)"></MudIconButton>
+        <MudButton OnClick="Cancel" Variant="Variant.Filled" Class="ml-auto">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="OK" Variant="Variant.Filled" accesskey="s" Class="mr-5">Save</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -77,6 +86,9 @@
     private object[] editRow = null;
     private object[] row = null;
 
+    private Dictionary<string, MudDatePicker> datePickers = new Dictionary<string, MudDatePicker>();
+    private Dictionary<string, MudTimePicker> timePickers = new Dictionary<string, MudTimePicker>();
+
     protected override void OnInitialized()
     {
         if (Query.Row != null)
@@ -85,13 +97,15 @@
             editRow = (object[])Query.Row.Clone();
             Query.Action = "UPDATE";
             Query.Row = editRow;
+            Query.OriginalRow = row;
         }
         else
         {
-            row = Query.Row;
+            row = null;
             editRow = QueryResult.Columns.Select(c => GetDefault(Type.GetType(c.TypeName))).ToArray();
             Query.Action = "INSERT";
             Query.Row = editRow;
+            Query.OriginalRow = null;
         }
     }
 
@@ -137,22 +151,42 @@
                 var updrow = await response.Content.ReadFromJsonAsync<object[]>();
                 for (int p = 0; p < row.Length; p++)
                 {
-                    //try
-                    {
-                        row[p] = ((JsonElement)(updrow[p])).Deserialize(Type.GetType(QueryResult.Columns[p].TypeName));
-                    }
-                    /*catch
-                    {
-                    row[p] = String.Empty;
-                }*/
+                    row[p] = ((JsonElement)(updrow[p])).Deserialize(Type.GetType(QueryResult.Columns[p].TypeName));
                 }
                 var tmp = QueryResult.Rows.ToList();
                 tmp.Add(row);
                 QueryResult.Rows = tmp.ToArray();
                 snackBar.Add($"Row added", Severity.Success);
-
             }
             MudDialog.Close(DialogResult.Ok(row));
+        }
+    }
+
+    private async Task Delete()
+    {
+        if ((await DialogService.ShowMessageBox(
+                    "Warning",
+                    $"Do you want to delete row in table \"{QueryResult.TableName}\" ?",
+                    yesText: "Delete!", cancelText: "Cancel") != null))
+        {
+
+            Query.Action = "DELETE";
+            var response = (await Http.PutAsJsonAsync($"api/sqlquery", Query));
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var msg = await response.Content.ReadAsStringAsync();
+                await DialogService.ShowMessageBox("Error", msg);
+                Query.Action = "UPDATE";
+            }
+            else
+            {
+                var tmp = QueryResult.Rows.ToList();
+                tmp.Remove(row);
+                QueryResult.Rows = tmp.ToArray();
+                snackBar.Add($"Row deleted", Severity.Success);
+                MudDialog.Close(DialogResult.Ok((object[])(null)));
+            }
         }
     }
 

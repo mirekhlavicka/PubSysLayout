@@ -43,19 +43,20 @@ namespace PubSysLayout.Server.Controllers
                         using (var adapter = new SqlDataAdapter(cmd))
                         {
                             adapter.MissingSchemaAction = MissingSchemaAction.AddWithKey;
-                            var resultTable = new DataTable();
-                            adapter.Fill(0, maxRowCount, resultTable);
+                            DataTable table = new DataTable();
+                            adapter.Fill(0, maxRowCount, table);
                             return Ok(new QueryResult
                             {
-                                TableName = resultTable.TableName,
-                                Columns = resultTable.Columns.Cast<DataColumn>().Select(dc => new QueryResultColumn 
+                                TableName = table.TableName,
+                                Columns = table.Columns.Cast<DataColumn>().Select(dc => new QueryResultColumn 
                                 { 
                                     Name = dc.ColumnName, 
                                     TypeName = dc.DataType.ToString(),
                                     ReadOnly = dc.ReadOnly,
-                                    MaxLength = dc.MaxLength
+                                    MaxLength = dc.MaxLength,
+                                    AllowDBNull = dc.AllowDBNull
                                 }).ToArray(),
-                                Rows = ConvertToArray(resultTable)
+                                Rows = ConvertToArray(table)
                             });
                         }
                     }
@@ -78,48 +79,29 @@ namespace PubSysLayout.Server.Controllers
                     {
                         using (var adapter = new SqlDataAdapter(cmd))
                         {
-                            DataSet dataSet = new DataSet();
                             SqlCommandBuilder builder = new SqlCommandBuilder(adapter);
-                            /*builder.QuotePrefix = "[";
-                            builder.QuoteSuffix = "]";*/
                             adapter.MissingSchemaAction = MissingSchemaAction.AddWithKey;
-                            adapter.Fill(dataSet);
-                            DataTable table = dataSet.Tables[0];
-
-                            DataRow srcRow = table.NewRow();
-                            for (int i = 0; i < query.Row.Length; i++)
-                            {
-                                srcRow[i] = ((JsonElement)(query.Row[i])).Deserialize(table.Columns[i].DataType);
-                            }
-
+                            DataTable table = new DataTable();
+                            adapter.FillSchema(table, SchemaType.Source);
+                            DataRow srcRow = FillDataRow(table, query.Row);
                             if (query.Action == "UPDATE")
                             {
-                                DataRow targetRow = table.AsEnumerable().FirstOrDefault(dr => table.PrimaryKey.All(k => dr[k].Equals(srcRow[k])));
-
-                                if (targetRow == null)
+                                DataRow targetRow = FillDataRow(table, query.OriginalRow);
+                                table.Rows.Add(targetRow);
+                                table.AcceptChanges();
+                                for (int i = 0; i < query.Row.Length; i++)
                                 {
-                                    table.Rows.Add(srcRow);
-                                    dataSet.AcceptChanges();
-                                    srcRow.SetModified();
-                                }
-                                else
-                                {
-                                    for (int i = 0; i < query.Row.Length; i++)
+                                    if (table.Columns[i].ReadOnly)
                                     {
-                                        if (table.Columns[i].ReadOnly)
-                                        {
-                                            continue;
-                                        }
-                                        targetRow[i] = srcRow[i];
+                                        continue;
                                     }
+                                    targetRow[i] = srcRow[i];
                                 }
                             }
                             else if (query.Action == "INSERT")
                             {
                                 table.Rows.Add(srcRow);
-
                                 string identity_name = null;
-
                                 try
                                 {
                                     identity_name = table.Columns.Cast<DataColumn>().SingleOrDefault(c => c.AutoIncrement).ColumnName;
@@ -128,15 +110,19 @@ namespace PubSysLayout.Server.Controllers
 
                                 if (identity_name != null)
                                 {
-                                    //https://stackoverflow.com/questions/136536/possible-to-retrieve-identity-column-value-on-insert-using-sqlcommandbuilder-wi
                                     adapter.InsertCommand = builder.GetInsertCommand().Clone();
-                                    adapter.InsertCommand.CommandText += $"; SELECT {identity_name} = SCOPE_IDENTITY()";
+                                    adapter.InsertCommand.CommandText += $"; SELECT * FROM {table.TableName} WHERE {identity_name} = SCOPE_IDENTITY()";
                                     adapter.InsertCommand.UpdatedRowSource = UpdateRowSource.FirstReturnedRecord;
                                 }
                             }
-
-                            adapter.Update(dataSet, table.TableName);
-                            dataSet.AcceptChanges();
+                            else if (query.Action == "DELETE")
+                            {
+                                table.Rows.Add(srcRow);
+                                table.AcceptChanges();
+                                srcRow.Delete();
+                            }
+                            adapter.Update(table);
+                            table.AcceptChanges();
                             return Ok(query.Action == "INSERT" ? srcRow.ItemArray : null);
                         }
                     }
@@ -263,6 +249,16 @@ namespace PubSysLayout.Server.Controllers
                 result[p] = dataTable.Rows[p].ItemArray;
             }
             return result;
+        }
+
+        private DataRow FillDataRow(DataTable table, object[] row)
+        {
+            DataRow dataRow = table.NewRow();
+            for (int i = 0; i < row.Length; i++)
+            {
+                dataRow[i] = ((JsonElement)(row[i])).Deserialize(table.Columns[i].DataType);
+            }
+            return dataRow;
         }
 
         //private static List<dynamic> ConvertToDynamic(DataTable dataTable)
