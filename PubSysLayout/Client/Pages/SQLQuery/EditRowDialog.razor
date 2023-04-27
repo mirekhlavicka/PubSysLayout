@@ -9,6 +9,13 @@
 @using System.ComponentModel;
 @using System.Text.Json;
 
+<style>
+    .numericField {
+        display:inline-block; 
+        max-width:300px;
+        margin-right:11px;
+    }
+</style>
 
 <MudDialog DefaultFocus="DefaultFocus.Element">
     <TitleContent>
@@ -26,35 +33,35 @@
                 Type type = Type.GetType(QueryResult.Columns[p].TypeName);
                 @if (type == typeof(string))
                 {
-                    <MudTextField Value="@((string)val)" ValueChanged="(v) => editRow[p] = v" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" T="string" ReadOnly="@(QueryResult.Columns[p].ReadOnly)" MaxLength="@(QueryResult.Columns[p].MaxLength)" Lines="@(QueryResult.Columns[p].MaxLength > 100 ? Math.Min(QueryResult.Columns[p].MaxLength / 100, 5)  : 1)"></MudTextField>
+                    <MudTextField Value="@((string)val)" ValueChanged="(v) => editRow[p] = v" Label="@(QueryResult.Columns[p].Name)" Variant="@(QueryResult.Columns[p].MaxLength > 100 ? Variant.Outlined : Variant.Text)" T="string" ReadOnly="@(QueryResult.Columns[p].ReadOnly)" MaxLength="@(QueryResult.Columns[p].MaxLength)" Lines="@(QueryResult.Columns[p].MaxLength > 100 ? Math.Min(QueryResult.Columns[p].MaxLength / 100, 5)  : 1)"></MudTextField>
                 }
                 else if (type == typeof(int))
                 {
-                    <MudNumericField Value="@((int)val)" ValueChanged="(v) => editRow[p] = v" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" T="int" ReadOnly="@(QueryResult.Columns[p].ReadOnly)"></MudNumericField>
+                    <MudNumericField Class="numericField" Value="@((int)val)" ValueChanged="(v) => editRow[p] = v" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" T="int" ReadOnly="@(QueryResult.Columns[p].ReadOnly)"></MudNumericField>
                 }
                 else if (val is byte)
                 {
-                    <MudNumericField Value="@((byte)val)" ValueChanged="(v) => editRow[p] = v" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" T="byte" ReadOnly="@(QueryResult.Columns[p].ReadOnly)"></MudNumericField>
+                    <MudNumericField Class="numericField" Value="@((byte)val)" ValueChanged="(v) => editRow[p] = v" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" T="byte" ReadOnly="@(QueryResult.Columns[p].ReadOnly)"></MudNumericField>
                 }
                 else if (type == typeof(short))
                 {
-                    <MudNumericField Value="@((short)val)" ValueChanged="(v) => editRow[p] = v" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" T="short" ReadOnly="@(QueryResult.Columns[p].ReadOnly)"></MudNumericField>
+                    <MudNumericField Class="numericField"Value="@((short)val)" ValueChanged="(v) => editRow[p] = v" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" T="short" ReadOnly="@(QueryResult.Columns[p].ReadOnly)"></MudNumericField>
                 }
                 else if (type == typeof(long))
                 {
-                    <MudNumericField Value="@((long)val)" ValueChanged="(v) => editRow[p] = v" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" T="long" ReadOnly="@(QueryResult.Columns[p].ReadOnly)"></MudNumericField>
+                    <MudNumericField Class="numericField" Value="@((long)val)" ValueChanged="(v) => editRow[p] = v" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" T="long" ReadOnly="@(QueryResult.Columns[p].ReadOnly)"></MudNumericField>
                 }
                 else if (type == typeof(DateTime))
                 {
                     <div class="d-flex">
                         <MudDatePicker @ref="datePickers[QueryResult.Columns[p].Name]" AutoClose="true" Editable="true" Placeholder="Select Date" Date="@(((DateTime)val).Date)" DateChanged="(v) => {if(v.HasValue) editRow[p] = (v.Value.Date).Add(((DateTime)editRow[p]).TimeOfDay);}" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" ReadOnly="@(QueryResult.Columns[p].ReadOnly)">
                             <PickerActions>
-                                <MudButton Class="mr-auto align-self-start" OnClick="@(() => {editRow[p] = DateTime.Today; datePickers[QueryResult.Columns[p].Name].Close(); })">Today</MudButton>
+                                <MudButton Class="mr-auto align-self-start" OnClick="@(() => {editRow[p] = (DateTime.Today).Add(((DateTime)editRow[p]).TimeOfDay); datePickers[QueryResult.Columns[p].Name].Close(); })">Today</MudButton>
                             </PickerActions>
                         </MudDatePicker>
                         <MudTimePicker @ref="timePickers[QueryResult.Columns[p].Name]" AutoClose="true" Editable="true" Placeholder="Select Time" Time="@(((DateTime)val).TimeOfDay)" TimeChanged="(v) => {if(v.HasValue) editRow[p] = ((DateTime)editRow[p]).Date.Add(v.Value); }" Label="time" Variant="Variant.Text" ReadOnly="@(QueryResult.Columns[p].ReadOnly)" Class="ml-4">
                             <PickerActions>
-                                <MudButton Class="mr-auto align-self-start" OnClick="@(() => {editRow[p] = DateTime.Now; timePickers[QueryResult.Columns[p].Name].Close(); })">Now</MudButton>
+                                <MudButton Class="mr-auto align-self-start" OnClick="@(() => {editRow[p] = ((DateTime)editRow[p]).Date.Add(DateTime.Now.TimeOfDay); timePickers[QueryResult.Columns[p].Name].Close(); })">Now</MudButton>
                             </PickerActions>
                         </MudTimePicker>
                     </div>
@@ -171,6 +178,7 @@
         {
 
             Query.Action = "DELETE";
+            Query.Row = row;
             var response = (await Http.PutAsJsonAsync($"api/sqlquery", Query));
 
             if (!response.IsSuccessStatusCode)
@@ -178,6 +186,7 @@
                 var msg = await response.Content.ReadAsStringAsync();
                 await DialogService.ShowMessageBox("Error", msg);
                 Query.Action = "UPDATE";
+                Query.Row = editRow;
             }
             else
             {
