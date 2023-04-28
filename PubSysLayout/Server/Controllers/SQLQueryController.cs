@@ -256,7 +256,7 @@ namespace PubSysLayout.Server.Controllers
             DataRow dataRow = table.NewRow();
             for (int i = 0; i < row.Length; i++)
             {
-                dataRow[i] = ((JsonElement)(row[i])).Deserialize(table.Columns[i].DataType);
+                dataRow[i] = row[i] == null ? System.DBNull.Value: ((JsonElement)(row[i])).Deserialize(table.Columns[i].DataType);
             }
             return dataRow;
         }

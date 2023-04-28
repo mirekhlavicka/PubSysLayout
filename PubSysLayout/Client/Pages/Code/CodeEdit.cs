@@ -99,5 +99,28 @@ namespace PubSysLayout.Client.Pages.Code
 
             await dialog.Result;
         }
+
+        public async Task EditCode(string title, string code, Func<string, string, Task<bool>> saveCode)
+        {
+
+            var dialog = DialogService.Show<CodeDialog>(title,
+                new DialogParameters
+                {
+                    ["Code"] = code,
+                    ["Path"] = "",
+                    ["Ext"] = ".aspx",
+                    ["SaveCode"] = saveCode,
+                    ["CloseOnSave"] = true
+                },
+                new DialogOptions()
+                {
+                    MaxWidth = MaxWidth.ExtraExtraLarge,
+                    FullWidth = true,
+                    CloseButton = false,
+                    CloseOnEscapeKey = false
+                });
+
+            await dialog.Result;
+        }
     }
 }

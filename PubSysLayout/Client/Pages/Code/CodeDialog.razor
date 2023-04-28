@@ -34,7 +34,10 @@
                 <MudText Typo="Typo.body2" Align="Align.Left"><b>Alt-F</b><br />&nbsp;Persistent search<MudText Typo="Typo.caption"><br />&nbsp&nbspdialog doesn't autoclose,<br />&nbsp&nbspenter to find next,<br />&nbsp&nbspShift-Enter to find previous</MudText></MudText>
                 <MudText Typo="Typo.body2" Align="Align.Left"><b>Alt-G</b><br />&nbsp;Jump to line</MudText>
             </TooltipContent>
-        </MudTooltip>        
+        </MudTooltip>
+        <MudSpacer />
+        <MudSwitch Checked="lineWrapping" CheckedChanged="@(async (ch) => {lineWrapping = ch; await js.InvokeVoidAsync("codemirror.setOption", "dlgCode", "lineWrapping", lineWrapping); })" Color="Color.Primary" T="bool" Label="Line wrapping" />
+        <MudSpacer />
         <MudButton Variant="Variant.Filled" IconColor="Color.Secondary" Color="Color.Default" OnClick="Save" Class="ml-auto" StartIcon="@Icons.Material.Filled.Save" accesskey="s">Save</MudButton>
     </DialogActions>
 </MudDialog>
@@ -45,9 +48,11 @@
     [Parameter] public string Code { get; set; } = "";
     [Parameter] public string Path { get; set; } = "";
     [Parameter] public Func<string, string, Task<bool>> SaveCode { get; set; } = null;
+    [Parameter] public bool CloseOnSave { get; set; } = false;
     [Parameter] public string Ext { get; set; } = "";
 
     private ElementReference textarea;
+    private bool lineWrapping = true;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -103,6 +108,12 @@
         }
 
         await js.InvokeAsync<bool>("codemirror.setChanges", "dlgCode", false);
+
+        if (CloseOnSave)
+        {
+            MudDialog.Cancel();
+        }
+
         return true;
     }
 

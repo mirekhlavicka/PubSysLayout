@@ -6,6 +6,7 @@
         this.cm[textArea.id] = CodeMirror.fromTextArea(textArea, {
             mode: mode,
             lineNumbers: true,
+            lineWrapping: true,
             matchBrackets: true,
             matchTags: { bothTags: false },
             extraKeys: {
@@ -54,6 +55,8 @@
     },
     setChanges: function (id, val) {
         return this.changes[id] = val;
+    },
+    setOption: function (id, option, val) {
+        this.cm[id].setOption(option, val);
     }
-
 };
