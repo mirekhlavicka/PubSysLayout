@@ -114,7 +114,19 @@
 
     protected override void OnInitialized()
     {
-        if (Query.Row != null)
+        if (Query.OriginalRow != null) //copy
+        {
+            row = null;
+            editRow = (object[])Query.OriginalRow.Clone();
+            foreach (int p in QueryResult.Columns.Select((c, i) => new { c, i }).Where(c => c.c.ReadOnly).Select(c => c.i))
+            {
+                editRow[p] = GetDefault(editRow[p].GetType());
+            }
+            Query.Action = "INSERT";
+            Query.Row = editRow;
+            Query.OriginalRow = null;
+        }
+        else if (Query.Row != null) //edit
         {
             row = Query.Row;
             editRow = (object[])Query.Row.Clone();
@@ -122,7 +134,7 @@
             Query.Row = editRow;
             Query.OriginalRow = row;
         }
-        else
+        else //new 
         {
             row = null;
             editRow = QueryResult.Columns.Select(c => GetDefault(Type.GetType(c.TypeName))).ToArray();

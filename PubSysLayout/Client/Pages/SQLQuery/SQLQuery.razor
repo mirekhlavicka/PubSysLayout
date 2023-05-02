@@ -14,7 +14,7 @@
 @inject LocalStorage localStorage
 @inject NavigationManager uriHelper
 @inject IDialogService DialogService
-
+@inject Clipboard clipboard
 
 <style>
     .valTD
@@ -107,7 +107,9 @@
                         <MudTooltip Text="Add new row">
                             <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-4 mb-4 ml-3" OnClick='@(()=>OpenEditRowDialog(null))' />
                         </MudTooltip>
-
+                        <MudTooltip Text="Paste row">
+                            <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.ContentPaste" Size="Size.Medium" IconSize="Size.Medium" Class="mt-4 mb-4 ml-3" OnClick="@(async ()=> {await OpenEditRowDialog(clipboard.Content as object[], true); })" Disabled="@(!(clipboard.Content is object[]) )" />
+                        </MudTooltip>
                     }
                     <MudSpacer />
                     <div class="d-flex">
@@ -178,6 +180,7 @@
                         @if(!String.IsNullOrEmpty(queryResult.TableName))
                         {
                             <MudIconButton Icon="@Icons.Material.Filled.Edit" @onclick="@(()=>OpenEditRowDialog(@context))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text" Title="Edit row" />
+                            <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" @onclick="@(()=> clipboard.Content = context)" Color="Color.Default" Size="Size.Small" Variant="Variant.Text" Title="Copy" />
                         }
                     </MudTd>
                 </RowTemplate>
@@ -445,7 +448,7 @@
         errorMsg = "No result";
     }
 
-    private async Task OpenEditRowDialog(object[] row)
+    private async Task OpenEditRowDialog(object[] row, bool copy =  false)
     {
         var options = new DialogOptions
         {
@@ -455,7 +458,24 @@
 
         var parameters = new DialogParameters();
 
-        query.Row = row;
+        if (copy && row != null)
+        {
+            if (row.Length != queryResult.Columns.Length || row.Select((v, i) => v.GetType().ToString() != queryResult.Columns[i].TypeName).Any(b => b))
+            {
+                await DialogService.ShowMessageBox("Error", "Incompatible row format");
+                return;
+            }
+
+            query.OriginalRow = row;
+            query.Row = null;
+            row = null;
+        }
+        else
+        {
+            query.Row = row;
+            query.OriginalRow = null;
+        }
+
         parameters.Add("Query", query);
         parameters.Add("QueryResult", queryResult);        
 
@@ -476,6 +496,10 @@
                     await Task.Delay(100);
                     await js.InvokeVoidAsync("scrollToElementClass", "selected");
                 }
+            }
+            if (copy)
+            {
+                clipboard.Content = null;
             }
         }        
     }
