@@ -180,7 +180,7 @@
                         @if(!String.IsNullOrEmpty(queryResult.TableName))
                         {
                             <MudIconButton Icon="@Icons.Material.Filled.Edit" @onclick="@(()=>OpenEditRowDialog(@context))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text" Title="Edit row" />
-                            <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" @onclick="@(()=> clipboard.Content = context)" Color="Color.Default" Size="Size.Small" Variant="Variant.Text" Title="Copy" />
+                            <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" @onclick="@(()=> clipboard.Content = context)" Color="Color.Default" Size="Size.Small" Variant="Variant.Text" Title="Copy row" />
                         }
                     </MudTd>
                 </RowTemplate>
@@ -242,6 +242,7 @@
     [Parameter]
     [SupplyParameterFromQuery(Name = "sql")]
     public string SavedSQL_ID { get; set; } = null;
+    private bool sqlFromQS = true;
 
     protected override async Task OnInitializedAsync()
     {
@@ -263,6 +264,7 @@
 
         if (String.IsNullOrEmpty(SavedSQL_ID))
         {
+            sqlFromQS = false;
             SavedSQL_ID = await localStorage.GetAsync<string>("SQLQuery_savedSQL_ID");
         }
 
@@ -277,7 +279,7 @@
     {
         if (firstRender)
         {
-            if (!String.IsNullOrEmpty(SavedSQL_ID))
+            if (!String.IsNullOrEmpty(SavedSQL_ID) && sqlFromQS)
             {
                 SQL = await Http.GetStringAsync($"api/sqlquery/savedsql?name={SavedSQL_ID}");
             }
@@ -290,7 +292,6 @@
                     SQL = await Http.GetStringAsync("api/sqlquery/defaultsql");
                 }
             }
-
             await js.InvokeVoidAsync("codemirror.create", textarea, SQL, "100%", "calc(100vh - 280px)", "text/x-mssql");
         }
     }
@@ -380,6 +381,16 @@
 
     protected async Task AddToFavorites()
     {
+        if (!favorites.ContainsKey(favorite_name) && !String.IsNullOrEmpty(SavedSQL_ID))
+        {
+            string savedSQL = await Http.GetStringAsync($"api/sqlquery/savedsql?name={SavedSQL_ID}");
+            string currentSQL = await js.InvokeAsync<string>("codemirror.getValue", "taSQL");
+            if (savedSQL != currentSQL)
+            {
+                SavedSQL_ID = null;
+            }
+        }
+
         await SaveSQL(false);
 
         if (favorites.ContainsKey(favorite_name))
