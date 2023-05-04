@@ -212,6 +212,31 @@ namespace PubSysLayout.Server.Controllers
             }
         }
 
+        [HttpGet("searchtable")]
+        public IEnumerable<string> SearchTable(string database, string search)
+        {
+            using (var conn = new SqlConnection(String.Format(_configuration.GetConnectionString("PubSysDefault"), database)))
+            {
+                using (var cmd = new SqlCommand(
+                                            $@"SELECT TOP 50
+                                                    TABLE_NAME
+                                                FROM
+                                                    INFORMATION_SCHEMA.TABLES
+                                                {(String.IsNullOrEmpty(search) ? "" : "WHERE TABLE_NAME LIKE @search + '%'")}
+                                                ORDER BY
+	                                                TABLE_NAME", conn))
+                {
+                    using (var adapter = new SqlDataAdapter(cmd))
+                    {
+                        cmd.Parameters.Add("@search", SqlDbType.VarChar, 255).Value = search ?? "";
+                        DataTable table = new DataTable();
+                        adapter.Fill(table);
+                        return table.AsEnumerable().Select(dr => dr[0].ToString());
+                    }
+                }
+            }
+        }
+
         [HttpGet("dblist")]
         public IEnumerable<string> GetDBList()
         {

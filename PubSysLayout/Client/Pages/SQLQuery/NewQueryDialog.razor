@@ -1,0 +1,60 @@
+﻿@inject HttpClient Http
+@inject IJSRuntime js
+@inject NavigationManager uriHelper
+@inject MudBlazor.ISnackbar snackBar
+@inject IDialogService DialogService
+@inject PubSysLayout.Client.Pages.Code.CodeEdit codeEdit
+@inject Clipboard clipboard
+@using PubSysLayout.Shared.Model
+@using PubSysLayout.Shared.SQLQuery;
+@using System.ComponentModel;
+@using System.Text.Json;
+
+
+<MudDialog DefaultFocus="DefaultFocus.Element">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.PostAdd" Class="mr-3 mb-n1" />
+            @MudDialog.Title
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudContainer>
+            <MudAutocomplete T="string" Label="Select table" AnchorOrigin="Origin.BottomCenter" @bind-Value="tableName" Variant="Variant.Text" SearchFunc="@SearchTable" Clearable="true" ResetValueOnEmptyText="true" spellcheck="false" MaxItems="50" DebounceInterval="200" /> 
+            @*ToStringFunc='@((v) => String.IsNullOrEmpty(v) ? "[blank query]" : v)'*@
+        </MudContainer>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Filled" Class="ml-auto">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="OK" Variant="Variant.Filled" >OK</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public string Database { get; set; }
+
+    private string tableName = null;
+
+    private async Task OK()
+    {
+        MudDialog.Close(DialogResult.Ok(String.IsNullOrEmpty(tableName) ? "" : $@"SELECT TOP 200 
+    * 
+FROM 
+    {tableName}"));
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private async Task<IEnumerable<string>> SearchTable(string value)
+    {
+        /*if (string.IsNullOrEmpty(value))
+            return new string[] { };*/
+
+        return await Http.GetFromJsonAsync<string[]>($"api/sqlquery/searchtable?database={Database}&search={value}");
+    }
+}

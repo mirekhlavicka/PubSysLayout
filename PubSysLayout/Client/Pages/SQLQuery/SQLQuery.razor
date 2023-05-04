@@ -70,7 +70,7 @@
                 <MudFab OnClick="async () => await LoadData()" StartIcon="@Icons.Material.Filled.PlayArrow" Color="Color.Default" IconColor="Color.Secondary" IconSize="Size.Large" Size="Size.Large" Label="Run&nbsp;" DisableElevation="true" accesskey="r" Style="margin-top:10px"></MudFab>
             </div>
             <MudSpacer />
-            <MudFab OnClick="async () => await NewQuery()" StartIcon="@Icons.Material.Filled.Clear" Color="Color.Default" IconColor="Color.Secondary" IconSize="Size.Large" Size="Size.Large" Label="New query" DisableElevation="true" Style="margin-top:10px"></MudFab>
+            <MudFab OnClick="async () => await NewQuery()" StartIcon="@Icons.Material.Filled.PostAdd" Color="Color.Default" IconColor="Color.Primary" IconSize="Size.Medium" Size="Size.Large" Label="New query" DisableElevation="true" Style="margin-top:10px"></MudFab>
             <MudSpacer />
             <MudTextField @bind-Value="favorite_name" Label="Save query to favorites" Variant="Variant.Text" Immediate="true"></MudTextField>
             <MudFab Icon="@Icons.Material.Filled.Save" Size="Size.Small" OnClick="AddToFavorites" IconColor="Color.Primary" DisableElevation="true" Class="ml-2 mt-3" Title="Save to favorites" Disabled="@(String.IsNullOrWhiteSpace(favorite_name))"></MudFab>
@@ -176,7 +176,7 @@
                             }
                         </MudTd>
                     }
-                    <MudTd DataLabel="">
+                    <MudTd DataLabel="" Class="valTD">
                         @if(!String.IsNullOrEmpty(queryResult.TableName))
                         {
                             <MudIconButton Icon="@Icons.Material.Filled.Edit" @onclick="@(()=>OpenEditRowDialog(@context))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text" Title="Edit row" />
@@ -450,13 +450,28 @@
 
     protected async Task NewQuery()
     {
-        SavedSQL_ID = "";
-        favorite_name = "";
-        SQL = "";
-        await js.InvokeAsync<string>("codemirror.setValue", "taSQL", SQL);
-        await SaveToLocalStorage();
-        queryResult = null;
-        errorMsg = "No result";
+        var options = new DialogOptions
+            {
+                MaxWidth = MaxWidth.Small,
+                CloseButton = true
+            };
+
+        var parameters = new DialogParameters
+            {
+                ["Database"] = Database
+            };
+
+        var result = await DialogService.Show<NewQueryDialog>("New query", parameters, options).Result;
+        if (!result.Canceled)
+        {
+            SavedSQL_ID = "";
+            favorite_name = "";
+            SQL = (string)result.Data;
+            await js.InvokeAsync<string>("codemirror.setValue", "taSQL", SQL);
+            await SaveToLocalStorage();
+            queryResult = null;
+            errorMsg = "No result";
+        }
     }
 
     private async Task OpenEditRowDialog(object[] row, bool copy =  false)
