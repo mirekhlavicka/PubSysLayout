@@ -213,7 +213,7 @@ namespace PubSysLayout.Server.Controllers
         }
 
         [HttpGet("searchtable")]
-        public IEnumerable<string> SearchTable(string database, string search)
+        public IEnumerable<string> SearchTable(string database, string search, bool searchinside)
         {
             using (var conn = new SqlConnection(String.Format(_configuration.GetConnectionString("PubSysDefault"), database)))
             {
@@ -222,7 +222,7 @@ namespace PubSysLayout.Server.Controllers
                                                     TABLE_NAME
                                                 FROM
                                                     INFORMATION_SCHEMA.TABLES
-                                                {(String.IsNullOrEmpty(search) ? "" : "WHERE TABLE_NAME LIKE @search + '%'")}
+                                                {(String.IsNullOrEmpty(search) ? "" : "WHERE TABLE_NAME LIKE " + (searchinside ? "'%' + " : "") + "@search + '%'")}
                                                 ORDER BY
 	                                                TABLE_NAME", conn))
                 {
@@ -236,6 +236,32 @@ namespace PubSysLayout.Server.Controllers
                 }
             }
         }
+
+        [HttpGet("tablecolumns")]
+        public IEnumerable<string> TableColumns(string database, string tableName)
+        {
+            using (var conn = new SqlConnection(String.Format(_configuration.GetConnectionString("PubSysDefault"), database)))
+            {
+                using (var cmd = new SqlCommand(
+                                            @"SELECT
+                                                COLUMN_NAME, ORDINAL_POSITION, DATA_TYPE
+                                            FROM
+                                                INFORMATION_SCHEMA.COLUMNS
+                                            WHERE
+                                                TABLE_NAME = @tablename
+                                            ORDER BY 2", conn))
+                {
+                    using (var adapter = new SqlDataAdapter(cmd))
+                    {
+                        cmd.Parameters.Add("@tablename", SqlDbType.VarChar, 255).Value = tableName;
+                        DataTable table = new DataTable();
+                        adapter.Fill(table);
+                        return table.AsEnumerable().Select(dr => dr[0].ToString());
+                    }
+                }
+            }
+        }
+
 
         [HttpGet("dblist")]
         public IEnumerable<string> GetDBList()

@@ -70,7 +70,8 @@
                 <MudFab OnClick="async () => await LoadData()" StartIcon="@Icons.Material.Filled.PlayArrow" Color="Color.Default" IconColor="Color.Secondary" IconSize="Size.Large" Size="Size.Large" Label="Run&nbsp;" DisableElevation="true" accesskey="r" Style="margin-top:10px"></MudFab>
             </div>
             <MudSpacer />
-            <MudFab OnClick="async () => await NewQuery()" StartIcon="@Icons.Material.Filled.PostAdd" Color="Color.Default" IconColor="Color.Primary" IconSize="Size.Medium" Size="Size.Large" Label="New query" DisableElevation="true" Style="margin-top:10px"></MudFab>
+            <MudFab OnClick="async () => await ClearQuery()" StartIcon="@Icons.Material.Filled.Clear" Color="Color.Default" IconColor="Color.Secondary" IconSize="Size.Medium" Size="Size.Medium" DisableElevation="true" Style="margin-top:10px" Class="mr-2" Title="Clear query"></MudFab>
+            <MudFab OnClick="async () => await BuildQuery()" StartIcon="@Icons.Material.Filled.GridOn" Color="Color.Default" IconColor="Color.Primary" IconSize="Size.Medium" Size="Size.Medium" DisableElevation="true" Style="margin-top:10px" Title="Build query from table"></MudFab>
             <MudSpacer />
             <MudTextField @bind-Value="favorite_name" Label="Save query to favorites" Variant="Variant.Text" Immediate="true"></MudTextField>
             <MudFab Icon="@Icons.Material.Filled.Save" Size="Size.Small" OnClick="AddToFavorites" IconColor="Color.Primary" DisableElevation="true" Class="ml-2 mt-3" Title="Save to favorites" Disabled="@(String.IsNullOrWhiteSpace(favorite_name))"></MudFab>
@@ -448,7 +449,18 @@
         await SaveToLocalStorage();
     }
 
-    protected async Task NewQuery()
+    protected async Task ClearQuery()
+    {
+        SavedSQL_ID = "";
+        favorite_name = "";
+        SQL = "";
+        await js.InvokeAsync<string>("codemirror.setValue", "taSQL", SQL);
+        await SaveToLocalStorage();
+        queryResult = null;
+        errorMsg = "No result";
+    }
+
+    protected async Task BuildQuery()
     {
         var options = new DialogOptions
             {
@@ -461,7 +473,7 @@
                 ["Database"] = Database
             };
 
-        var result = await DialogService.Show<NewQueryDialog>("New query", parameters, options).Result;
+        var result = await DialogService.Show<NewQueryDialog>("Query builder", parameters, options).Result;
         if (!result.Canceled)
         {
             SavedSQL_ID = "";
