@@ -34,7 +34,7 @@
             return;
         }
 
-        string[] reservedKeywords = { "order", "date", "user", "unique" };
+        string[] reservedKeywords = { "order", "date", "user", "unique", "default" };
 
         var columns = String.Join(", ", (await Http.GetFromJsonAsync<string[]>($"api/sqlquery/tablecolumns?database={Database}&tablename={tableName}")).Select(s => reservedKeywords.Contains(s.ToLower()) ? $"[{s}]" : s));
 

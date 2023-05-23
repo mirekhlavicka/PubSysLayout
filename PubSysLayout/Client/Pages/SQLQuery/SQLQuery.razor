@@ -68,6 +68,7 @@
             <div class="d-flex" style="max-width:600px;flex-grow:3">
                 <MudAutocomplete T="string" Label="Database" AnchorOrigin="Origin.BottomCenter" @bind-Value="Database" FullWidth="false" Variant="Variant.Outlined" Class="mr-6" SearchFunc="@SearchDB" Clearable="true" spellcheck="false" MaxItems="100" />
                 <MudFab OnClick="async () => await LoadData()" StartIcon="@Icons.Material.Filled.PlayArrow" Color="Color.Default" IconColor="Color.Secondary" IconSize="Size.Large" Size="Size.Large" Label="Run&nbsp;" DisableElevation="true" accesskey="r" Style="margin-top:10px"></MudFab>
+                <MudSwitch @bind-Checked="@allowUpdate" Color="Color.Primary" Class="mt-3 ml-3" Title="Updatable results" />
             </div>
             <MudSpacer />
             <MudFab OnClick="async () => await ClearQuery()" StartIcon="@Icons.Material.Filled.Clear" Color="Color.Default" IconColor="Color.Secondary" IconSize="Size.Medium" Size="Size.Medium" DisableElevation="true" Style="margin-top:10px" Class="mr-2" Title="Clear query"></MudFab>
@@ -145,7 +146,7 @@
                     <MudTh />
                 </HeaderContent>
                 <RowTemplate>
-                    @foreach (var val in context)
+                    @foreach (var (val, index) in context.Select(((val, index) => (val, index))))
                     {
                         <MudTd Class="valTD">
                             @if (val is String && ((string)val).StartsWith("http"))
@@ -173,7 +174,7 @@
                             }
                             else
                             {
-                                @Format(val)
+                                @Format(val, index)
                             }
                         </MudTd>
                     }
@@ -222,6 +223,7 @@
     private QueryResult queryResult = null;
     private string errorMsg = "No result";
     private bool inProgress = false;
+    private bool allowUpdate = false;
 
     private string searchString = "";
 
@@ -313,7 +315,8 @@
             query = new Query
             {
                 Database = Database,
-                SQL = SQL
+                SQL = SQL,
+                AllowUpdate = allowUpdate
             };
             var res = (await Http.PostAsJsonAsync("api/sqlquery",query));
 
@@ -596,12 +599,12 @@
         return $"{qualifier}{th}{qualifier}\n{qualifier}{td}{qualifier}";
     }
 
-    private string Format(object val)
+    private string Format(object val, int index)
     {
         switch (Type.GetTypeCode(val.GetType()))
         {
             case TypeCode.Int32:
-                return ((Int32)val).ToString("n0");
+                return ((Int32)val).ToString(queryResult.Columns[index].Name.StartsWith("id_") ? "g0" : "n0");
             case TypeCode.DateTime:
                 return ((DateTime)val).ToString("g");
             default:

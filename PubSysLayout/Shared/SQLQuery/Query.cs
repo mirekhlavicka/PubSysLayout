@@ -10,6 +10,7 @@ namespace PubSysLayout.Shared.SQLQuery
     {
         public string Database { get; set; }
         public string SQL { get; set; }
+        public bool AllowUpdate { get; set; }
         public object[] OriginalRow { get; set; }
         public object[] Row { get; set; }
         public string Action { get; set; }

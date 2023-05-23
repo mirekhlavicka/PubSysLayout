@@ -42,12 +42,15 @@ namespace PubSysLayout.Server.Controllers
                     {
                         using (var adapter = new SqlDataAdapter(cmd))
                         {
-                            adapter.MissingSchemaAction = MissingSchemaAction.AddWithKey;
+                            if (query.AllowUpdate)
+                            {
+                                adapter.MissingSchemaAction = MissingSchemaAction.AddWithKey;
+                            }                            
                             DataTable table = new DataTable();
                             adapter.Fill(0, maxRowCount, table);
                             return Ok(new QueryResult
                             {
-                                TableName = table.TableName,
+                                TableName = query.AllowUpdate ? table.TableName : "",
                                 Columns = table.Columns.Cast<DataColumn>().Select(dc => new QueryResultColumn 
                                 { 
                                     Name = dc.ColumnName, 
