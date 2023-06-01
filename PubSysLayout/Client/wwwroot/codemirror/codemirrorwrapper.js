@@ -59,4 +59,10 @@
     setOption: function (id, option, val) {
         this.cm[id].setOption(option, val);
     }
+    ,
+    setTableHintOptions: function (id, table, columns) {
+        var hintOptions = this.cm[id].getOption('hintOptions');
+        hintOptions.tables[table] = columns;
+        this.cm[id].setOption('hintOptions', hintOptions);
+    }
 };

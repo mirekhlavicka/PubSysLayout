@@ -1,6 +1,8 @@
 ﻿@inject HttpClient Http
 @inject LocalStorage localStorage
 @inject SessionStorage session
+@inject IJSRuntime js
+
 
 <MudDialog DefaultFocus="DefaultFocus.None">
     <TitleContent>
@@ -99,38 +101,40 @@
         }
     }
 
-    private void OK()
+    private async Task OK()
     {
         if (String.IsNullOrEmpty(tableName))
         {
             return;
         }       
 
-        var columns = String.Join(", ", columnsInfo[0].Select(s => reservedKeywords.Contains(s.ToLower()) ? $"[{s}]" : s));
+        var columns = String.Join(", ", columnsInfo[0].Select(s => "t." + (reservedKeywords.Contains(s.ToLower()) ? $"[{s}]" : s)));
         var where = String.Join(" AND \r\n    ", whereClause
         .Where(kv => !String.IsNullOrEmpty(kv.Value))
-        .Select(kv => (reservedKeywords.Contains(kv.Key.ToLower()) ? $"[{kv.Key}]" : kv.Key) + (kv.Value.Contains('%') ? " LIKE " : "=") + (double.TryParse(kv.Value, out _) ? kv.Value : $"'{kv.Value}'")));
+        .Select(kv => "t." + (reservedKeywords.Contains(kv.Key.ToLower()) ? $"[{kv.Key}]" : kv.Key) + (kv.Value.Contains('%') ? " LIKE " : "=") + (double.TryParse(kv.Value, out _) ? kv.Value : $"'{kv.Value}'")));
 
         string sql = $@"SELECT TOP 200
     {columns}
 FROM
-    {tableName}";
+    {tableName} t";
 
-    if(!String.IsNullOrEmpty(where))
-    {
-        sql +=
+        if(!String.IsNullOrEmpty(where))
+        {
+            sql +=
 $@"
 WHERE
     {where}";
-    }
+        }
 
-    if(!String.IsNullOrEmpty(sortColumn))
-    {
-        sql +=
+        if(!String.IsNullOrEmpty(sortColumn))
+        {
+            sql +=
 $@"
 ORDER BY
-    {(reservedKeywords.Contains(sortColumn.ToLower()) ? "[" + sortColumn + "]" : sortColumn)}{(sortDESC ? " DESC" : "")}";
-    }
+    {"t." + (reservedKeywords.Contains(sortColumn.ToLower()) ? "[" + sortColumn + "]" : sortColumn)}{(sortDESC ? " DESC" : "")}";
+        }
+
+        await js.InvokeVoidAsync("codemirror.setTableHintOptions", "taSQL", tableName, columnsInfo[0]);
 
         MudDialog.Close(DialogResult.Ok(sql));
     }
