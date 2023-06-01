@@ -1,4 +1,6 @@
 ﻿@inject HttpClient Http
+@inject LocalStorage localStorage
+@inject SessionStorage session
 
 <MudDialog DefaultFocus="DefaultFocus.None">
     <TitleContent>
@@ -9,9 +11,32 @@
     </TitleContent>
     <DialogContent>
         <div class="d-flex">
-            <MudAutocomplete AutoFocus="true" T="string" Label="Type table name" AnchorOrigin="Origin.BottomCenter" @bind-Value="tableName" Variant="Variant.Text" SearchFunc="@SearchTable" Clearable="true" ResetValueOnEmptyText="true" spellcheck="false" MaxItems="50" DebounceInterval="200" />
+            <MudAutocomplete AutoFocus="true" T="string" Label="Type table name" AnchorOrigin="Origin.BottomCenter" Variant="Variant.Text" SearchFunc="@SearchTable" Clearable="true" ResetValueOnEmptyText="true" spellcheck="false" MaxItems="50" DebounceInterval="200" ValueChanged="TableChanged" Value="tableName" />
             <MudSwitch @bind-Checked="@searchinside" Color="Color.Primary" title="Search inside table or view name" Class="ml-6 mt-4" />
         </div>
+        @if (columnsInfo != null)
+        {
+            <div class="d-flex">
+            <MudText Typo="Typo.subtitle1" Class="mt-8">WHERE clause:</MudText>
+            <MudSwitch @bind-Checked="@showAllWhereClause" Color="Color.Primary" title="Show all fields" Class="ml-auto mt-6" />
+            </div>
+            <MudContainer Style="max-height: 300px; overflow-y: scroll">
+            @foreach (var cn in columnsInfo[showAllWhereClause ? 0 : 1])
+            {
+                <MudTextField Label="@cn" Variant="Variant.Text" T="string" @bind-Value="whereClause[cn]"></MudTextField>
+            }
+            </MudContainer>
+
+            <div class="d-flex mt-6">
+            <MudSelect Label="ORDER BY clause:" T="string" @bind-Value="sortColumn" Clearable>
+                @foreach (var cn in columnsInfo[0])
+                {
+                    <MudSelectItem Value="@cn">@cn</MudSelectItem>
+                }
+            </MudSelect>
+                <MudSwitch @bind-Checked="@sortDESC" Color="Color.Primary" title="DESC" Class="ml-6 mt-4" />
+            </div>
+        }
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel" Variant="Variant.Filled" Class="ml-auto">Cancel</MudButton>
@@ -21,28 +46,93 @@
 
 @code {
     [CascadingParameter] MudDialogInstance MudDialog { get; set; }
-
     [Parameter] public string Database { get; set; }
 
-    private bool searchinside = true;
-    private string tableName = null;
+    private string[] reservedKeywords = { "order", "date", "user", "unique", "default", "image" };
 
-    private async Task OK()
+    private bool searchinside = true;
+
+    private string tableName { get { return session["QB_tableName"] as string; } set { session["QB_tableName"] = value; } }
+    private string[][] columnsInfo { get { return session["QB_columnsInfo"] as string[][]; } set { session["QB_columnsInfo"] = value; } }
+    private Dictionary<string, string> whereClause { get { return session["QB_whereClause"] as Dictionary<string, string>; } set { session["QB_whereClause"] = value; } }
+    private bool showAllWhereClause { get { return session["QB_showAllWhereClause"] as bool? ?? false; } set { session["QB_showAllWhereClause"] = value; } }
+    private string sortColumn { get { return session["QB_sortColumn"] as string ?? String.Empty; } set { session["QB_sortColumn"] = value; } }
+    private bool sortDESC { get { return session["QB_sortDESC"] as bool? ?? false; } set { session["QB_sortDESC"] = value; } }
+
+    protected async override Task OnInitializedAsync()
+    {
+        if (String.IsNullOrEmpty(tableName))
+        {
+            tableName = await localStorage.GetAsync<string>("SQLQuery_query_tableName");
+            if (!String.IsNullOrEmpty(tableName))
+            {
+                await LoadColumns();
+            }
+        }
+    }
+
+    private async Task TableChanged(string value)
+    {
+        if (tableName != value)
+        {
+            tableName = value;
+            await localStorage.SetAsync("SQLQuery_query_tableName", tableName);
+            await LoadColumns();
+        }
+    }
+
+    private async Task LoadColumns()
+    {
+        if (!String.IsNullOrEmpty(tableName))
+        {
+            columnsInfo = await Http.GetFromJsonAsync<string[][]>($"api/sqlquery/tablecolumns?database={Database}&tablename={tableName}");
+            whereClause = columnsInfo[0].ToDictionary(s => s, s => "");
+            sortColumn = String.Empty;
+            sortDESC = false;
+        }
+        else
+        {
+            columnsInfo = null;
+            whereClause = null;
+            sortColumn = String.Empty;
+            sortDESC = false;
+        }
+    }
+
+    private void OK()
     {
         if (String.IsNullOrEmpty(tableName))
         {
             return;
-        }
+        }       
 
-        string[] reservedKeywords = { "order", "date", "user", "unique", "default" };
+        var columns = String.Join(", ", columnsInfo[0].Select(s => reservedKeywords.Contains(s.ToLower()) ? $"[{s}]" : s));
+        var where = String.Join(" AND \r\n    ", whereClause
+        .Where(kv => !String.IsNullOrEmpty(kv.Value))
+        .Select(kv => (reservedKeywords.Contains(kv.Key.ToLower()) ? $"[{kv.Key}]" : kv.Key) + (kv.Value.Contains('%') ? " LIKE " : "=") + (double.TryParse(kv.Value, out _) ? kv.Value : $"'{kv.Value}'")));
 
-        var columns = String.Join(", ", (await Http.GetFromJsonAsync<string[]>($"api/sqlquery/tablecolumns?database={Database}&tablename={tableName}")).Select(s => reservedKeywords.Contains(s.ToLower()) ? $"[{s}]" : s));
+        string sql = $@"SELECT TOP 200
+    {columns}
+FROM
+    {tableName}";
 
-        MudDialog.Close(DialogResult.Ok(
-$@"SELECT TOP 200 
-    {columns} 
-FROM 
-    {tableName}"));
+    if(!String.IsNullOrEmpty(where))
+    {
+        sql +=
+$@"
+WHERE
+    {where}";
+    }
+
+    if(!String.IsNullOrEmpty(sortColumn))
+    {
+        sql +=
+$@"
+ORDER BY
+    {(reservedKeywords.Contains(sortColumn.ToLower()) ? "[" + sortColumn + "]" : sortColumn)}{(sortDESC ? " DESC" : "")}";
+    }
+
+        MudDialog.Close(DialogResult.Ok(sql));
     }
 
     private void Cancel()

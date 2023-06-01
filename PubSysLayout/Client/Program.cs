@@ -14,6 +14,7 @@ builder.RootComponents.Add<HeadOutlet>("head::after");
 //builder.Services.AddScoped(sp => new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) });
 
 builder.Services.AddSingleton<LocalStorage>();
+builder.Services.AddSingleton<SessionStorage>();
 builder.Services.AddSingleton<Clipboard>();
 builder.Services.AddSingleton<CurrentDB>();
 

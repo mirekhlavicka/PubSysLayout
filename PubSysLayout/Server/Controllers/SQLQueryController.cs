@@ -241,25 +241,42 @@ namespace PubSysLayout.Server.Controllers
         }
 
         [HttpGet("tablecolumns")]
-        public IEnumerable<string> TableColumns(string database, string tableName)
+        public string[][] TableColumns(string database, string tableName)
         {
             using (var conn = new SqlConnection(String.Format(_configuration.GetConnectionString("PubSysDefault"), database)))
             {
                 using (var cmd = new SqlCommand(
                                             @"SELECT
-                                                COLUMN_NAME, ORDINAL_POSITION, DATA_TYPE
+                                                COLUMN_NAME--, ORDINAL_POSITION, DATA_TYPE
                                             FROM
                                                 INFORMATION_SCHEMA.COLUMNS
                                             WHERE
                                                 TABLE_NAME = @tablename
-                                            ORDER BY 2", conn))
+                                            ORDER BY ORDINAL_POSITION;
+
+                                            SELECT t.COLUMN_NAME FROM
+											(
+												SELECT DISTINCT
+													C.COLUMN_NAME 
+												FROM  
+													INFORMATION_SCHEMA.TABLE_CONSTRAINTS T JOIN 
+													INFORMATION_SCHEMA.CONSTRAINT_COLUMN_USAGE C ON C.CONSTRAINT_NAME=T.CONSTRAINT_NAME  
+												WHERE
+													C.TABLE_NAME=@tablename AND T.CONSTRAINT_TYPE IN ('FOREIGN KEY',  'PRIMARY KEY')
+											) t JOIN INFORMATION_SCHEMA.COLUMNS c ON c.COLUMN_NAME=t.COLUMN_NAME AND c.TABLE_NAME=@tablename
+											ORDER BY
+												c.ORDINAL_POSITION", conn))
                 {
                     using (var adapter = new SqlDataAdapter(cmd))
                     {
                         cmd.Parameters.Add("@tablename", SqlDbType.VarChar, 255).Value = tableName;
-                        DataTable table = new DataTable();
-                        adapter.Fill(table);
-                        return table.AsEnumerable().Select(dr => dr[0].ToString());
+                        DataSet ds = new DataSet();
+                        adapter.Fill(ds);
+                        return new string[][] 
+                        {
+                            ds.Tables[0].AsEnumerable().Select(dr => dr[0].ToString()).ToArray(),
+                            ds.Tables[1].AsEnumerable().Select(dr => dr[0].ToString()).ToArray()
+                        };
                     }
                 }
             }
