@@ -580,7 +580,7 @@
                 }
                 catch
                 {
-                    row[p] = String.Empty;
+                    row[p] = null;// System.DBNull.Value;//String.Empty;
                 }
             }
         }
@@ -601,6 +601,10 @@
 
     private string Format(object val, int index)
     {
+        if (val == null)
+        {
+            return "NULL";
+        }
         switch (Type.GetTypeCode(val.GetType()))
         {
             case TypeCode.Int32:
