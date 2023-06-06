@@ -501,7 +501,7 @@
 
         if (copy && row != null)
         {
-            if (row.Length != queryResult.Columns.Length || row.Select((v, i) => v.GetType().ToString() != queryResult.Columns[i].TypeName).Any(b => b))
+            if (row.Length != queryResult.Columns.Length || row.Select((v, i) => v != null && v.GetType().ToString() != queryResult.Columns[i].TypeName).Any(b => b))
             {
                 await DialogService.ShowMessageBox("Error", "Incompatible row format");
                 return;
@@ -580,7 +580,7 @@
                 }
                 catch
                 {
-                    row[p] = null;// System.DBNull.Value;//String.Empty;
+                    row[p] = null;
                 }
             }
         }
