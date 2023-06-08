@@ -30,14 +30,25 @@
             </MudContainer>
 
             <div class="d-flex mt-6">
-            <MudSelect Label="ORDER BY clause:" T="string" @bind-Value="sortColumn" Clearable>
-                @foreach (var cn in columnsInfo[0])
-                {
-                    <MudSelectItem Value="@cn">@cn</MudSelectItem>
-                }
-            </MudSelect>
+                <MudSelect Label="ORDER BY clause:" T="string" @bind-Value="sortColumn" Clearable>
+                    @foreach (var cn in columnsInfo[0])
+                    {
+                        <MudSelectItem Value="@cn">@cn</MudSelectItem>
+                    }
+                </MudSelect>
                 <MudSwitch @bind-Checked="@sortDESC" Color="Color.Primary" title="DESC" Class="ml-6 mt-4" />
             </div>
+        }
+        @if (foreignKeys != null)
+        {
+            <MudText Typo="Typo.subtitle1" Class="mt-8">JOIN tables:</MudText>
+            <MudContainer Style="max-height: 300px; overflow-y: scroll">
+            @foreach (var fk in foreignKeys)
+            {
+                    <MudCheckBox T="bool" Label='@($"{fk[1]} ⟹ {fk[2]}")' Checked="@(joinForeignKeys.Contains(fk[0]))" CheckedChanged="async (v) => {if(v) {joinForeignKeys.Add(fk[0]); } else {joinForeignKeys.Remove(fk[0]); } await LoadForeignKeys(); } " />
+            }
+            </MudContainer>
+            @(String.Join(", ", GetJoinTables(tableName)))
         }
     </DialogContent>
     <DialogActions>
@@ -61,15 +72,14 @@
     private string sortColumn { get { return session["QB_sortColumn"] as string ?? String.Empty; } set { session["QB_sortColumn"] = value; } }
     private bool sortDESC { get { return session["QB_sortDESC"] as bool? ?? false; } set { session["QB_sortDESC"] = value; } }
 
+    private string[][] foreignKeys { get { return session["QB_foreignKeys"] as string[][]; } set { session["QB_foreignKeys"] = value; } }
+    private HashSet<string> joinForeignKeys { get { return session["QB_joinForeignKeys"] as HashSet<string>; } set { session["QB_joinForeignKeys"] = value; } }
+
     protected async override Task OnInitializedAsync()
     {
         if (String.IsNullOrEmpty(tableName))
         {
-            tableName = await localStorage.GetAsync<string>("SQLQuery_query_tableName");
-            if (!String.IsNullOrEmpty(tableName))
-            {
-                await LoadColumns();
-            }
+            await TableChanged(await localStorage.GetAsync<string>("SQLQuery_query_tableName"));
         }
     }
 
@@ -78,8 +88,10 @@
         if (tableName != value)
         {
             tableName = value;
+            joinForeignKeys = new HashSet<string>();
             await localStorage.SetAsync("SQLQuery_query_tableName", tableName);
             await LoadColumns();
+            await LoadForeignKeys();
         }
     }
 
@@ -101,6 +113,78 @@
         }
     }
 
+    private async Task LoadForeignKeys()
+    {
+        if (!String.IsNullOrEmpty(tableName))
+        {
+            foreignKeys = await Http.GetFromJsonAsync<string[][]>($"api/sqlquery/tableforeignkeys?database={Database}&tablenames={String.Join(',', GetJoinTables(tableName))}");
+            joinForeignKeys.RemoveWhere(fkn => !foreignKeys.Any(fk => fk[0] == fkn));
+
+            List<string[]> sorted = new List<string[]>();
+            foreach (var fk in GetJoinTables(tableName).SelectMany(tn => foreignKeys.Where(fk => fk[1] == tn).OrderBy(fk => fk[2]).Union(foreignKeys.Where(fk => fk[2] == tn).OrderBy(fk => fk[1]))))
+            {
+                if (!sorted.Contains(fk))
+                {
+                    sorted.Add(fk);
+                }
+            }
+            foreignKeys = sorted.ToArray();
+        }
+        else
+        {
+            foreignKeys = null;
+        }
+    }
+
+    private IEnumerable<string> GetJoinTables(string table, string fromTable = null)
+    {
+        yield return table;
+        if (joinForeignKeys != null)
+        {
+            foreach (string s in
+                joinForeignKeys
+                    .Select(fkn => foreignKeys.SingleOrDefault(fk => fk[0] == fkn))
+                    .Where(fk => fk != null && (fk[1] == table || fk[2] == table))
+                    .Select(fk => fk[1] == table ? fk[2] : fk[1])
+                    .Where(s => s != fromTable)
+                    .Distinct())
+            {
+                foreach (string s1 in GetJoinTables(s, table))
+                {
+                    yield return s1;
+                }
+            }
+        }
+    }
+
+    private async IAsyncEnumerable<string> GetJoinForeignKeys(string table, string fromTable = null)
+    {
+        if (joinForeignKeys != null)
+        {
+            foreach (var item in
+                joinForeignKeys
+                    .Select(fkn => foreignKeys.SingleOrDefault(fk => fk[0] == fkn))
+                    .Where(fk => fk != null && (fk[1] == table || fk[2] == table))
+                    .OrderBy(fk => fk[1] == table ? 0 : 1)
+                    .ThenBy(fk => fk[1] == table ? fk[2] : fk[1])
+                    .Select(fk => new { fk, table = fk[1] == table ? fk[2] : fk[1] })
+                    .Where(it => it.table != fromTable))
+            {
+                yield return item.table + " ON " + (await GetForeignKeyJoinOn(item.fk[0]));
+                await foreach (string s in GetJoinForeignKeys(item.table, table))
+                {
+                    yield return s;
+                }
+            }
+        }
+    }
+
+    private async Task<string> GetForeignKeyJoinOn(string fkName)
+    {
+        var columns = await Http.GetFromJsonAsync<string[][]>($"api/sqlquery/foreignkeycolumns?database={Database}&fkname={fkName}");
+        return String.Join(" AND ", columns.Select(r => $"{r[0]}.{r[1]}={r[2]}.{r[3]}"));
+    }
+
     private async Task OK()
     {
         if (String.IsNullOrEmpty(tableName))
@@ -108,15 +192,29 @@
             return;
         }       
 
-        var columns = String.Join(", ", columnsInfo[0].Select(s => "t." + (reservedKeywords.Contains(s.ToLower()) ? $"[{s}]" : s)));
+        var columns = String.Join(", ", columnsInfo[0].Select(s => tableName + "." + (reservedKeywords.Contains(s.ToLower()) ? $"[{s}]" : s)));
         var where = String.Join(" AND \r\n    ", whereClause
         .Where(kv => !String.IsNullOrEmpty(kv.Value))
-        .Select(kv => "t." + (reservedKeywords.Contains(kv.Key.ToLower()) ? $"[{kv.Key}]" : kv.Key) + (kv.Value.Contains('%') ? " LIKE " : "=") + (double.TryParse(kv.Value, out _) ? kv.Value : $"'{kv.Value}'")));
+        .Select(kv => tableName + "." + (reservedKeywords.Contains(kv.Key.ToLower()) ? $"[{kv.Key}]" : kv.Key) + (kv.Value.Contains('%') ? " LIKE " : "=") + (double.TryParse(kv.Value, out _) ? kv.Value : $"'{kv.Value}'")));
 
         string sql = $@"SELECT TOP 200
     {columns}
 FROM
-    {tableName} t";
+    {tableName}";
+
+        if (joinForeignKeys.Count > 0)
+        {
+            List<string> tmp = new List<string>();
+            await foreach (var s in GetJoinForeignKeys(tableName))
+            {
+                tmp.Add(s);
+            }
+
+            sql += $@" JOIN
+    { String.Join(@" JOIN
+    ", tmp)}";
+        }
+
 
         if(!String.IsNullOrEmpty(where))
         {

@@ -54,24 +54,24 @@
                 }
                 else if (type == typeof(int))
                 {
-                    <MudNumericField Class="smallField" Value="@((int?)val)" ValueChanged="(v) => editRow[p] = v" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" T="int?" ReadOnly="@(QueryResult.Columns[p].ReadOnly)" Required="@(!QueryResult.Columns[p].AllowDBNull)"></MudNumericField>
+                    <MudNumericField Class="smallField" Value="@((int?)val)" ValueChanged="(v) => editRow[p] = v" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" T="int?" ReadOnly="@(QueryResult.Columns[p].ReadOnly)" Required="@(!QueryResult.Columns[p].AllowDBNull)" RequiredError='@($"{QueryResult.Columns[p].Name} is  required")'></MudNumericField>
                 }
                 else if (val is byte)
                 {
-                    <MudNumericField Class="smallField" Value="@((byte?)val)" ValueChanged="(v) => editRow[p] = v" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" T="byte?" ReadOnly="@(QueryResult.Columns[p].ReadOnly)" Required="@(!QueryResult.Columns[p].AllowDBNull)"></MudNumericField>
+                    <MudNumericField Class="smallField" Value="@((byte?)val)" ValueChanged="(v) => editRow[p] = v" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" T="byte?" ReadOnly="@(QueryResult.Columns[p].ReadOnly)" Required="@(!QueryResult.Columns[p].AllowDBNull)" RequiredError='@($"{QueryResult.Columns[p].Name} is  required")'></MudNumericField>
                 }
                 else if (type == typeof(short))
                 {
-                    <MudNumericField Class="smallField" Value="@((short?)val)" ValueChanged="(v) => editRow[p] = v" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" T="short?" ReadOnly="@(QueryResult.Columns[p].ReadOnly)" Required="@(!QueryResult.Columns[p].AllowDBNull)"></MudNumericField>
+                    <MudNumericField Class="smallField" Value="@((short?)val)" ValueChanged="(v) => editRow[p] = v" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" T="short?" ReadOnly="@(QueryResult.Columns[p].ReadOnly)" Required="@(!QueryResult.Columns[p].AllowDBNull)" RequiredError='@($"{QueryResult.Columns[p].Name} is  required")'></MudNumericField>
                 }
                 else if (type == typeof(long))
                 {
-                    <MudNumericField Class="smallField" Value="@((long?)val)" ValueChanged="(v) => editRow[p] = v" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" T="long?" ReadOnly="@(QueryResult.Columns[p].ReadOnly)" Required="@(!QueryResult.Columns[p].AllowDBNull)"></MudNumericField>
+                    <MudNumericField Class="smallField" Value="@((long?)val)" ValueChanged="(v) => editRow[p] = v" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" T="long?" ReadOnly="@(QueryResult.Columns[p].ReadOnly)" Required="@(!QueryResult.Columns[p].AllowDBNull)" RequiredError='@($"{QueryResult.Columns[p].Name} is  required")'></MudNumericField>
                 }
                 else if (type == typeof(DateTime))
                 {
                     <div class="d-flex">
-                            <MudDatePicker @ref="datePickers[QueryResult.Columns[p].Name]" AutoClose="true" Editable="true" Placeholder="Select Date" Date="@(((DateTime?)val)?.Date)" DateChanged="(v) => {editRow[p] = v.HasValue ? (v.Value.Date).Add(((DateTime?)editRow[p])?.TimeOfDay ?? new TimeSpan(0)) : null;}" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" ReadOnly="@(QueryResult.Columns[p].ReadOnly)" Required="@(!QueryResult.Columns[p].AllowDBNull)">
+                            <MudDatePicker @ref="datePickers[QueryResult.Columns[p].Name]" AutoClose="true" Editable="true" Placeholder="Select Date" Date="@(((DateTime?)val)?.Date)" DateChanged="(v) => {editRow[p] = v.HasValue ? (v.Value.Date).Add(((DateTime?)editRow[p])?.TimeOfDay ?? new TimeSpan(0)) : null;}" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" ReadOnly="@(QueryResult.Columns[p].ReadOnly)" Required="@(!QueryResult.Columns[p].AllowDBNull)" RequiredError='@($"{QueryResult.Columns[p].Name} is  required")'>
                             <PickerActions>
                                 <MudButton Class="mr-auto align-self-start" OnClick="@(() => {editRow[p] = (DateTime.Today).Add(((DateTime?)editRow[p])?.TimeOfDay ?? new TimeSpan(0)); datePickers[QueryResult.Columns[p].Name].Close(); })">Today</MudButton>
                             </PickerActions>
@@ -179,7 +179,7 @@
 
         if (!form.IsValid)
         {
-            await DialogService.ShowMessageBox("Error", "Fill required fields");
+            await DialogService.ShowMessageBox("Error", $"Fill required fields: {String.Join("; ", form.Errors)}");
             return;
         }
 

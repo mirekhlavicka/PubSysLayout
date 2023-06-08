@@ -282,6 +282,76 @@ namespace PubSysLayout.Server.Controllers
             }
         }
 
+        [HttpGet("tableforeignkeys")]
+        public string[][] TableForeignKeys(string database, string tableNames)
+        {
+            using (var conn = new SqlConnection(String.Format(_configuration.GetConnectionString("PubSysDefault"), database)))
+            {
+                using (var cmd = new SqlCommand(String.Format(
+                                            @"SELECT  
+                                                fk.name,
+                                                OBJECT_NAME(fk.parent_object_id) 'parent_table',
+                                                OBJECT_NAME(fk.referenced_object_id) 'referenced_table'
+                                            FROM 
+                                                sys.foreign_keys fk
+                                            WHERE
+	                                            OBJECT_NAME(fk.parent_object_id) IN ({0}) OR
+	                                            OBJECT_NAME(fk.referenced_object_id) IN ({0})
+                                            ORDER BY
+	                                            OBJECT_NAME(fk.parent_object_id),
+	                                            OBJECT_NAME(fk.referenced_object_id)", "'" + tableNames.Replace(",", "','") + "'"), conn))
+                {
+                    using (var adapter = new SqlDataAdapter(cmd))
+                    {
+                        //cmd.Parameters.Add("@tablename", SqlDbType.VarChar, 255).Value = tableName;
+                        DataTable dt = new DataTable();
+                        adapter.Fill(dt);
+                        return dt.AsEnumerable().Select(dr => new string[] 
+                        {
+                            dr[0].ToString(),
+                            dr[1].ToString(),
+                            dr[2].ToString()
+                        }).ToArray();
+                    }
+                }
+            }
+        }
+
+        [HttpGet("foreignkeycolumns")]
+        public string[][] ForeignKeyColumns(string database, string fkName)
+        {
+            using (var conn = new SqlConnection(String.Format(_configuration.GetConnectionString("PubSysDefault"), database)))
+            {
+                using (var cmd = new SqlCommand(
+                                            @"SELECT
+                                                OBJECT_NAME(fk.parent_object_id) 'parent_table',
+                                                c1.name 'parent_column',
+                                                OBJECT_NAME(fk.referenced_object_id) 'referenced_table',
+                                                c2.name 'referenced_column'
+                                            FROM 
+	                                            sys.foreign_key_columns fkc JOIN 
+	                                            sys.foreign_keys fk ON fk.object_id=fkc.constraint_object_id  JOIN
+                                                sys.columns c1 ON fkc.parent_column_id = c1.column_id AND fkc.parent_object_id = c1.object_id JOIN
+                                                sys.columns c2 ON fkc.referenced_column_id = c2.column_id AND fkc.referenced_object_id = c2.object_id
+                                            WHERE
+	                                            fk.name=@fkname", conn))
+                {
+                    using (var adapter = new SqlDataAdapter(cmd))
+                    {
+                        cmd.Parameters.Add("@fkname", SqlDbType.VarChar, 255).Value = fkName;
+                        DataTable dt = new DataTable();
+                        adapter.Fill(dt);
+                        return dt.AsEnumerable().Select(dr => new string[]
+                        {
+                            dr[0].ToString(),
+                            dr[1].ToString(),
+                            dr[2].ToString(),
+                            dr[3].ToString()
+                        }).ToArray();
+                    }
+                }
+            }
+        }
 
         [HttpGet("dblist")]
         public IEnumerable<string> GetDBList()
