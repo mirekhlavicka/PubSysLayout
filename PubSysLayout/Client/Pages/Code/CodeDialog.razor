@@ -52,7 +52,7 @@
     [Parameter] public string Ext { get; set; } = "";
 
     private ElementReference textarea;
-    private bool lineWrapping = true;
+    private bool lineWrapping = false;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {

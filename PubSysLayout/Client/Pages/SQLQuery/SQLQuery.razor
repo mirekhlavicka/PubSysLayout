@@ -86,6 +86,9 @@
         </div>
         <MudDivider />
         <textarea @ref="textarea" id="taSQL" name="taSQL" style="display:none" />
+        <div class="d-flex justify-center">
+            <MudSwitch Checked="lineWrapping" CheckedChanged="@(async (ch) => {lineWrapping = ch; await js.InvokeVoidAsync("codemirror.setOption", "taSQL", "lineWrapping", lineWrapping); })" Color="Color.Primary" T="bool" Label="Line wrapping" />
+        </div>
     </MudTabPanel>
     <MudTabPanel Text="Results" Icon="@Icons.Material.Filled.Dataset">
         @if (queryResult != null && queryResult.Columns.Length > 0)
@@ -219,6 +222,8 @@
     private string[] dbList = { };
     private string SQL = "";
 
+    private bool lineWrapping = false;
+
     private Query query = null;
     private QueryResult queryResult = null;
     private string errorMsg = "No result";
@@ -295,7 +300,7 @@
                     SQL = await Http.GetStringAsync("api/sqlquery/defaultsql");
                 }
             }
-            await js.InvokeVoidAsync("codemirror.create", textarea, SQL, "100%", "calc(100vh - 280px)", "text/x-mssql");
+            await js.InvokeVoidAsync("codemirror.create", textarea, SQL, "100%", "calc(100vh - 330px)", "text/x-mssql");
         }
     }
 
@@ -467,7 +472,7 @@
     {
         var options = new DialogOptions
             {
-                MaxWidth = MaxWidth.Small,
+                MaxWidth = MaxWidth.Medium,
                 CloseButton = true
             };
 

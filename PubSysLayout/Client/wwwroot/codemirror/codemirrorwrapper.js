@@ -6,7 +6,7 @@
         this.cm[textArea.id] = CodeMirror.fromTextArea(textArea, {
             mode: mode,
             lineNumbers: true,
-            lineWrapping: true,
+            lineWrapping: false,
             matchBrackets: true,
             matchTags: { bothTags: false },
             extraKeys: {
