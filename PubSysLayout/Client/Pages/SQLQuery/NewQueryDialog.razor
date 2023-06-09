@@ -164,7 +164,7 @@
                 .OrderBy(fk => fk[1] == table ? 0 : 1)
                 .ThenBy(fk => fk[1] == table ? fk[2] : fk[1]))
         {
-            if (!joinForeignKeys.Contains(fk[0]) && GetJoinTables(tableName).Contains(fk[1] == table ? fk[2] : fk[1]))
+            if (!joinForeignKeys.Contains(fk[0]) && joinTables.Contains(fk[1] == table ? fk[2] : fk[1]))
             {
                 continue;
             }
