@@ -16,6 +16,17 @@
             <MudAutocomplete AutoFocus="true" T="string" Label="Type table name" AnchorOrigin="Origin.BottomCenter" Variant="Variant.Text" SearchFunc="@SearchTable" Clearable="true" ResetValueOnEmptyText="true" spellcheck="false" MaxItems="50" DebounceInterval="200" ValueChanged="TableChanged" Value="tableName" />
             <MudSwitch @bind-Checked="@searchinside" Color="Color.Primary" title="Search inside table or view name" Class="ml-6 mt-4" />
         </div>
+        @if (foreignKeys != null)
+        {
+            <MudText Typo="Typo.subtitle1" Class="mt-8">JOIN tables:</MudText>
+            <MudContainer Style="max-height: 400px; overflow-y: scroll">
+            @foreach (var fk in SortForeignKeys(tableName).ToArray())
+            {
+                    <MudCheckBox T="bool" Checked="@(joinForeignKeys.Contains(fk[0]))" CheckedChanged="async (v) => {if(v) {joinForeignKeys.Add(fk[0]); } else {joinForeignKeys.RemoveWhere(path => path.StartsWith(fk[0])); } await LoadForeignKeys(); } "  Style='@($"margin-left:{20 * (fk[0].Split(',').Length- 1) }px")'>@((MarkupString)fk[1])</MudCheckBox>
+            }
+            </MudContainer>
+            @*@(String.Join(", ", GetJoinTables()))*@
+        }
         @if (columnsInfo != null)
         {
             <div class="d-flex">
@@ -38,17 +49,6 @@
                 </MudSelect>
                 <MudSwitch @bind-Checked="@sortDESC" Color="Color.Primary" title="DESC" Class="ml-6 mt-4" />
             </div>
-        }
-        @if (foreignKeys != null)
-        {
-            <MudText Typo="Typo.subtitle1" Class="mt-8">JOIN tables:</MudText>
-            <MudContainer Style="max-height: 300px; overflow-y: scroll">
-            @foreach (var fk in foreignKeys)
-            {
-                    <MudCheckBox T="bool" Label='@($"{fk[1]} ⟹ {fk[2]}")' Checked="@(joinForeignKeys.Contains(fk[0]))" CheckedChanged="async (v) => {if(v) {joinForeignKeys.Add(fk[0]); } else {joinForeignKeys.Remove(fk[0]); } await LoadForeignKeys(); } " Class='@("ml-" + 4 * foreignKeysLevel[fk[0]])' />
-            }
-            </MudContainer>
-            @*@(String.Join(", ", GetJoinTables(tableName)))*@
         }
     </DialogContent>
     <DialogActions>
@@ -73,8 +73,8 @@
     private bool sortDESC { get { return session["QB_sortDESC"] as bool? ?? false; } set { session["QB_sortDESC"] = value; } }
 
     private string[][] foreignKeys { get { return session["QB_foreignKeys"] as string[][]; } set { session["QB_foreignKeys"] = value; } }
-    private Dictionary<string, int> foreignKeysLevel { get { return session["QB_foreignKeysLevel"] as Dictionary<string, int>; } set { session["QB_foreignKeysLevel"] = value; } }
     private HashSet<string> joinForeignKeys { get { return session["QB_joinForeignKeys"] as HashSet<string>; } set { session["QB_joinForeignKeys"] = value; } }
+    private Dictionary<string, string> tableAlias = null;
 
     protected async override Task OnInitializedAsync()
     {
@@ -118,45 +118,37 @@
     {
         if (!String.IsNullOrEmpty(tableName))
         {
-            foreignKeys = await Http.GetFromJsonAsync<string[][]>($"api/sqlquery/tableforeignkeys?database={Database}&tablenames={String.Join(',', GetJoinTables(tableName))}");
-            joinForeignKeys.RemoveWhere(fkn => !foreignKeys.Any(fk => fk[0] == fkn));
-            foreignKeysLevel = new Dictionary<string, int>();
-            foreignKeys = SortForeignKeys(tableName, GetJoinTables(tableName).ToHashSet()).ToArray();
+            foreignKeys = await Http.GetFromJsonAsync<string[][]>($"api/sqlquery/tableforeignkeys?database={Database}&tablenames={String.Join(',', GetJoinTables())}");
         }
         else
         {
             foreignKeys = null;
-            foreignKeysLevel = null;
         }
     }
 
-    private IEnumerable<string> GetJoinTables(string table, string fromTable = null)
+    private IEnumerable<string> GetJoinTables()
     {
-        yield return table;
-        if (joinForeignKeys != null)
+        if (joinForeignKeys == null || joinForeignKeys.Count == 0)
         {
-            foreach (string s in
-                joinForeignKeys
-                    .Select(fkn => foreignKeys.SingleOrDefault(fk => fk[0] == fkn))
-                    .Where(fk => fk != null && (fk[1] == table || fk[2] == table))
-                    .Select(fk => fk[1] == table ? fk[2] : fk[1])
-                    .Where(s => s != fromTable)
-                    .Distinct())
+            return new string[] { tableName };
+        }
+        else
+        {
+            return joinForeignKeys
+                .SelectMany(path => path.Split(','))
+                .Select(fkn => foreignKeys.SingleOrDefault(fk => fk[0] == fkn))
+                .Where(fk => fk != null)
+                .SelectMany(fk => fk.Skip(1))
+                .Distinct();
+        }
+    }
+
+    private IEnumerable<string[]> SortForeignKeys(string table, string fromTable = null, int level = 0, string path = "")
+    {
+        /*if (level > 4)
             {
-                foreach (string s1 in GetJoinTables(s, table))
-                {
-                    yield return s1;
-                }
-            }
-        }
-    }
-
-    private IEnumerable<string[]> SortForeignKeys(string table, HashSet<string> joinTables, string fromTable = null, int level = 0)
-    {
-        if (level > 4)
-        {
             yield break;
-        }
+        }*/
 
         foreach (string[] fk in
             foreignKeys
@@ -164,16 +156,12 @@
                 .OrderBy(fk => fk[1] == table ? 0 : 1)
                 .ThenBy(fk => fk[1] == table ? fk[2] : fk[1]))
         {
-            if (!joinForeignKeys.Contains(fk[0]) && joinTables.Contains(fk[1] == table ? fk[2] : fk[1]))
-            {
-                continue;
-            }
+            string path1 = path + (path == "" ? "" : ",") + fk[0];
+            yield return new string[] { path1, fk[1] == table ? $"{fk[1]} ⟹ <b>{fk[2]}</b>" : $"<b>{fk[1]}</b> ⟹ {fk[2]}" };
 
-            yield return fk;
-            foreignKeysLevel[fk[0]] = level;
-            if (joinForeignKeys.Contains(fk[0]))
+            if (joinForeignKeys.Contains(path1))
             {
-                foreach (string[] fk1 in SortForeignKeys(fk[1] == table ? fk[2] : fk[1], joinTables, table, level + 1))
+                foreach (string[] fk1 in SortForeignKeys(fk[1] == table ? fk[2] : fk[1], table, level + 1, path1))
                 {
                     yield return fk1;
                 }
@@ -181,32 +169,53 @@
         }
     }
 
-    private async IAsyncEnumerable<string> GetJoinForeignKeys(string table, string fromTable = null)
+    private async IAsyncEnumerable<string> GetJoinForeignKeys(string table, string fromTable = null, string path = "")
     {
-        if (joinForeignKeys != null)
+        foreach (string[] fk in
+            foreignKeys
+                .Where(fk => (fk[1] == table || fk[2] == table) && (fk[1] != fromTable && fk[2] != fromTable))
+                .OrderBy(fk => fk[1] == table ? 0 : 1)
+                .ThenBy(fk => fk[1] == table ? fk[2] : fk[1]))
         {
-            foreach (var item in
-                joinForeignKeys
-                    .Select(fkn => foreignKeys.SingleOrDefault(fk => fk[0] == fkn))
-                    .Where(fk => fk != null && (fk[1] == table || fk[2] == table))
-                    .OrderBy(fk => fk[1] == table ? 0 : 1)
-                    .ThenBy(fk => fk[1] == table ? fk[2] : fk[1])
-                    .Select(fk => new { fk, table = fk[1] == table ? fk[2] : fk[1] })
-                    .Where(it => it.table != fromTable))
+            string path1 = path + (path == "" ? "" : ",") + fk[0];
+
+            if (joinForeignKeys.Contains(path1))
             {
-                yield return item.table + " ON " + (await GetForeignKeyJoinOn(item.fk[0]));
-                await foreach (string s in GetJoinForeignKeys(item.table, table))
+                string tn = fk[1] == table ? fk[2] : fk[1];
+                string utn = tn;
+
+                int p = 0;
+                while (tableAlias.Values.Any(s => s == utn))
                 {
-                    yield return s;
+                    p++;
+                    utn = tn + p;
+                }
+
+                tableAlias[path1] = utn;
+
+                yield return (tn != utn ? tn + " AS " + utn : utn) + " ON " + (await GetForeignKeyJoinOn(fk[0], tn, utn, table, path == "" ? table : tableAlias[path]));
+                await foreach(string fk1 in GetJoinForeignKeys(fk[1] == table ? fk[2] : fk[1], table, path1))
+                {
+                    yield return fk1;
                 }
             }
         }
     }
 
-    private async Task<string> GetForeignKeyJoinOn(string fkName)
+
+    private async Task<string> GetForeignKeyJoinOn(string fkName, string tn, string utn, string tn1, string utn1)
     {
         var columns = await Http.GetFromJsonAsync<string[][]>($"api/sqlquery/foreignkeycolumns?database={Database}&fkname={fkName}");
-        return String.Join(" AND ", columns.Select(r => $"{r[0]}.{r[1]}={r[2]}.{r[3]}"));
+        string res = String.Join(" AND ", columns.Select(r => $"{r[0]}.{r[1]}={r[2]}.{r[3]}"));
+        if (tn != utn)
+        {
+            res = res.Replace(tn + ".", utn + ".");
+        }
+        if (tn1 != utn1)
+        {
+            res = res.Replace(tn1 + ".", utn1 + ".");
+        }
+        return res;
     }
 
     private async Task OK()
@@ -214,13 +223,16 @@
         if (String.IsNullOrEmpty(tableName))
         {
             return;
-        }       
+        }
+
+        tableAlias = new Dictionary<string, string>();
+        tableAlias[tableName] = tableName;
 
         var columns = String.Join(", ", columnsInfo[0].Select(s => tableName + "." + (reservedKeywords.Contains(s.ToLower()) ? $"[{s}]" : s)));
 
         if (joinForeignKeys.Count > 0)
         {
-            columns += ",\r\n    " + String.Join(",\r\n    ", await Task.WhenAll(GetJoinTables(tableName).Skip(1).Select(async tn =>
+            columns += ",\r\n    " + String.Join(",\r\n    ", await Task.WhenAll(GetJoinTables().Skip(1).Select(async tn =>
             {
                 var c = await Http.GetFromJsonAsync<string[][]>($"api/sqlquery/tablecolumns?database={Database}&tablename={tn}");
                 return String.Join(", ", c[0].Select(s => tn + "." + (reservedKeywords.Contains(s.ToLower()) ? $"[{s}]" : s)));
