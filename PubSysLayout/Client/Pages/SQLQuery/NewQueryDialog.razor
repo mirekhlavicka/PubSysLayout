@@ -22,19 +22,18 @@
             <MudContainer Style="max-height: 400px; overflow-y: scroll">
             @foreach (var fk in SortForeignKeys(tableName).ToArray())
             {
-                    <MudCheckBox T="bool" Checked="@(joinForeignKeys.Contains(fk[0]))" CheckedChanged="async (v) => {if(v) {joinForeignKeys.Add(fk[0]); } else {joinForeignKeys.RemoveWhere(path => path.StartsWith(fk[0])); } await LoadForeignKeys(); } "  Style='@($"margin-left:{20 * (fk[0].Split(',').Length- 1) }px")'>@((MarkupString)fk[1])</MudCheckBox>
+                    <MudCheckBox T="bool" Checked="@(joinForeignKeys.Contains(fk[0]))" CheckedChanged="async (v) => {if(v) {joinForeignKeys.Add(fk[0]); } else {joinForeignKeys.RemoveWhere(path => path.StartsWith(fk[0])); } await LoadForeignKeys(); } " Style='@($"margin-left:{20 * (fk[0].Split(',').Length- 1) }px")'>@((MarkupString)fk[1])</MudCheckBox>
             }
             </MudContainer>
-            @*@(String.Join(", ", GetJoinTables()))*@
         }
-        @if (columnsInfo != null)
+        @if (columnsInfo != null && columnsInfo.ContainsKey(tableName))
         {
             <div class="d-flex">
             <MudText Typo="Typo.subtitle1" Class="mt-8">WHERE clause:</MudText>
             <MudSwitch @bind-Checked="@showAllWhereClause" Color="Color.Primary" title="Show all fields" Class="ml-auto mt-6" />
             </div>
             <MudContainer Style="max-height: 300px; overflow-y: scroll">
-            @foreach (var cn in columnsInfo[showAllWhereClause ? 0 : 1])
+            @foreach (var cn in columnsInfo[tableName][showAllWhereClause ? 0 : 1])
             {
                 <MudTextField Label="@cn" Variant="Variant.Text" T="string" @bind-Value="whereClause[cn]"></MudTextField>
             }
@@ -42,7 +41,7 @@
 
             <div class="d-flex mt-6">
                 <MudSelect Label="ORDER BY clause:" T="string" @bind-Value="sortColumn" Clearable>
-                    @foreach (var cn in columnsInfo[0])
+                    @foreach (var cn in columnsInfo[tableName][0])
                     {
                         <MudSelectItem Value="@cn">@cn</MudSelectItem>
                     }
@@ -66,7 +65,7 @@
     private bool searchinside = true;
 
     private string tableName { get { return session["QB_tableName"] as string; } set { session["QB_tableName"] = value; } }
-    private string[][] columnsInfo { get { return session["QB_columnsInfo"] as string[][]; } set { session["QB_columnsInfo"] = value; } }
+    private Dictionary<string, string[][]> columnsInfo { get { return session["QB_columnsInfo"] as Dictionary<string, string[][]>; } set { session["QB_columnsInfo"] = value; } }
     private Dictionary<string, string> whereClause { get { return session["QB_whereClause"] as Dictionary<string, string>; } set { session["QB_whereClause"] = value; } }
     private bool showAllWhereClause { get { return session["QB_showAllWhereClause"] as bool? ?? false; } set { session["QB_showAllWhereClause"] = value; } }
     private string sortColumn { get { return session["QB_sortColumn"] as string ?? String.Empty; } set { session["QB_sortColumn"] = value; } }
@@ -74,7 +73,7 @@
 
     private string[][] foreignKeys { get { return session["QB_foreignKeys"] as string[][]; } set { session["QB_foreignKeys"] = value; } }
     private HashSet<string> joinForeignKeys { get { return session["QB_joinForeignKeys"] as HashSet<string>; } set { session["QB_joinForeignKeys"] = value; } }
-    private Dictionary<string, string> tableAlias = null;
+    private Dictionary<string, string> tableAlias;
 
     protected async override Task OnInitializedAsync()
     {
@@ -100,8 +99,9 @@
     {
         if (!String.IsNullOrEmpty(tableName))
         {
-            columnsInfo = await Http.GetFromJsonAsync<string[][]>($"api/sqlquery/tablecolumns?database={Database}&tablename={tableName}");
-            whereClause = columnsInfo[0].ToDictionary(s => s, s => "");
+            columnsInfo = new Dictionary<string, string[][]>();
+            columnsInfo[tableName] = await Http.GetFromJsonAsync<string[][]>($"api/sqlquery/tablecolumns?database={Database}&tablename={tableName}");
+            whereClause = columnsInfo[tableName][0].ToDictionary(s => s, s => "");
             sortColumn = String.Empty;
             sortDESC = false;
         }
@@ -150,6 +150,12 @@
             yield break;
         }*/
 
+        if (path == "")
+        {
+            tableAlias = new Dictionary<string, string>();
+            tableAlias[""] = tableName;
+        }
+
         foreach (string[] fk in
             foreignKeys
                 .Where(fk => (fk[1] == table || fk[2] == table) && (fk[1] != fromTable && fk[2] != fromTable))
@@ -161,6 +167,16 @@
 
             if (joinForeignKeys.Contains(path1))
             {
+                string tn = fk[1] == table ? fk[2] : fk[1];
+                string utn = tn;
+                int p = 0;
+                while (tableAlias.Values.Any(s => s == utn))
+                {
+                    p++;
+                    utn = tn + p;
+                }
+                tableAlias[path1] = utn;
+
                 foreach (string[] fk1 in SortForeignKeys(fk[1] == table ? fk[2] : fk[1], table, level + 1, path1))
                 {
                     yield return fk1;
@@ -182,18 +198,9 @@
             if (joinForeignKeys.Contains(path1))
             {
                 string tn = fk[1] == table ? fk[2] : fk[1];
-                string utn = tn;
+                string utn = tableAlias[path1];
 
-                int p = 0;
-                while (tableAlias.Values.Any(s => s == utn))
-                {
-                    p++;
-                    utn = tn + p;
-                }
-
-                tableAlias[path1] = utn;
-
-                yield return (tn != utn ? tn + " AS " + utn : utn) + " ON " + (await GetForeignKeyJoinOn(fk[0], tn, utn, table, path == "" ? table : tableAlias[path]));
+                yield return (tn != utn ? tn + " AS " + utn : utn) + " ON " + (await GetForeignKeyJoinOn(fk[0], tn, utn, table, tableAlias[path]));
                 await foreach(string fk1 in GetJoinForeignKeys(fk[1] == table ? fk[2] : fk[1], table, path1))
                 {
                     yield return fk1;
@@ -201,7 +208,6 @@
             }
         }
     }
-
 
     private async Task<string> GetForeignKeyJoinOn(string fkName, string tn, string utn, string tn1, string utn1)
     {
@@ -218,6 +224,29 @@
         return res;
     }
 
+    private async IAsyncEnumerable<string> GetTableColumnList(string table, string fromTable = null, string path = "")
+    {
+        var c = await Http.GetFromJsonAsync<string[][]>($"api/sqlquery/tablecolumns?database={Database}&tablename={table}");
+        yield return String.Join(", ", c[0].Select(s => tableAlias[path] + "." + (reservedKeywords.Contains(s.ToLower()) ? $"[{s}]" : s)));
+
+        foreach (string[] fk in
+            foreignKeys
+                .Where(fk => (fk[1] == table || fk[2] == table) && (fk[1] != fromTable && fk[2] != fromTable))
+                .OrderBy(fk => fk[1] == table ? 0 : 1)
+                .ThenBy(fk => fk[1] == table ? fk[2] : fk[1]))
+        {
+            string path1 = path + (path == "" ? "" : ",") + fk[0];
+
+            if (joinForeignKeys.Contains(path1))
+            {
+                await foreach (string s in GetTableColumnList(fk[1] == table ? fk[2] : fk[1], table, path1))
+                {
+                    yield return s;
+                }
+            }
+        }
+    }
+
     private async Task OK()
     {
         if (String.IsNullOrEmpty(tableName))
@@ -225,42 +254,37 @@
             return;
         }
 
-        tableAlias = new Dictionary<string, string>();
-        tableAlias[tableName] = tableName;
-
-        var columns = String.Join(", ", columnsInfo[0].Select(s => tableName + "." + (reservedKeywords.Contains(s.ToLower()) ? $"[{s}]" : s)));
-
-        if (joinForeignKeys.Count > 0)
+        List<string> tableColumns = new List<string>();
+        await foreach (var s in GetTableColumnList(tableName))
         {
-            columns += ",\r\n    " + String.Join(",\r\n    ", await Task.WhenAll(GetJoinTables().Skip(1).Select(async tn =>
-            {
-                var c = await Http.GetFromJsonAsync<string[][]>($"api/sqlquery/tablecolumns?database={Database}&tablename={tn}");
-                return String.Join(", ", c[0].Select(s => tn + "." + (reservedKeywords.Contains(s.ToLower()) ? $"[{s}]" : s)));
-            })));
+            tableColumns.Add(s);
         }
+        string columns = String.Join(",\r\n    ", tableColumns);
 
-        var where = String.Join(" AND \r\n    ", whereClause
-        .Where(kv => !String.IsNullOrEmpty(kv.Value))
-        .Select(kv => tableName + "." + (reservedKeywords.Contains(kv.Key.ToLower()) ? $"[{kv.Key}]" : kv.Key) + (kv.Value.Contains('%') ? " LIKE " : "=") + (double.TryParse(kv.Value, out _) ? kv.Value : $"'{kv.Value}'")));
+        var where = String.Join(" AND \r\n    ", 
+            whereClause
+                .Where(kv => !String.IsNullOrEmpty(kv.Value))
+                .Select(kv => tableName + "." + (reservedKeywords.Contains(kv.Key.ToLower()) ? $"[{kv.Key}]" : kv.Key) + (kv.Value.Contains('%') ? " LIKE " : "=") + (double.TryParse(kv.Value, out _) ? kv.Value : $"'{kv.Value}'")));
 
-        string sql = $@"SELECT TOP 200
+        string sql = 
+$@"SELECT TOP 200
     {columns}
 FROM
     {tableName}";
 
         if (joinForeignKeys.Count > 0)
         {
-            List<string> tmp = new List<string>();
+            List<string> joinTables = new List<string>();
             await foreach (var s in GetJoinForeignKeys(tableName))
             {
-                tmp.Add(s);
+                joinTables.Add(s);
             }
 
-            sql += $@" JOIN
+            sql += 
+$@" JOIN
     { String.Join(@" JOIN
-    ", tmp)}";
+    ", joinTables)}";
         }
-
 
         if(!String.IsNullOrEmpty(where))
         {
@@ -278,7 +302,7 @@ ORDER BY
     {tableName + "." + (reservedKeywords.Contains(sortColumn.ToLower()) ? "[" + sortColumn + "]" : sortColumn)}{(sortDESC ? " DESC" : "")}";
         }
 
-        await js.InvokeVoidAsync("codemirror.setTableHintOptions", "taSQL", tableName, columnsInfo[0]);
+        await js.InvokeVoidAsync("codemirror.setTableHintOptions", "taSQL", tableName, columnsInfo[tableName][0]);
 
         MudDialog.Close(DialogResult.Ok(sql));
     }
