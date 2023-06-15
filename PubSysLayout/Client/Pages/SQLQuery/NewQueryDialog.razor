@@ -22,30 +22,30 @@
             <MudContainer Style="max-height: 400px; overflow-y: scroll">
             @foreach (var fk in sortedForeignKeys)
             {
-                    <MudCheckBox T="bool" Checked="@(joinForeignKeys.Contains(fk[0]))" CheckedChanged="async (v) => {if(v) {joinForeignKeys.Add(fk[0]); } else {joinForeignKeys.RemoveWhere(path => path.StartsWith(fk[0])); } await LoadForeignKeys(); } " Style='@($"margin-left:{20 * (fk[0].Split(',').Length- 1) }px")'>@((MarkupString)fk[1])</MudCheckBox>
+                    <MudCheckBox T="bool" Checked="@(joinForeignKeys.Contains(fk[0]))" CheckedChanged="async (v) => {if(v) {joinForeignKeys.Add(fk[0]); } else {joinForeignKeys.RemoveWhere(path => path.StartsWith(fk[0])); } await LoadForeignKeys(); if(tableAlias.ContainsKey(fk[0])){ /*await Task.Delay(500);*/ currentTable = tableAlias[fk[0]]; includeAll = true; StateHasChanged(); } } " Style='@($"margin-left:{20 * (fk[0].Split(',').Length- 1) }px")'>@((MarkupString)fk[1])</MudCheckBox>
             }
             </MudContainer>
         }
         @if (currentTable != null && columnsInfo != null && columnsInfo.ContainsKey(currentTable))
         {
             <div class="d-flex">
-                @*<MudText Typo="Typo.subtitle1" Class="mt-6">WHERE:</MudText>*@
-                <MudSelect T="string" @bind-Value="currentTable" Clearable="false" Class="ml-6 mr-6" Dense="true">
+                <MudSelect T="string" @bind-Value="currentTable" Clearable="false" Class="ml-6 mr-6 mt-3 flex-grow-1" Dense="true" Margin="Margin.Dense" Variant=" Variant.Outlined">
                     @foreach (var utn in tableAlias.Values.OrderBy(tn => tn))
                     {
                         <MudSelectItem Value="@utn">@utn</MudSelectItem>
                     }
                 </MudSelect>
-                <MudSwitch @bind-Checked="@showAllWhereClause" Color="Color.Primary" title="Show all fields" Class="ml-auto mt-5" />
+                @*<MudSwitch @bind-Checked="@showAllWhereClause" Color="Color.Primary" title="Show all fields" Class="ml-auto mt-5" />*@
+                <MudTextField DebounceInterval="300" @bind-Value="searchField" Placeholder="Search field" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-3 flex-grow-0" Clearable="true"></MudTextField>
             </div>
             <div class="d-flex">
-                <MudCheckBox T="bool" Checked="false" title="check all" Style="padding-left: 24px"></MudCheckBox>
+                <MudCheckBox T="bool" title="check/uncheck all" Checked="includeAll" Style="padding-left: 24px" CheckedChanged="(v) => {includeAll = v; foreach(var cn in includeColumns[currentTable].Keys) { includeColumns[currentTable][cn] = v; }}"></MudCheckBox>
             </div>
             <MudContainer Style="max-height: 300px; overflow-y: scroll">
-            @foreach (var cn in columnsInfo[currentTable][showAllWhereClause ? 0 : 1])
+            @foreach (var cn in columnsInfo[currentTable][showAllWhereClause ? 0 : 1].Where(cn => String.IsNullOrEmpty(searchField) || cn.ToLower().Contains(searchField)))
             {
                 <div class="d-flex">
-                    <MudCheckBox T="bool" Checked="true" title="include in SELECT" Class="mt-3"></MudCheckBox>
+                    <MudCheckBox T="bool" title="include in SELECT" Class="mt-3" @bind-Checked="includeColumns[currentTable][cn]"></MudCheckBox>
                     <MudTextField Label="@cn" Variant="Variant.Text" T="string" @bind-Value="whereClause[currentTable][cn]" title="WHERE Clause value"></MudTextField>
                 </div>
             }
@@ -76,9 +76,14 @@
 
     private bool searchinside = true;
 
+    private bool includeAll = true;
+
+    private string searchField = "";
+
     private string tableName { get { return session["QB_tableName"] as string; } set { session["QB_tableName"] = value; } }
     private string currentTable { get { return session["QB_currentTable"] as string; } set { session["QB_currentTable"] = value; } }
     private Dictionary<string, string[][]> columnsInfo { get { return session["QB_columnsInfo"] as Dictionary<string, string[][]>; } set { session["QB_columnsInfo"] = value; } }
+    private Dictionary<string, Dictionary<string, bool>> includeColumns { get { return session["QB_includeColumns"] as Dictionary<string, Dictionary<string, bool>>; } set { session["QB_includeColumns"] = value; } }
     private Dictionary<string, Dictionary<string, string>> whereClause { get { return session["QB_whereClause"] as Dictionary<string, Dictionary<string, string>>; } set { session["QB_whereClause"] = value; } }
     private bool showAllWhereClause { get { return session["QB_showAllWhereClause"] as bool? ?? true; } set { session["QB_showAllWhereClause"] = value; } }
     private string sortColumn { get { return session["QB_sortColumn"] as string ?? String.Empty; } set { session["QB_sortColumn"] = value; } }
@@ -118,6 +123,8 @@
             columnsInfo[tableName] = await Http.GetFromJsonAsync<string[][]>($"api/sqlquery/tablecolumns?database={Database}&tablename={tableName}");
             whereClause = new Dictionary<string, Dictionary<string, string>>();
             whereClause[tableName] = columnsInfo[tableName][0].ToDictionary(s => s, s => "");
+            includeColumns = new Dictionary<string, Dictionary<string, bool>>();
+            includeColumns[tableName] = columnsInfo[tableName][0].ToDictionary(s => s, s => true);
             sortColumn = String.Empty;
             sortDESC = false;
         }
@@ -125,6 +132,7 @@
         {
             columnsInfo = null;
             whereClause = null;
+            includeColumns = null;
             sortColumn = String.Empty;
             sortDESC = false;
         }
@@ -151,6 +159,7 @@
             {
                 columnsInfo.Remove(rtn);
                 whereClause.Remove(rtn);
+                includeColumns.Remove(rtn);
             }
             if(!String.IsNullOrEmpty(sortColumn) && !tableAlias.Values.Contains(sortColumn.Split('.')[0]))
             {
@@ -184,15 +193,11 @@
     private async IAsyncEnumerable<string[]> SortForeignKeys(string table, string fromTable = null, int level = 0, string path = "")
     {
         if (level > 10)
-            {
+        {
             yield break;
         }
 
-        foreach (string[] fk in
-            foreignKeys
-                .Where(fk => (fk[1] == table || fk[2] == table) && (fk[1] != fromTable && fk[2] != fromTable))
-                .OrderBy(fk => fk[1] == table ? 0 : 1)
-                .ThenBy(fk => fk[1] == table ? fk[2] : fk[1]))
+        foreach (string[] fk in GetForeignKeysFromTable(table, fromTable))
         {
             string path1 = path + (path == "" ? "" : ",") + fk[0];
 
@@ -213,6 +218,7 @@
                 {
                     columnsInfo[utn] = await Http.GetFromJsonAsync<string[][]>($"api/sqlquery/tablecolumns?database={Database}&tablename={tn}");
                     whereClause[utn] = columnsInfo[utn][0].ToDictionary(s => s, s => "");
+                    includeColumns[utn] = columnsInfo[utn][0].ToDictionary(s => s, s => true);
                 }
             }
 
@@ -230,11 +236,7 @@
 
     private async IAsyncEnumerable<string> GetJoinForeignKeys(string table, string fromTable = null, string path = "")
     {
-        foreach (string[] fk in
-            foreignKeys
-                .Where(fk => (fk[1] == table || fk[2] == table) && (fk[1] != fromTable && fk[2] != fromTable))
-                .OrderBy(fk => fk[1] == table ? 0 : 1)
-                .ThenBy(fk => fk[1] == table ? fk[2] : fk[1]))
+        foreach (string[] fk in GetForeignKeysFromTable(table, fromTable))
         {
             string path1 = path + (path == "" ? "" : ",") + fk[0];
 
@@ -269,13 +271,9 @@
 
     private IEnumerable<string> GetTableColumnList(string table, string fromTable = null, string path = "")
     {
-        yield return String.Join(", ", columnsInfo[tableAlias[path]][0].Select(s => tableAlias[path] + "." + (reservedKeywords.Contains(s.ToLower()) ? $"[{s}]" : s)));
+        yield return String.Join(", ", columnsInfo[tableAlias[path]][0].Where(c => includeColumns[tableAlias[path]][c]).Select(s => tableAlias[path] + "." + (reservedKeywords.Contains(s.ToLower()) ? $"[{s}]" : s)));
 
-        foreach (string[] fk in
-            foreignKeys
-                .Where(fk => (fk[1] == table || fk[2] == table) && (fk[1] != fromTable && fk[2] != fromTable))
-                .OrderBy(fk => fk[1] == table ? 0 : 1)
-                .ThenBy(fk => fk[1] == table ? fk[2] : fk[1]))
+        foreach (string[] fk in GetForeignKeysFromTable(table, fromTable))
         {
             string path1 = path + (path == "" ? "" : ",") + fk[0];
 
@@ -289,6 +287,14 @@
         }
     }
 
+    private IEnumerable<string[]> GetForeignKeysFromTable(string table, string fromTable)
+    {
+        return foreignKeys
+                .Where(fk => (fk[1] == table || fk[2] == table) && (fk[1] != fromTable && fk[2] != fromTable))
+                .OrderBy(fk => fk[1] == table ? 0 : 1)
+                .ThenBy(fk => fk[1] == table ? fk[2] : fk[1]);
+    }
+
     private async Task OK()
     {
         if (String.IsNullOrEmpty(tableName))
@@ -296,7 +302,7 @@
             return;
         }
 
-        string columns = String.Join(",\r\n    ", GetTableColumnList(tableName));
+        string columns = String.Join(",\r\n    ", GetTableColumnList(tableName).Where(cl => !String.IsNullOrEmpty(cl)));
 
         string  where = String.Join(" AND \r\n    ",
             whereClause.Keys.SelectMany(utn => 
@@ -304,12 +310,7 @@
                 .Where(kv => !String.IsNullOrEmpty(kv.Value))
                 .Select(kv => utn + "." + (reservedKeywords.Contains(kv.Key.ToLower()) ? $"[{kv.Key}]" : kv.Key) + (kv.Value.Contains('%') ? " LIKE " : "=") + (double.TryParse(kv.Value, out _) ? kv.Value : $"'{kv.Value}'"))));
 
-        string sql = 
-$@"SELECT TOP 200
-    {columns}
-FROM
-    {tableName}";
-
+        string join = "";
         if (joinForeignKeys.Count > 0)
         {
             List<string> joinTables = new List<string>();
@@ -317,25 +318,30 @@ FROM
             {
                 joinTables.Add(s);
             }
+            join = $" JOIN\r\n    {String.Join(" JOIN\r\n    ", joinTables)}";
+        }
 
-            sql += 
-$@" JOIN
-    { String.Join(@" JOIN
-    ", joinTables)}";
+        string sql = 
+$@"SELECT TOP 200
+    {columns}
+FROM
+    {tableName}";
+
+        if (!String.IsNullOrEmpty(join))
+        {
+            sql += join;
         }
 
         if(!String.IsNullOrEmpty(where))
         {
-            sql +=
-$@"
+            sql += $@"
 WHERE
     {where}";
         }
 
         if(!String.IsNullOrEmpty(sortColumn))
         {
-            sql +=
-$@"
+            sql += $@"
 ORDER BY
     {sortColumn}{(sortDESC ? " DESC" : "")}";
         }
