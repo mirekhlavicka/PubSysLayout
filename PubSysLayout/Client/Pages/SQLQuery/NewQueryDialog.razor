@@ -13,36 +13,44 @@
     </TitleContent>
     <DialogContent>
         <div class="d-flex">
-            <MudAutocomplete AutoFocus="true" T="string" Label="Type table name" AnchorOrigin="Origin.BottomCenter" Variant="Variant.Text" SearchFunc="@SearchTable" Clearable="true" ResetValueOnEmptyText="true" spellcheck="false" MaxItems="50" DebounceInterval="200" ValueChanged="TableChanged" Value="tableName" />
+            <MudAutocomplete AutoFocus="true" T="string" Label="Type main table name" AnchorOrigin="Origin.BottomCenter" Variant="Variant.Text" SearchFunc="@SearchTable" Clearable="true" ResetValueOnEmptyText="true" spellcheck="false" MaxItems="50" DebounceInterval="200" ValueChanged="TableChanged" Value="tableName" />
+            <MudIconButton Disabled="@(String.IsNullOrEmpty(tableName))" Icon="@Icons.Material.Filled.PlayArrow" Color="@(currentTable == tableName ? Color.Primary : Color.Default)" Size="Size.Medium" Title="Show columns" OnClick="@(_ => currentTable = tableName)" Class="ml-1 mt-3"></MudIconButton>
             <MudSwitch @bind-Checked="@searchinside" Color="Color.Primary" title="Search inside table or view name" Class="ml-6 mt-4" />
         </div>
         @if (foreignKeys != null)
         {
             <MudText Typo="Typo.subtitle1" Class="mt-8">JOIN tables:</MudText>
-            <MudContainer Style="max-height: 400px; overflow-y: scroll">
+            <MudContainer Style="height: 400px; overflow-y: scroll">
             @foreach (var fk in sortedForeignKeys)
             {
-                    <MudCheckBox T="bool" Checked="@(joinForeignKeys.Contains(fk[0]))" CheckedChanged="async (v) => {if(v) {joinForeignKeys.Add(fk[0]); } else {joinForeignKeys.RemoveWhere(path => path.StartsWith(fk[0])); } await LoadForeignKeys(); if(tableAlias.ContainsKey(fk[0])){ /*await Task.Delay(500);*/ currentTable = tableAlias[fk[0]]; includeAll = true; StateHasChanged(); } } " Style='@($"margin-left:{20 * (fk[0].Split(',').Length- 1) }px")'>@((MarkupString)fk[1])</MudCheckBox>
+                <div class="d-flex" Style='@($"margin-left:{20 * (fk[0].Split(',').Length - 2) }px")'>
+                    <MudIconButton Icon="@(expandForeignKeys.Contains(fk[0]) ? Icons.Material.Filled.ArrowDropDown : Icons.Material.Filled.ArrowRight)" Size="Size.Medium" Title="Show related tables" Style='@($"visibility:{(joinForeignKeys.Contains(fk[0]) ? "visible" : "hidden")};margin-right: -15px")' OnClick="@(async _ => { if(expandForeignKeys.Contains(fk[0])) { expandForeignKeys.RemoveWhere(path => path.StartsWith(fk[0]));} else { expandForeignKeys.Add(fk[0]); } await LoadForeignKeys(); })"></MudIconButton>
+                    <MudCheckBox T="bool" Color="@(tableAlias.Keys.Contains(fk[0]) && currentTable == tableAlias[fk[0]] ? Color.Primary : Color.Default)" Title="Join table" Checked="@(joinForeignKeys.Contains(fk[0]))" CheckedChanged="async (v) => {if(v) {joinForeignKeys.Add(fk[0]); } else {joinForeignKeys.RemoveWhere(path => path.StartsWith(fk[0])); expandForeignKeys.RemoveWhere(path => path.StartsWith(fk[0]));} await LoadForeignKeys(); if(tableAlias.ContainsKey(fk[0])){ /*await Task.Delay(500);*/ currentTable = tableAlias[fk[0]]; includeAll = true; StateHasChanged(); } } ">@((MarkupString)fk[1])</MudCheckBox>
+                    @if (joinForeignKeys.Contains(fk[0]))
+                    {
+                            <MudIconButton Icon="@Icons.Material.Filled.PlayArrow" Color="@(tableAlias.Keys.Contains(fk[0]) && currentTable == tableAlias[fk[0]] ? Color.Primary : Color.Default)" Size="Size.Medium" Title="Show columns" OnClick="@(_ => currentTable = tableAlias[fk[0]])"></MudIconButton>
+                    }
+                </div>
             }
             </MudContainer>
         }
         @if (currentTable != null && columnsInfo != null && columnsInfo.ContainsKey(currentTable))
         {
             <div class="d-flex">
-                <MudSelect T="string" @bind-Value="currentTable" Clearable="false" Class="ml-6 mr-6 mt-3 flex-grow-1" Dense="true" Margin="Margin.Dense" Variant=" Variant.Outlined">
+                <MudSelect Label="Columns of table" T="string" @bind-Value="currentTable" Clearable="false" Class="ml-6 mr-6 mt-3 flex-grow-1" Dense="true" Margin="Margin.Dense" Variant=" Variant.Outlined">
                     @foreach (var utn in tableAlias.Values.OrderBy(tn => tn))
                     {
                         <MudSelectItem Value="@utn">@utn</MudSelectItem>
                     }
                 </MudSelect>
                 @*<MudSwitch @bind-Checked="@showAllWhereClause" Color="Color.Primary" title="Show all fields" Class="ml-auto mt-5" />*@
-                <MudTextField DebounceInterval="300" @bind-Value="searchField" Placeholder="Search field" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-3 flex-grow-0" Clearable="true"></MudTextField>
+                <MudTextField DebounceInterval="300" @bind-Value="searchField" Placeholder="Search column" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-3 flex-grow-0" Clearable="true"></MudTextField>
             </div>
             <div class="d-flex">
                 <MudCheckBox T="bool" title="check/uncheck all" Checked="includeAll" Style="padding-left: 24px" CheckedChanged="(v) => {includeAll = v; foreach(var cn in includeColumns[currentTable].Keys) { includeColumns[currentTable][cn] = v; }}"></MudCheckBox>
             </div>
-            <MudContainer Style="max-height: 300px; overflow-y: scroll">
-            @foreach (var cn in columnsInfo[currentTable][showAllWhereClause ? 0 : 1].Where(cn => String.IsNullOrEmpty(searchField) || cn.ToLower().Contains(searchField)))
+            <MudContainer Style="height: 300px; overflow-y: scroll">
+            @foreach (var cn in columnsInfo[currentTable][0/*showAllWhereClause ? 0 : 1*/].Where(cn => String.IsNullOrEmpty(searchField) || cn.ToLower().Contains(searchField)))
             {
                 <div class="d-flex">
                     <MudCheckBox T="bool" title="include in SELECT" Class="mt-3" @bind-Checked="includeColumns[currentTable][cn]"></MudCheckBox>
@@ -85,13 +93,14 @@
     private Dictionary<string, string[][]> columnsInfo { get { return session["QB_columnsInfo"] as Dictionary<string, string[][]>; } set { session["QB_columnsInfo"] = value; } }
     private Dictionary<string, Dictionary<string, bool>> includeColumns { get { return session["QB_includeColumns"] as Dictionary<string, Dictionary<string, bool>>; } set { session["QB_includeColumns"] = value; } }
     private Dictionary<string, Dictionary<string, string>> whereClause { get { return session["QB_whereClause"] as Dictionary<string, Dictionary<string, string>>; } set { session["QB_whereClause"] = value; } }
-    private bool showAllWhereClause { get { return session["QB_showAllWhereClause"] as bool? ?? true; } set { session["QB_showAllWhereClause"] = value; } }
+    //private bool showAllWhereClause { get { return session["QB_showAllWhereClause"] as bool? ?? true; } set { session["QB_showAllWhereClause"] = value; } }
     private string sortColumn { get { return session["QB_sortColumn"] as string ?? String.Empty; } set { session["QB_sortColumn"] = value; } }
     private bool sortDESC { get { return session["QB_sortDESC"] as bool? ?? false; } set { session["QB_sortDESC"] = value; } }
 
     private string[][] foreignKeys { get { return session["QB_foreignKeys"] as string[][]; } set { session["QB_foreignKeys"] = value; } }
     private List<string[]> sortedForeignKeys { get { return session["QB_sortedForeignKeys"] as List<string[]>; } set { session["QB_sortedForeignKeys"] = value; } }
     private HashSet<string> joinForeignKeys { get { return session["QB_joinForeignKeys"] as HashSet<string>; } set { session["QB_joinForeignKeys"] = value; } }
+    private HashSet<string> expandForeignKeys { get { return session["QB_expandForeignKeys"] as HashSet<string>; } set { session["QB_expandForeignKeys"] = value; } }
     private Dictionary<string, string> tableAlias { get { return session["QB_tableAlias"] as Dictionary<string, string>; } set { session["QB_tableAlias"] = value; } }
 
     protected async override Task OnInitializedAsync()
@@ -109,6 +118,7 @@
             tableName = value;
             currentTable = tableName;
             joinForeignKeys = new HashSet<string>();
+            expandForeignKeys = new HashSet<string>();
             await localStorage.SetAsync("SQLQuery_query_tableName", tableName);
             await LoadColumns();
             await LoadForeignKeys();
@@ -228,7 +238,10 @@
             {
                 await foreach (string[] fk1 in SortForeignKeys(fk[1] == table ? fk[2] : fk[1], table, level + 1, path1))
                 {
-                    yield return fk1;
+                    if (expandForeignKeys.Contains(path1))
+                    {
+                        yield return fk1;
+                    }
                 }
             }
         }
@@ -257,15 +270,7 @@
     private async Task<string> GetForeignKeyJoinOn(string fkName, string tn, string utn, string tn1, string utn1)
     {
         var columns = await Http.GetFromJsonAsync<string[][]>($"api/sqlquery/foreignkeycolumns?database={Database}&fkname={fkName}");
-        string res = String.Join(" AND ", columns.Select(r => $"{r[0]}.{r[1]}={r[2]}.{r[3]}"));
-        if (tn != utn)
-        {
-            res = res.Replace(tn + ".", utn + ".");
-        }
-        if (tn1 != utn1)
-        {
-            res = res.Replace(tn1 + ".", utn1 + ".");
-        }
+        string res = String.Join(" AND ", columns.Select(r => $"{(r[0] == tn ? utn : utn1)}.{r[1]}={(r[2] == tn ? utn : utn1)}.{r[3]}"));
         return res;
     }
 
@@ -346,7 +351,11 @@ ORDER BY
     {sortColumn}{(sortDESC ? " DESC" : "")}";
         }
 
-        await js.InvokeVoidAsync("codemirror.setTableHintOptions", "taSQL", tableName, columnsInfo[tableName][0]);
+
+        foreach (var tn in GetJoinTables())
+        {
+            await js.InvokeVoidAsync("codemirror.setTableHintOptions", "taSQL", tn, columnsInfo[tn][0]);
+        }
 
         MudDialog.Close(DialogResult.Ok(sql));
     }
