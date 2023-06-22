@@ -3,6 +3,17 @@
 @inject SessionStorage session
 @inject IJSRuntime js
 
+@using MudBlazor.Utilities
+
+<style>
+    .transformRotate {
+        transform: rotate(90deg);
+    }
+
+    .expandRelated {
+        transition: .3s cubic-bezier(.25,.8,.5,1),visibility 0s;
+    }
+</style>
 
 <MudDialog DefaultFocus="DefaultFocus.None">
     <TitleContent>
@@ -19,13 +30,13 @@
         </div>
         @if (foreignKeys != null)
         {
-            <MudText Typo="Typo.subtitle1" Class="mt-8">JOIN tables:</MudText>
-            <MudContainer Style="height: 400px; overflow-y: scroll">
+            <MudText Typo="Typo.subtitle1" Class="mt-4">JOIN tables:</MudText>
+            <MudContainer Style="height: 300px; overflow-y: scroll">
             @foreach (var fk in sortedForeignKeys)
             {
                 <div class="d-flex" Style='@($"margin-left:{20 * (fk[0].Split(',').Length - 2) }px")'>
-                    <MudIconButton Icon="@(expandForeignKeys.Contains(fk[0]) ? Icons.Material.Filled.ArrowDropDown : Icons.Material.Filled.ArrowRight)" Size="Size.Medium" Title="Show related tables" Style='@($"visibility:{(joinForeignKeys.Contains(fk[0]) ? "visible" : "hidden")};margin-right: -15px")' OnClick="@(async _ => { if(expandForeignKeys.Contains(fk[0])) { expandForeignKeys.RemoveWhere(path => path.StartsWith(fk[0]));} else { expandForeignKeys.Add(fk[0]); } await LoadForeignKeys(); })"></MudIconButton>
-                    <MudCheckBox T="bool" Color="@(tableAlias.Keys.Contains(fk[0]) && currentTable == tableAlias[fk[0]] ? Color.Primary : Color.Default)" Title="Join table" Checked="@(joinForeignKeys.Contains(fk[0]))" CheckedChanged="async (v) => {if(v) {joinForeignKeys.Add(fk[0]); } else {joinForeignKeys.RemoveWhere(path => path.StartsWith(fk[0])); expandForeignKeys.RemoveWhere(path => path.StartsWith(fk[0]));} await LoadForeignKeys(); if(tableAlias.ContainsKey(fk[0])){ /*await Task.Delay(500);*/ currentTable = tableAlias[fk[0]]; includeAll = true; StateHasChanged(); } } ">@((MarkupString)fk[1])</MudCheckBox>
+                    <MudIconButton Icon="@(Icons.Material.Filled.ChevronRight)" Class="@(expandForeignKeys.Contains(fk[0]) ? "expandRelated transformRotate" : "expandRelated")" Size="Size.Medium" Title="Show related tables" Style='@($"visibility:{(joinForeignKeys.Contains(fk[0]) ? "visible" : "hidden")};margin-right: -15px")' OnClick="@(async _ => { if(expandForeignKeys.Contains(fk[0])) { expandForeignKeys.RemoveWhere(path => path.StartsWith(fk[0]));} else { expandForeignKeys.Add(fk[0]); } await LoadForeignKeys(); })"></MudIconButton>
+                    <MudCheckBox T="bool" Color="@(tableAlias.Keys.Contains(fk[0]) && currentTable == tableAlias[fk[0]] ? Color.Primary : Color.Default)" Title="JOIN table" Checked="@(joinForeignKeys.Contains(fk[0]))" CheckedChanged="async (v) => {if(v) {joinForeignKeys.Add(fk[0]); } else {joinForeignKeys.RemoveWhere(path => path.StartsWith(fk[0])); expandForeignKeys.RemoveWhere(path => path.StartsWith(fk[0]));} await LoadForeignKeys(); if(tableAlias.ContainsKey(fk[0])){ /*await Task.Delay(500);*/ currentTable = tableAlias[fk[0]]; includeAll = true; StateHasChanged(); } } ">@((MarkupString)fk[1])</MudCheckBox>
                     @if (joinForeignKeys.Contains(fk[0]))
                     {
                             <MudIconButton Icon="@Icons.Material.Filled.PlayArrow" Color="@(tableAlias.Keys.Contains(fk[0]) && currentTable == tableAlias[fk[0]] ? Color.Primary : Color.Default)" Size="Size.Medium" Title="Show columns" OnClick="@(_ => currentTable = tableAlias[fk[0]])"></MudIconButton>
@@ -43,7 +54,6 @@
                         <MudSelectItem Value="@utn">@utn</MudSelectItem>
                     }
                 </MudSelect>
-                @*<MudSwitch @bind-Checked="@showAllWhereClause" Color="Color.Primary" title="Show all fields" Class="ml-auto mt-5" />*@
                 <MudTextField DebounceInterval="300" @bind-Value="searchField" Placeholder="Search column" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-3 flex-grow-0" Clearable="true"></MudTextField>
             </div>
             <div class="d-flex">
@@ -55,20 +65,24 @@
                 <div class="d-flex">
                     <MudCheckBox T="bool" title="include in SELECT" Class="mt-3" @bind-Checked="includeColumns[currentTable][cn]"></MudCheckBox>
                     <MudTextField Label="@cn" Variant="Variant.Text" T="string" @bind-Value="whereClause[currentTable][cn]" title="WHERE Clause value"></MudTextField>
+                    <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" OnClick="@(_ => { if(!sortColumns.Any(sc => sc.TableName == currentTable && sc.ColumnName == cn)) {sortColumns.Add(new SortDropItem { TableName =  currentTable, ColumnName = cn, Order = sortColumns.Count > 0  ? sortColumns.Max(sc => sc.Order) + 1 : 0, Desc = false}); RefreshSortColumns(); }})" Class="mt-3" Title="Add to ORDER BY"></MudIconButton>
                 </div>
             }
             </MudContainer>
-
-            <div class="d-flex mt-6">
-                <MudSelect Label="ORDER BY:" T="string" @bind-Value="sortColumn" Clearable="true" Dense="true">
-                    @foreach (var cn in columnsInfo.Keys.SelectMany(utn => columnsInfo[utn][0], (utn, cn) => $"{utn}.{(reservedKeywords.Contains(cn.ToLower()) ? "[" + cn + "]" : cn)}").OrderBy(cn => cn))
-                    {
-                        <MudSelectItem Value="@cn">@cn</MudSelectItem>
-                    }
-                </MudSelect>
-                <MudSwitch @bind-Checked="@sortDESC" Color="Color.Primary" title="DESC" Class="ml-6 mt-4" />
-            </div>
-        }
+            <MudText Typo="Typo.subtitle1" Class="mt-4">ORDER BY:</MudText>
+            <MudDropContainer @ref="sortDropContainer" T="SortDropItem" Items="sortColumns" ItemsSelector="@((item,dropzone) => true)" ItemDropped="@((dropItem) => { sortColumns.UpdateOrder(dropItem, item => item.Order, 0); RefreshSortColumns(false); })">
+                <ChildContent>
+                    <MudDropZone T="SortDropItem" Identifier="1" AllowReorder="true" Class="rounded-lg mud-alert-text-normal pa-2 mt-2 mx-2 flex-grow-1 d-flex flex-wrap" Style="min-height:74px" />
+                </ChildContent>
+                <ItemRenderer>
+                    <MudPaper Elevation="2" Class="pa-2 ma-2">
+                        @($"{context.TableName}.{context.ColumnName}")
+                        <MudIconButton Icon="@(context.Desc ? Icons.Material.Filled.ArrowDownward : Icons.Material.Filled.ArrowUpward)" OnClick="@(_ => { context.Desc = !context.Desc; RefreshSortColumns(); })" Size="Size.Small" Title="@(context.Desc ? "DESC" : "ASC")"></MudIconButton>
+                        <MudIconButton Icon="@Icons.Material.Filled.Clear" OnClick="@(_ => { sortColumns.Remove(context); RefreshSortColumns(); })" Size="Size.Small" Title="Remove"></MudIconButton>
+                    </MudPaper>
+                </ItemRenderer>
+            </MudDropContainer>
+         }
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel" Variant="Variant.Filled" Class="ml-auto">Cancel</MudButton>
@@ -93,15 +107,22 @@
     private Dictionary<string, string[][]> columnsInfo { get { return session["QB_columnsInfo"] as Dictionary<string, string[][]>; } set { session["QB_columnsInfo"] = value; } }
     private Dictionary<string, Dictionary<string, bool>> includeColumns { get { return session["QB_includeColumns"] as Dictionary<string, Dictionary<string, bool>>; } set { session["QB_includeColumns"] = value; } }
     private Dictionary<string, Dictionary<string, string>> whereClause { get { return session["QB_whereClause"] as Dictionary<string, Dictionary<string, string>>; } set { session["QB_whereClause"] = value; } }
-    //private bool showAllWhereClause { get { return session["QB_showAllWhereClause"] as bool? ?? true; } set { session["QB_showAllWhereClause"] = value; } }
-    private string sortColumn { get { return session["QB_sortColumn"] as string ?? String.Empty; } set { session["QB_sortColumn"] = value; } }
-    private bool sortDESC { get { return session["QB_sortDESC"] as bool? ?? false; } set { session["QB_sortDESC"] = value; } }
+    private List<SortDropItem> sortColumns { get { return session["QB_sortColumns"] as List<SortDropItem>; } set { session["QB_sortColumns"] = value; } }
 
     private string[][] foreignKeys { get { return session["QB_foreignKeys"] as string[][]; } set { session["QB_foreignKeys"] = value; } }
     private List<string[]> sortedForeignKeys { get { return session["QB_sortedForeignKeys"] as List<string[]>; } set { session["QB_sortedForeignKeys"] = value; } }
     private HashSet<string> joinForeignKeys { get { return session["QB_joinForeignKeys"] as HashSet<string>; } set { session["QB_joinForeignKeys"] = value; } }
     private HashSet<string> expandForeignKeys { get { return session["QB_expandForeignKeys"] as HashSet<string>; } set { session["QB_expandForeignKeys"] = value; } }
     private Dictionary<string, string> tableAlias { get { return session["QB_tableAlias"] as Dictionary<string, string>; } set { session["QB_tableAlias"] = value; } }
+
+    private MudDropContainer<SortDropItem> sortDropContainer;
+    private class SortDropItem
+    {
+        public string TableName { get; init; }
+        public string ColumnName { get; init; }
+        public bool Desc { get; set; }
+        public int Order { get; set; }
+    }
 
     protected async override Task OnInitializedAsync()
     {
@@ -129,23 +150,22 @@
     {
         if (!String.IsNullOrEmpty(tableName))
         {
-            columnsInfo = new Dictionary<string, string[][]>();
+            columnsInfo = new();
             columnsInfo[tableName] = await Http.GetFromJsonAsync<string[][]>($"api/sqlquery/tablecolumns?database={Database}&tablename={tableName}");
-            whereClause = new Dictionary<string, Dictionary<string, string>>();
+            whereClause = new();
             whereClause[tableName] = columnsInfo[tableName][0].ToDictionary(s => s, s => "");
-            includeColumns = new Dictionary<string, Dictionary<string, bool>>();
+            includeColumns = new();
             includeColumns[tableName] = columnsInfo[tableName][0].ToDictionary(s => s, s => true);
-            sortColumn = String.Empty;
-            sortDESC = false;
+            sortColumns = new();
         }
         else
         {
             columnsInfo = null;
             whereClause = null;
             includeColumns = null;
-            sortColumn = String.Empty;
-            sortDESC = false;
+            sortColumns = null;
         }
+        sortDropContainer?.Refresh();
     }
 
     private async Task LoadForeignKeys()
@@ -171,15 +191,25 @@
                 whereClause.Remove(rtn);
                 includeColumns.Remove(rtn);
             }
-            if(!String.IsNullOrEmpty(sortColumn) && !tableAlias.Values.Contains(sortColumn.Split('.')[0]))
+            foreach (var sc in sortColumns.Where(sc => !tableAlias.Values.Contains(sc.TableName)).ToArray())
             {
-                sortColumn = String.Empty;
+                sortColumns.Remove(sc);
             }
+            RefreshSortColumns();
         }
         else
         {
             foreignKeys = null;
             sortedForeignKeys = null;
+        }
+    }
+
+    private void RefreshSortColumns(bool refresh = true)
+    {
+        sortColumns?.Sort((i1, i2) => i1.Order.CompareTo(i2.Order));
+        if (refresh)
+        {
+            sortDropContainer?.Refresh();
         }
     }
 
@@ -326,6 +356,12 @@
             join = $" JOIN\r\n    {String.Join(" JOIN\r\n    ", joinTables)}";
         }
 
+        string sort = "";
+        if (sortColumns.Count > 0)
+        {
+            sort = String.Join(",\r\n    ", sortColumns.OrderBy(sc => sc.Order).Select(sc => $"{sc.TableName}.{sc.ColumnName}{(sc.Desc ? " DESC" : "")}"));
+        }
+
         string sql = 
 $@"SELECT TOP 200
     {columns}
@@ -344,11 +380,11 @@ WHERE
     {where}";
         }
 
-        if(!String.IsNullOrEmpty(sortColumn))
+        if(!String.IsNullOrEmpty(sort))
         {
             sql += $@"
 ORDER BY
-    {sortColumn}{(sortDESC ? " DESC" : "")}";
+    {sort}";
         }
 
 
