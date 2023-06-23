@@ -72,7 +72,7 @@
             </div>
             <MudSpacer />
             <MudFab OnClick="async () => await ClearQuery()" StartIcon="@Icons.Material.Filled.Clear" Color="Color.Default" IconColor="Color.Secondary" IconSize="Size.Medium" Size="Size.Medium" DisableElevation="true" Style="margin-top:10px" Class="mr-2" Title="Clear query"></MudFab>
-            <MudFab OnClick="async () => await BuildQuery()" StartIcon="@Icons.Material.Filled.GridOn" Color="Color.Default" IconColor="Color.Primary" IconSize="Size.Medium" Size="Size.Medium" DisableElevation="true" Style="margin-top:10px" Title="Build query from table"></MudFab>
+            <MudFab OnClick="async () => await BuildQuery()" StartIcon="@Icons.Material.Filled.AutoFixHigh" Color="Color.Default" IconColor="Color.Primary" IconSize="Size.Medium" Size="Size.Medium" DisableElevation="true" Style="margin-top:10px" Title="Query builder"></MudFab>
             <MudSpacer />
             <MudTextField @bind-Value="favorite_name" Label="Save query to favorites" Variant="Variant.Text" Immediate="true"></MudTextField>
             <MudFab Icon="@Icons.Material.Filled.Save" Size="Size.Small" OnClick="AddToFavorites" IconColor="Color.Primary" DisableElevation="true" Class="ml-2 mt-3" Title="Save to favorites" Disabled="@(String.IsNullOrWhiteSpace(favorite_name))"></MudFab>

@@ -13,25 +13,34 @@
     .expandRelated {
         transition: .3s cubic-bezier(.25,.8,.5,1),visibility 0s;
     }
+
+
+    .columnRow .mud-icon-button {
+        opacity: 0.5;
+    }
+
+    .columnRow:hover .mud-icon-button {
+        opacity: 1;
+    }
 </style>
 
 <MudDialog DefaultFocus="DefaultFocus.None">
     <TitleContent>
         <MudText Typo="Typo.h6">
-            <MudIcon Icon="@Icons.Material.Filled.GridOn" Class="mr-3 mb-n1" />
+            <MudIcon Icon="@Icons.Material.Filled.AutoFixHigh" Class="mr-3 mb-n1" />
             @MudDialog.Title
         </MudText>
     </TitleContent>
     <DialogContent>
         <div class="d-flex">
-            <MudAutocomplete AutoFocus="true" T="string" Label="Type main table name" AnchorOrigin="Origin.BottomCenter" Variant="Variant.Text" SearchFunc="@SearchTable" Clearable="true" ResetValueOnEmptyText="true" spellcheck="false" MaxItems="50" DebounceInterval="200" ValueChanged="TableChanged" Value="tableName" />
-            <MudIconButton Disabled="@(String.IsNullOrEmpty(tableName))" Icon="@Icons.Material.Filled.PlayArrow" Color="@(currentTable == tableName ? Color.Primary : Color.Default)" Size="Size.Medium" Title="Show columns" OnClick="@(_ => currentTable = tableName)" Class="ml-1 mt-3"></MudIconButton>
-            <MudSwitch @bind-Checked="@searchinside" Color="Color.Primary" title="Search inside table or view name" Class="ml-6 mt-4" />
+            <MudAutocomplete AutoFocus="true" T="string" Label="Main table" AnchorOrigin="Origin.BottomCenter" Variant="Variant.Text" SearchFunc="@SearchTable" Clearable="true" ResetValueOnEmptyText="true" spellcheck="false" MaxItems="50" DebounceInterval="200" ValueChanged="TableChanged" Value="mainTable" />
+            <MudIconButton Disabled="@(String.IsNullOrEmpty(mainTable))" Icon="@Icons.Material.Filled.PlayArrow" Color="@(currentTable == mainTable ? Color.Primary : Color.Default)" Size="Size.Medium" Title="Show columns" OnClick="@(_ => currentTable = mainTable)" Class="ml-1 mt-3"></MudIconButton>
+            <MudSwitch @bind-Checked="@searchInside" Color="Color.Primary" title="Search inside table or view name" Class="ml-6 mt-4" />
         </div>
         @if (foreignKeys != null)
         {
             <MudText Typo="Typo.subtitle1" Class="mt-4">JOIN tables:</MudText>
-            <MudContainer Style="height: 300px; overflow-y: scroll">
+            <MudContainer Style="height: 300px; overflow-y: scroll" Class="rounded-lg mud-alert-text-normal">
             @foreach (var fk in sortedForeignKeys)
             {
                 <div class="d-flex" Style='@($"margin-left:{20 * (fk[0].Split(',').Length - 2) }px")'>
@@ -47,38 +56,41 @@
         }
         @if (currentTable != null && columnsInfo != null && columnsInfo.ContainsKey(currentTable))
         {
-            <div class="d-flex">
-                <MudSelect Label="Columns of table" T="string" @bind-Value="currentTable" Clearable="false" Class="ml-6 mr-6 mt-3 flex-grow-1" Dense="true" Margin="Margin.Dense" Variant=" Variant.Outlined">
-                    @foreach (var utn in tableAlias.Values.OrderBy(tn => tn))
-                    {
-                        <MudSelectItem Value="@utn">@utn</MudSelectItem>
-                    }
-                </MudSelect>
-                <MudTextField DebounceInterval="300" @bind-Value="searchField" Placeholder="Search column" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-3 flex-grow-0" Clearable="true"></MudTextField>
-            </div>
-            <div class="d-flex">
-                <MudCheckBox T="bool" title="check/uncheck all" Checked="includeAll" Style="padding-left: 24px" CheckedChanged="(v) => {includeAll = v; foreach(var cn in includeColumns[currentTable].Keys) { includeColumns[currentTable][cn] = v; }}"></MudCheckBox>
-            </div>
-            <MudContainer Style="height: 300px; overflow-y: scroll">
-            @foreach (var cn in columnsInfo[currentTable][0/*showAllWhereClause ? 0 : 1*/].Where(cn => String.IsNullOrEmpty(searchField) || cn.ToLower().Contains(searchField)))
-            {
+            <MudText Typo="Typo.subtitle1" Class="mt-4">Columns of table:</MudText>
+            <div Class="rounded-lg mud-alert-text-normal mt-0">
                 <div class="d-flex">
-                    <MudCheckBox T="bool" title="include in SELECT" Class="mt-3" @bind-Checked="includeColumns[currentTable][cn]"></MudCheckBox>
-                    <MudTextField Label="@cn" Variant="Variant.Text" T="string" @bind-Value="whereClause[currentTable][cn]" title="WHERE Clause value"></MudTextField>
-                    <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" OnClick="@(_ => { if(!sortColumns.Any(sc => sc.TableName == currentTable && sc.ColumnName == cn)) {sortColumns.Add(new SortDropItem { TableName =  currentTable, ColumnName = cn, Order = sortColumns.Count > 0  ? sortColumns.Max(sc => sc.Order) + 1 : 0, Desc = false}); RefreshSortColumns(); }})" Class="mt-3" Title="Add to ORDER BY"></MudIconButton>
+                    <MudSelect T="string" @bind-Value="currentTable" Clearable="false" Class="ml-6 mr-4 mt-4 flex-grow-1" Dense="true" Margin="Margin.Dense" Variant=" Variant.Outlined">
+                        @foreach (var utn in tableAlias.Values.OrderBy(tn => tn))
+                        {
+                            <MudSelectItem Value="@utn">@utn</MudSelectItem>
+                        }
+                    </MudSelect>
+                    <MudTextField DebounceInterval="300" @bind-Value="searchField" Placeholder="Search column" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-4 mr-6 flex-grow-0" Clearable="true"></MudTextField>
                 </div>
-            }
-            </MudContainer>
+                <div class="d-flex">
+                    <MudCheckBox T="bool" title="check/uncheck all" Checked="includeAll" Style="padding-left: 15px" CheckedChanged="(v) => {includeAll = v; foreach(var cn in includeColumns[currentTable].Keys) { includeColumns[currentTable][cn] = v; }}"></MudCheckBox>
+                </div>
+                <MudContainer Style="height: 300px; overflow-y: scroll; padding-left: 15px">
+                @foreach (var cn in columnsInfo[currentTable][0].Where(cn => String.IsNullOrEmpty(searchField) || cn.ToLower().Contains(searchField)))
+                {
+                    <div class="d-flex columnRow">
+                        <MudCheckBox T="bool" title="include in SELECT" Class="mt-3" @bind-Checked="includeColumns[currentTable][cn]"></MudCheckBox>
+                        <MudTextField Label="@cn" Variant="Variant.Text" T="string" @bind-Value="whereClause[currentTable][cn]" title="WHERE Clause value"></MudTextField>
+                        <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Color="Color.Primary" OnClick="@(_ => { if(!sortColumns.Any(sc => sc.TableName == currentTable && sc.ColumnName == cn)) {sortColumns.Add(new SortDropItem { TableName =  currentTable, ColumnName = cn, Order = sortColumns.Count > 0  ? sortColumns.Max(sc => sc.Order) + 1 : 0, Desc = false}); RefreshSortColumns(); }})" Class="mt-3" Title="Add to ORDER BY"></MudIconButton>
+                    </div>
+                }
+                </MudContainer>
+            </div>
             <MudText Typo="Typo.subtitle1" Class="mt-4">ORDER BY:</MudText>
             <MudDropContainer @ref="sortDropContainer" T="SortDropItem" Items="sortColumns" ItemsSelector="@((item,dropzone) => true)" ItemDropped="@((dropItem) => { sortColumns.UpdateOrder(dropItem, item => item.Order, 0); RefreshSortColumns(false); })">
                 <ChildContent>
-                    <MudDropZone T="SortDropItem" Identifier="1" AllowReorder="true" Class="rounded-lg mud-alert-text-normal pa-2 mt-2 mx-2 flex-grow-1 d-flex flex-wrap" Style="min-height:74px" />
+                    <MudDropZone T="SortDropItem" Identifier="1" AllowReorder="true" Class="rounded-lg mud-alert-text-normal pa-2 mt-0 mx-0 flex-grow-1 d-flex flex-wrap" Style="min-height:74px" />
                 </ChildContent>
                 <ItemRenderer>
                     <MudPaper Elevation="2" Class="pa-2 ma-2">
                         @($"{context.TableName}.{context.ColumnName}")
-                        <MudIconButton Icon="@(context.Desc ? Icons.Material.Filled.ArrowDownward : Icons.Material.Filled.ArrowUpward)" OnClick="@(_ => { context.Desc = !context.Desc; RefreshSortColumns(); })" Size="Size.Small" Title="@(context.Desc ? "DESC" : "ASC")"></MudIconButton>
-                        <MudIconButton Icon="@Icons.Material.Filled.Clear" OnClick="@(_ => { sortColumns.Remove(context); RefreshSortColumns(); })" Size="Size.Small" Title="Remove"></MudIconButton>
+                        <MudIconButton Color="Color.Primary" Icon="@(context.Desc ? Icons.Material.Filled.ArrowDownward : Icons.Material.Filled.ArrowUpward)" OnClick="@(_ => { context.Desc = !context.Desc; RefreshSortColumns(); })" Size="Size.Small" Title="@(context.Desc ? "DESC" : "ASC")"></MudIconButton>
+                        <MudIconButton Color="Color.Secondary" Icon="@Icons.Material.Filled.Clear" OnClick="@(_ => { sortColumns.Remove(context); RefreshSortColumns(); })" Size="Size.Small" Title="Remove"></MudIconButton>
                     </MudPaper>
                 </ItemRenderer>
             </MudDropContainer>
@@ -86,7 +98,7 @@
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel" Variant="Variant.Filled" Class="ml-auto">Cancel</MudButton>
-        <MudButton Color="Color.Primary" OnClick="OK" Variant="Variant.Filled" Disabled="@(String.IsNullOrEmpty(tableName))" Class="mr-4" >OK</MudButton>
+        <MudButton Color="Color.Primary" OnClick="OK" Variant="Variant.Filled" Disabled="@(String.IsNullOrEmpty(mainTable))" Class="mr-4" >OK</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -96,13 +108,13 @@
 
     private string[] reservedKeywords = { "order", "date", "user", "unique", "default", "image", "tran", "public" };
 
-    private bool searchinside = true;
+    private bool searchInside = true;
 
     private bool includeAll = true;
 
     private string searchField = "";
 
-    private string tableName { get { return session["QB_tableName"] as string; } set { session["QB_tableName"] = value; } }
+    private string mainTable { get { return session["QB_tableName"] as string; } set { session["QB_tableName"] = value; } }
     private string currentTable { get { return session["QB_currentTable"] as string; } set { session["QB_currentTable"] = value; } }
     private Dictionary<string, string[][]> columnsInfo { get { return session["QB_columnsInfo"] as Dictionary<string, string[][]>; } set { session["QB_columnsInfo"] = value; } }
     private Dictionary<string, Dictionary<string, bool>> includeColumns { get { return session["QB_includeColumns"] as Dictionary<string, Dictionary<string, bool>>; } set { session["QB_includeColumns"] = value; } }
@@ -126,7 +138,7 @@
 
     protected async override Task OnInitializedAsync()
     {
-        if (String.IsNullOrEmpty(tableName))
+        if (String.IsNullOrEmpty(mainTable))
         {
             await TableChanged(await localStorage.GetAsync<string>("SQLQuery_query_tableName"));
         }
@@ -134,13 +146,13 @@
 
     private async Task TableChanged(string value)
     {
-        if (tableName != value)
+        if (mainTable != value)
         {
-            tableName = value;
-            currentTable = tableName;
+            mainTable = value;
+            currentTable = mainTable;
             joinForeignKeys = new HashSet<string>();
             expandForeignKeys = new HashSet<string>();
-            await localStorage.SetAsync("SQLQuery_query_tableName", tableName);
+            await localStorage.SetAsync("SQLQuery_query_tableName", mainTable);
             await LoadColumns();
             await LoadForeignKeys();
         }
@@ -148,14 +160,14 @@
 
     private async Task LoadColumns()
     {
-        if (!String.IsNullOrEmpty(tableName))
+        if (!String.IsNullOrEmpty(mainTable))
         {
             columnsInfo = new();
-            columnsInfo[tableName] = await Http.GetFromJsonAsync<string[][]>($"api/sqlquery/tablecolumns?database={Database}&tablename={tableName}");
+            columnsInfo[mainTable] = await Http.GetFromJsonAsync<string[][]>($"api/sqlquery/tablecolumns?database={Database}&tablename={mainTable}");
             whereClause = new();
-            whereClause[tableName] = columnsInfo[tableName][0].ToDictionary(s => s, s => "");
+            whereClause[mainTable] = columnsInfo[mainTable][0].ToDictionary(s => s, s => "");
             includeColumns = new();
-            includeColumns[tableName] = columnsInfo[tableName][0].ToDictionary(s => s, s => true);
+            includeColumns[mainTable] = columnsInfo[mainTable][0].ToDictionary(s => s, s => true);
             sortColumns = new();
         }
         else
@@ -170,20 +182,20 @@
 
     private async Task LoadForeignKeys()
     {
-        if (!String.IsNullOrEmpty(tableName))
+        if (!String.IsNullOrEmpty(mainTable))
         {
             foreignKeys = await Http.GetFromJsonAsync<string[][]>($"api/sqlquery/tableforeignkeys?database={Database}&tablenames={String.Join(',', GetJoinTables())}");
             List<string[]> tmp = new List<string[]>();
             tableAlias = new Dictionary<string, string>();
-            tableAlias[""] = tableName;
-            await foreach (var fk in SortForeignKeys(tableName))
+            tableAlias[""] = mainTable;
+            await foreach (var fk in SortForeignKeys(mainTable))
             {
                 tmp.Add(fk);
             }
             sortedForeignKeys = tmp;
             if (!tableAlias.Values.Contains(currentTable))
             {
-                currentTable = tableName;
+                currentTable = mainTable;
             }
             foreach (var rtn in columnsInfo.Keys.Where(utn => !tableAlias.Values.Contains(utn)).ToList())
             {
@@ -217,7 +229,7 @@
     {
         if (joinForeignKeys == null || joinForeignKeys.Count == 0)
         {
-            return new string[] { tableName };
+            return new string[] { mainTable };
         }
         else
         {
@@ -332,12 +344,12 @@
 
     private async Task OK()
     {
-        if (String.IsNullOrEmpty(tableName))
+        if (String.IsNullOrEmpty(mainTable))
         {
             return;
         }
 
-        string columns = String.Join(",\r\n    ", GetTableColumnList(tableName).Where(cl => !String.IsNullOrEmpty(cl)));
+        string columns = String.Join(",\r\n    ", GetTableColumnList(mainTable).Where(cl => !String.IsNullOrEmpty(cl)));
 
         string  where = String.Join(" AND \r\n    ",
             whereClause.Keys.SelectMany(utn => 
@@ -349,7 +361,7 @@
         if (joinForeignKeys.Count > 0)
         {
             List<string> joinTables = new List<string>();
-            await foreach (var s in GetJoinForeignKeys(tableName))
+            await foreach (var s in GetJoinForeignKeys(mainTable))
             {
                 joinTables.Add(s);
             }
@@ -366,7 +378,7 @@
 $@"SELECT TOP 200
     {columns}
 FROM
-    {tableName}";
+    {mainTable}";
 
         if (!String.IsNullOrEmpty(join))
         {
@@ -403,6 +415,6 @@ ORDER BY
 
     private async Task<IEnumerable<string>> SearchTable(string value)
     {
-        return await Http.GetFromJsonAsync<string[]>($"api/sqlquery/searchtable?database={Database}&search={value}&searchinside={searchinside}");
+        return await Http.GetFromJsonAsync<string[]>($"api/sqlquery/searchtable?database={Database}&search={value}&searchinside={searchInside}");
     }
 }
