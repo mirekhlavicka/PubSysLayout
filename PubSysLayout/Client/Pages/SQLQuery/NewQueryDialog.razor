@@ -14,12 +14,11 @@
         transition: .3s cubic-bezier(.25,.8,.5,1),visibility 0s;
     }
 
-
-    .columnRow .mud-icon-button {
-        opacity: 0.5;
+    .columnRow .mud-icon-button.notSortCoumn {
+        opacity: 0.25;
     }
 
-    .columnRow:hover .mud-icon-button {
+    .columnRow .mud-icon-button.SortCoumn {
         opacity: 1;
     }
 </style>
@@ -73,10 +72,11 @@
                 <MudContainer Style="height: 300px; overflow-y: scroll; padding-left: 15px">
                 @foreach (var cn in columnsInfo[currentTable][0].Where(cn => String.IsNullOrEmpty(searchField) || cn.ToLower().Contains(searchField)))
                 {
+                    var si = sortColumns.SingleOrDefault(sc => sc.TableName == currentTable && sc.ColumnName == cn);
                     <div class="d-flex columnRow">
                         <MudCheckBox T="bool" title="include in SELECT" Class="mt-3" @bind-Checked="includeColumns[currentTable][cn]"></MudCheckBox>
                         <MudTextField Label="@cn" Variant="Variant.Text" T="string" @bind-Value="whereClause[currentTable][cn]" title="WHERE Clause value"></MudTextField>
-                        <MudIconButton Icon="@Icons.Material.Filled.ArrowUpward" Color="Color.Primary" OnClick="@(_ => { if(!sortColumns.Any(sc => sc.TableName == currentTable && sc.ColumnName == cn)) {sortColumns.Add(new SortDropItem { TableName =  currentTable, ColumnName = cn, Order = sortColumns.Count > 0  ? sortColumns.Max(sc => sc.Order) + 1 : 0, Desc = false}); RefreshSortColumns(); }})" Class="mt-3" Title="Add to ORDER BY"></MudIconButton>
+                        <MudIconButton Icon="@(si != null && si.Desc ? Icons.Material.Filled.ArrowDownward : Icons.Material.Filled.ArrowUpward )" Color="Color.Primary" Class='@("mt-3 " + (si != null ? "sortCoumn" : "notSortCoumn"))' OnClick="@(_ => { AddToSortColumns(cn); })" Title='@(si == null ? "Add to ORDER BY": (si.Desc ? "Remove from ORDER BY" :"Change to DESC" ))'></MudIconButton>
                     </div>
                 }
                 </MudContainer>
@@ -223,6 +223,31 @@
         {
             sortDropContainer?.Refresh();
         }
+    }
+
+    private void AddToSortColumns(string cn)
+    {
+        var si = sortColumns.SingleOrDefault(sc => sc.TableName == currentTable && sc.ColumnName == cn);
+
+        if (si == null)
+        {
+            sortColumns.Add(new SortDropItem
+                {
+                    TableName = currentTable,
+                    ColumnName = cn,
+                    Order = sortColumns.Count > 0 ? sortColumns.Max(sc => sc.Order) + 1 : 0,
+                    Desc = false
+                });
+        }
+        else if (!si.Desc)
+        {
+            si.Desc = true;
+        }
+        else
+        {
+            sortColumns.Remove(si);
+        }
+        RefreshSortColumns();
     }
 
     private IEnumerable<string> GetJoinTables()
