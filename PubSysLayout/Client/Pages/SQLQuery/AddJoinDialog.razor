@@ -1,0 +1,53 @@
+﻿@inject HttpClient Http
+@inject LocalStorage localStorage
+@inject SessionStorage session
+@inject IJSRuntime js
+
+@using MudBlazor.Utilities
+
+<MudDialog DefaultFocus="DefaultFocus.None">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.ArrowRightAlt" Class="mr-3 mb-n1" />
+            @MudDialog.Title
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <div class="d-flex">
+            <MudAutocomplete AutoFocus="true" T="string" Label="Select table" AnchorOrigin="Origin.BottomCenter" Variant="Variant.Text" SearchFunc="@SearchTable" Clearable="true" ResetValueOnEmptyText="true" spellcheck="false" MaxItems="50" DebounceInterval="200" @bind-Value="selectedTable" />
+            <MudSwitch @bind-Checked="@searchInside" Color="Color.Primary" title="Search inside table or view name" Class="ml-6 mt-4" />
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Filled" Class="ml-auto">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="OK" Variant="Variant.Filled" Disabled="@(String.IsNullOrEmpty(selectedTable))" Class="mr-4">OK</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    [Parameter] public string Database { get; set; }
+
+    private string selectedTable;
+    private bool searchInside = true;
+
+    private void OK()
+    {
+        if (String.IsNullOrEmpty(selectedTable))
+        {
+            return;
+        }
+
+        MudDialog.Close(DialogResult.Ok(selectedTable));
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private async Task<IEnumerable<string>> SearchTable(string value)
+    {
+        return await Http.GetFromJsonAsync<string[]>($"api/sqlquery/searchtable?database={Database}&search={value}&searchinside={searchInside}");
+    }
+}
