@@ -49,7 +49,7 @@
                             <div class="d-flex" Style='@($"margin-left:{20 * (fk[0].Split(',').Length - 2) }px")'>
                                 @if (fk[0].EndsWith("[ADD]"))
                                 {
-                                    <MudIconButton Icon="@(Icons.Material.Filled.Add)" Style="margin-left: 32px;" Title="Add JOIN to table or subquery" OnClick="@(async (_) => await AddJoin(fk[0]))"></MudIconButton>
+                                    <MudFab Color="Color.Default" IconColor="Color.Primary" DisableElevation="true" StartIcon="@Icons.Material.Filled.Add" Size="Size.Small" Icon="@(Icons.Material.Filled.Add)" Style="margin-left: 37px;margin-top: 10px;margin-bottom: 5px" Title="Add JOIN to another table" OnClick="@(async (_) => await AddJoin(fk[0]))" />
                                 }
                                 else
                                 {
@@ -334,19 +334,26 @@
                 CloseButton = true
             };
 
+        string path = addpath.Replace("[ADD]", "").TrimEnd(',');
+
         var parameters = new DialogParameters
             {
-                ["Database"] = Database
+                ["Database"] = Database,
+                ["FromTable"] = tableAlias[path],
+                ["FromColumns"] = columnsInfo[tableAlias[path]]
             };
 
-        var result = await DialogService.Show<AddJoinDialog>("Select table to JOIN", parameters, options).Result;
+
+        var result = await DialogService.Show<AddJoinDialog>($"{tableAlias[path]} JOIN", parameters, options).Result;
 
         if (!result.Canceled)
         {
             string guid = "[join]" + Guid.NewGuid().ToString();
-            string path = addpath.Replace("[ADD]", "").TrimEnd(',');
             string path1 = addpath.Replace("[ADD]", guid);
-            addJoin.Add(new string[] { guid, path, (string)result.Data });
+
+            string[] res = (string[])result.Data;
+
+            addJoin.Add(new string[] { guid, path, res[0], res[1] });
             joinForeignKeys.Add(path1);
             await LoadForeignKeys();
             currentTable = tableAlias[path1];
@@ -379,7 +386,7 @@
     {
         if (fkName.StartsWith("[join]"))
         {
-            return $"{utn}. = {utn1}. /*[CTRL-SPACE]*/";
+            return addJoin.Single(aj => aj[0] == fkName)[3];//$"{utn}. = {utn1}. /*[CTRL-SPACE]*/";
         }
         else
         {
