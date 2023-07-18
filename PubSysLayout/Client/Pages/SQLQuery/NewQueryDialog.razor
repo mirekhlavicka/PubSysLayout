@@ -49,12 +49,16 @@
                             <div class="d-flex" Style='@($"margin-left:{20 * (fk[0].Split(',').Length - 2) }px")'>
                                 @if (fk[0].EndsWith("[ADD]"))
                                 {
-                                    <MudFab Color="Color.Default" IconColor="Color.Primary" DisableElevation="true" StartIcon="@Icons.Material.Filled.Add" Size="Size.Small" Icon="@(Icons.Material.Filled.Add)" Style="margin-left: 37px;margin-top: 10px;margin-bottom: 5px" Title="Add JOIN to another table" OnClick="@(async (_) => await AddJoin(fk[0]))" />
+                                    <MudFab Color="Color.Default" IconColor="Color.Primary" DisableElevation="true" StartIcon="@Icons.Material.Filled.Add" Size="Size.Small" Icon="@(Icons.Material.Filled.Add)" Style="margin-left: 37px;margin-top: 10px;margin-bottom: 5px" Title="Add JOIN to another table" OnClick="@(async (_) => await AddJoin(fk[0], fk[1]))" />
                                 }
                                 else
                                 {
                                     <MudIconButton Icon="@(Icons.Material.Filled.ChevronRight)" Class="@(expandForeignKeys.Contains(fk[0]) ? "expandRelated transformRotate" : "expandRelated")" Size="Size.Medium" Title="Show related tables" Style='@($"visibility:{(joinForeignKeys.Contains(fk[0]) ? "visible" : "hidden")};margin-right: -15px")' OnClick="@(async _ => { if(expandForeignKeys.Contains(fk[0])) { expandForeignKeys.RemoveWhere(path => path.StartsWith(fk[0]));} else { expandForeignKeys.Add(fk[0]); } await LoadForeignKeys(); })"></MudIconButton>
                                     <MudCheckBox T="bool" Color="@(tableAlias.Keys.Contains(fk[0]) && currentTable == tableAlias[fk[0]] ? Color.Primary : Color.Default)" Title="JOIN table" Checked="@(joinForeignKeys.Contains(fk[0]))" CheckedChanged="async (v) => {if(v) {joinForeignKeys.Add(fk[0]); } else {joinForeignKeys.RemoveWhere(path => path.StartsWith(fk[0])); expandForeignKeys.RemoveWhere(path => path.StartsWith(fk[0])); addJoin.RemoveAll(aj => aj[0] == fk[0].Split(',').Last()); } await LoadForeignKeys(); if(tableAlias.ContainsKey(fk[0])){ /*await Task.Delay(500);*/ currentTable = tableAlias[fk[0]]; includeAll = true; StateHasChanged(); } } ">@((MarkupString)fk[1])</MudCheckBox>
+                                    @if (joinForeignKeys.Contains(fk[0]) && fk[0].Split(',').Last().StartsWith("[join]"))
+                                    {
+                                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="@(tableAlias.Keys.Contains(fk[0]) && currentTable == tableAlias[fk[0]] ? Color.Primary : Color.Default)" Size="Size.Medium" Title="Edit JOIN ON" OnClick="@(async (_) => await EditJoin(fk[0]))" />
+                                    }
                                     @if (joinForeignKeys.Contains(fk[0]))
                                     {
                                         <MudIconButton Icon="@Icons.Material.Filled.PlayArrow" Color="@(tableAlias.Keys.Contains(fk[0]) && currentTable == tableAlias[fk[0]] ? Color.Primary : Color.Default)" Size="Size.Medium" Title="Show columns" OnClick="@(_ => currentTable = tableAlias[fk[0]])"></MudIconButton>
@@ -311,7 +315,14 @@
                 }
             }
 
-            yield return new string[] { path1, (fk[1] == path ? $"<b>{fk[2]}</b>" : (fk[1] == table || fk[1] == path ? $"{table} ⟹ <b>{fk[2]}</b>" : $"<b>{fk[1]}</b> ⟹ {table}")) + (tn != null && tn != utn ? " AS <b>" + utn : "</b>") };
+            if (fk[0] == "[ADD]")
+            {
+                yield return new string[] { path1, table };
+            }
+            else
+            {
+                yield return new string[] { path1, (fk[1] == path ? $"<b>{fk[2]}</b>" : (fk[1] == table || fk[1] == path ? $"{table} ⟹ <b>{fk[2]}</b>" : $"<b>{fk[1]}</b> ⟹ {table}")) + (tn != null && tn != utn ? " AS <b>" + utn : "</b>") };
+            }
 
             if (joinForeignKeys.Contains(path1))
             {
@@ -326,7 +337,7 @@
         }
     }
 
-    private async Task AddJoin(string addpath)
+    private async Task AddJoin(string addpath, string fromTable)
     {
         var options = new DialogOptions
             {
@@ -339,12 +350,12 @@
         var parameters = new DialogParameters
             {
                 ["Database"] = Database,
-                ["FromTable"] = tableAlias[path],
-                ["FromColumns"] = columnsInfo[tableAlias[path]]
+                ["FromTable"] = fromTable,
+                ["FromColumns"] = columnsInfo[fromTable]
             };
 
 
-        var result = await DialogService.Show<AddJoinDialog>($"{tableAlias[path]} JOIN", parameters, options).Result;
+        var result = await DialogService.Show<AddJoinDialog>($"{fromTable} JOIN", parameters, options).Result;
 
         if (!result.Canceled)
         {
@@ -353,7 +364,7 @@
 
             string[] res = (string[])result.Data;
 
-            addJoin.Add(new string[] { guid, path, res[0], res[1] });
+            addJoin.Add(new string[] { guid, path, res[0], res[1], fromTable });
             joinForeignKeys.Add(path1);
             await LoadForeignKeys();
             currentTable = tableAlias[path1];
@@ -361,6 +372,40 @@
             StateHasChanged();
         }
     }
+
+    private async Task EditJoin(string path)
+    {
+        var options = new DialogOptions
+            {
+                MaxWidth = MaxWidth.Small,
+                CloseButton = true
+            };
+
+        var join = addJoin.FirstOrDefault(aj => aj[0] == path.Split(',').Last());
+        string fromTable = join[4];
+
+        var parameters = new DialogParameters
+            {
+                ["Database"] = Database,
+                ["FromTable"] = fromTable,
+                ["FromColumns"] = columnsInfo[fromTable],
+                ["SelectedTable"] = join[2],
+                ["JoinOn"] = join[3],
+                ["EditMode"] = true
+            };
+
+
+        var result = await DialogService.Show<AddJoinDialog>($"{fromTable} JOIN", parameters, options).Result;
+
+        if (!result.Canceled)
+        {
+            string[] res = (string[])result.Data;
+            join[3] = res[1];
+            await LoadForeignKeys();
+            StateHasChanged();
+        }
+    }
+
 
     private async IAsyncEnumerable<string> GetJoinForeignKeys(string table, string fromTable = null, string path = "")
     {
@@ -386,7 +431,7 @@
     {
         if (fkName.StartsWith("[join]"))
         {
-            return addJoin.Single(aj => aj[0] == fkName)[3];//$"{utn}. = {utn1}. /*[CTRL-SPACE]*/";
+            return addJoin.Single(aj => aj[0] == fkName)[3].Replace($"{tn}.", $"{utn}.").Replace($"{tn1}.", $"{utn1}.");
         }
         else
         {

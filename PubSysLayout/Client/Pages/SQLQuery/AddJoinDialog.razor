@@ -4,13 +4,17 @@
 @inject IJSRuntime js
 
 <style>
-    .CodeMirror-hints /*, .CodeMirror-hint, .CodeMirror-hint-active*/ {
-        z-index: 1000000 /*2147483647*/ !important;
-        /*        position: relative !important;
-            background: white !important;
-    */
+    .CodeMirror-hints {
+        z-index: 1000000 !important;
     }
 
+    .CodeMirror {
+        border: 1px solid #bdbdbd
+    }
+
+    .CodeMirror-focused {
+        border: 1px solid #2b4db7
+    }
 </style>
 
 @using MudBlazor.Utilities
@@ -24,18 +28,18 @@
     </TitleContent>
     <DialogContent>
         <div class="d-flex">
-            <MudAutocomplete AutoFocus="true" T="string" Label="Select table" AnchorOrigin="Origin.BottomCenter" Variant="Variant.Text" SearchFunc="@SearchTable" Clearable="true" ResetValueOnEmptyText="true" spellcheck="false" MaxItems="50" DebounceInterval="200" ValueChanged="TableChanged" Value="selectedTable" />
-            <MudSwitch @bind-Checked="@searchInside" Color="Color.Primary" title="Search inside table or view name" Class="ml-6 mt-4" />
+            <MudAutocomplete AutoFocus="true" T="string" Label="Select table" AnchorOrigin="Origin.BottomCenter" Variant="Variant.Text" Disabled="EditMode" SearchFunc="@SearchTable" Clearable="true" ResetValueOnEmptyText="true" spellcheck="false" MaxItems="50" DebounceInterval="200" ValueChanged="TableChanged" Value="SelectedTable" />
+            <MudSwitch @bind-Checked="@searchInside" Disabled="EditMode" Color="Color.Primary" title="Search inside table or view name" Class="ml-6 mt-4" />
         </div>
-        <div style="@($"visibility:{(String.IsNullOrEmpty(selectedTable) ? "hidden" : "visible")}")">
+        <div style="@($"visibility:{(String.IsNullOrEmpty(SelectedTable) ? "hidden" : "visible")}")">
             <MudText Typo="Typo.subtitle1" Class="mt-4 mb-2">ON:</MudText>
             <textarea @ref="textarea" id="taJOINON" name="taJOINON" style="display:none" />
-            <MudText Typo="Typo.caption">use [CTRL-SPACE] to select column</MudText>
+            <MudText Typo="Typo.caption">use [CTRL-SPACE] to select table and column</MudText>
         </div>
     </DialogContent>
     <DialogActions>
         <MudButton OnClick="Cancel" Variant="Variant.Filled" Class="ml-auto">Cancel</MudButton>
-        <MudButton Color="Color.Primary" OnClick="OK" Variant="Variant.Filled" Disabled="@(String.IsNullOrEmpty(selectedTable))" Class="mr-4">OK</MudButton>
+        <MudButton Color="Color.Primary" OnClick="OK" Variant="Variant.Filled" Disabled="@(String.IsNullOrEmpty(SelectedTable))" Class="mr-4">OK</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -45,7 +49,11 @@
     [Parameter] public string FromTable { get; set; }
     [Parameter] public string[][] FromColumns { get; set; }
 
-    private string selectedTable;
+    [Parameter] public string SelectedTable { get; set; }
+    [Parameter] public string JoinOn { get; set; }
+    [Parameter] public bool EditMode{ get; set; }
+
+
     private bool searchInside = true;
 
     private ElementReference textarea;
@@ -54,23 +62,33 @@
     {
         if (firstRender)
         {
-            await js.InvokeVoidAsync("codemirror.create", textarea, "", "100%", "45px", "text/x-mssql");
+            await js.InvokeVoidAsync("codemirror.create", textarea, JoinOn ?? "", "100%", "75px", "text/x-mssql");
             await js.InvokeVoidAsync("codemirror.setOption", "taJOINON", "lineNumbers", false);
+
+            if (!String.IsNullOrEmpty(SelectedTable))
+            {
+                var columns = await Http.GetFromJsonAsync<string[][]>($"api/sqlquery/tablecolumns?database={Database}&tablename={SelectedTable}");
+                await js.InvokeVoidAsync("codemirror.setTableHintOptions", "taJOINON", SelectedTable, columns[0]);
+
+            }
+            if (!String.IsNullOrEmpty(FromTable) && FromColumns != null && FromColumns.Length > 0)
+            {
+                await js.InvokeVoidAsync("codemirror.setTableHintOptions", "taJOINON", FromTable, FromColumns[0]);
+            }
         }
     }
 
     private async Task TableChanged(string value)
     {
-        if (selectedTable != value)
+        if (SelectedTable != value)
         {
-            selectedTable = value;
+            SelectedTable = value;
 
-            if (!String.IsNullOrEmpty(selectedTable))
+            if (!String.IsNullOrEmpty(SelectedTable))
             {
-                var columns = await Http.GetFromJsonAsync<string[][]>($"api/sqlquery/tablecolumns?database={Database}&tablename={selectedTable}");
-                await js.InvokeVoidAsync("codemirror.setTableHintOptions", "taJOINON", FromTable, FromColumns[0]);
-                await js.InvokeVoidAsync("codemirror.setTableHintOptions", "taJOINON", selectedTable, columns[0]);
-                await js.InvokeAsync<string>("codemirror.setValue", "taJOINON", $"{FromTable}. = {selectedTable}.");
+                var columns = await Http.GetFromJsonAsync<string[][]>($"api/sqlquery/tablecolumns?database={Database}&tablename={SelectedTable}");
+                await js.InvokeVoidAsync("codemirror.setTableHintOptions", "taJOINON", SelectedTable, columns[0]);
+                await js.InvokeAsync<string>("codemirror.setValue", "taJOINON", $"{FromTable}. = {SelectedTable}.");
             }
             else
             {
@@ -82,14 +100,14 @@
 
     private async Task OK()
     {
-        if (String.IsNullOrEmpty(selectedTable))
+        if (String.IsNullOrEmpty(SelectedTable))
         {
             return;
         }
 
-        string joinOn = await js.InvokeAsync<string>("codemirror.getValue", "taJOINON");
+        JoinOn = await js.InvokeAsync<string>("codemirror.getValue", "taJOINON");
 
-        MudDialog.Close(DialogResult.Ok(new string[] { selectedTable, joinOn }));
+        MudDialog.Close(DialogResult.Ok(new string[] { SelectedTable, JoinOn }));
     }
 
     private void Cancel()
