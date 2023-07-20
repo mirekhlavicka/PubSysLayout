@@ -28,8 +28,13 @@
     </TitleContent>
     <DialogContent>
         <div class="d-flex">
-            <MudAutocomplete AutoFocus="true" T="string" Label="Select table" AnchorOrigin="Origin.BottomCenter" Variant="Variant.Text" Disabled="EditMode" SearchFunc="@SearchTable" Clearable="true" ResetValueOnEmptyText="true" spellcheck="false" MaxItems="50" DebounceInterval="200" ValueChanged="TableChanged" Value="SelectedTable" />
-            <MudSwitch @bind-Checked="@searchInside" Disabled="EditMode" Color="Color.Primary" title="Search inside table or view name" Class="ml-6 mt-4" />
+            <MudSelect T="string" AnchorOrigin="Origin.BottomCenter" @bind-Value="JoinType" Class="mr-2">
+                <MudSelectItem Value="@("INNER JOIN")" />
+                <MudSelectItem Value="@("LEFT JOIN")" />
+                <MudSelectItem Value="@("RIGHT JOIN")" />
+            </MudSelect>
+            <MudAutocomplete AutoFocus="true" T="string" Placeholder="Select table" AnchorOrigin="Origin.BottomCenter" Variant="Variant.Text" Disabled="EditMode" SearchFunc="@SearchTable" Clearable="true" ResetValueOnEmptyText="true" spellcheck="false" MaxItems="50" DebounceInterval="200" ValueChanged="TableChanged" Value="SelectedTable" />
+            <MudSwitch @bind-Checked="@searchInside" Disabled="EditMode" Color="Color.Primary" title="Search inside table or view name" Class="ml-4 mt-4 mr-n4" />
         </div>
         <div style="@($"visibility:{(String.IsNullOrEmpty(SelectedTable) ? "hidden" : "visible")}")">
             <MudText Typo="Typo.subtitle1" Class="mt-4 mb-2">ON:</MudText>
@@ -49,6 +54,7 @@
     [Parameter] public string FromTable { get; set; }
     [Parameter] public string[][] FromColumns { get; set; }
 
+    [Parameter] public string JoinType { get; set; }
     [Parameter] public string SelectedTable { get; set; }
     [Parameter] public string JoinOn { get; set; }
     [Parameter] public bool EditMode{ get; set; }
@@ -107,7 +113,7 @@
 
         JoinOn = await js.InvokeAsync<string>("codemirror.getValue", "taJOINON");
 
-        MudDialog.Close(DialogResult.Ok(new string[] { SelectedTable, JoinOn }));
+        MudDialog.Close(DialogResult.Ok(new string[] { SelectedTable, JoinOn, JoinType }));
     }
 
     private void Cancel()

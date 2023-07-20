@@ -57,7 +57,7 @@
                                     <MudCheckBox T="bool" Color="@(tableAlias.Keys.Contains(fk[0]) && currentTable == tableAlias[fk[0]] ? Color.Primary : Color.Default)" Title="JOIN table" Checked="@(joinForeignKeys.Contains(fk[0]))" CheckedChanged="async (v) => {if(v) {joinForeignKeys.Add(fk[0]); } else {joinForeignKeys.RemoveWhere(path => path.StartsWith(fk[0])); expandForeignKeys.RemoveWhere(path => path.StartsWith(fk[0])); addJoin.RemoveAll(aj => aj[0] == fk[0].Split(',').Last()); } await LoadForeignKeys(); if(tableAlias.ContainsKey(fk[0])){ /*await Task.Delay(500);*/ currentTable = tableAlias[fk[0]]; includeAll = true; StateHasChanged(); } } ">@((MarkupString)fk[1])</MudCheckBox>
                                     @if (joinForeignKeys.Contains(fk[0]) && fk[0].Split(',').Last().StartsWith("[join]"))
                                     {
-                                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="@(tableAlias.Keys.Contains(fk[0]) && currentTable == tableAlias[fk[0]] ? Color.Primary : Color.Default)" Size="Size.Medium" Title="Edit JOIN ON" OnClick="@(async (_) => await EditJoin(fk[0]))" />
+                                        <MudIconButton Icon="@Icons.Material.Filled.Edit" Color="@(tableAlias.Keys.Contains(fk[0]) && currentTable == tableAlias[fk[0]] ? Color.Primary : Color.Default)" Size="Size.Medium" Title="Edit JOIN" OnClick="@(async (_) => await EditJoin(fk[0]))" />
                                     }
                                     @if (joinForeignKeys.Contains(fk[0]))
                                     {
@@ -351,11 +351,12 @@
             {
                 ["Database"] = Database,
                 ["FromTable"] = fromTable,
-                ["FromColumns"] = columnsInfo[fromTable]
+                ["FromColumns"] = columnsInfo[fromTable],
+                ["JoinType"] = "INNER JOIN"
             };
 
 
-        var result = await DialogService.Show<AddJoinDialog>($"{fromTable} JOIN", parameters, options).Result;
+        var result = await DialogService.Show<AddJoinDialog>($"{fromTable}", parameters, options).Result;
 
         if (!result.Canceled)
         {
@@ -364,7 +365,7 @@
 
             string[] res = (string[])result.Data;
 
-            addJoin.Add(new string[] { guid, path, res[0], res[1], fromTable });
+            addJoin.Add(new string[] { guid, path, res[0], res[1], fromTable, res[2] });
             joinForeignKeys.Add(path1);
             await LoadForeignKeys();
             currentTable = tableAlias[path1];
@@ -391,16 +392,18 @@
                 ["FromColumns"] = columnsInfo[fromTable],
                 ["SelectedTable"] = join[2],
                 ["JoinOn"] = join[3],
+                ["JoinType"] = join[5],
                 ["EditMode"] = true
             };
 
 
-        var result = await DialogService.Show<AddJoinDialog>($"{fromTable} JOIN", parameters, options).Result;
+        var result = await DialogService.Show<AddJoinDialog>($"{fromTable}", parameters, options).Result;
 
         if (!result.Canceled)
         {
             string[] res = (string[])result.Data;
             join[3] = res[1];
+            join[5] = res[2];
             await LoadForeignKeys();
             StateHasChanged();
         }
@@ -418,7 +421,7 @@
                 string tn = fk[1] == table || fk[1] == path ? fk[2] : fk[1];
                 string utn = tableAlias[path1];
 
-                yield return (tn != utn ? tn + " AS " + utn : utn) + " ON " + (await GetForeignKeyJoinOn(fk[0], tn, utn, table, tableAlias[path]));
+                yield return $" {(fk[0].StartsWith("[join]") ? fk[5] : "INNER JOIN")}\r\n    " + (tn != utn ? tn + " AS " + utn : utn) + " ON " + (await GetForeignKeyJoinOn(fk[0], tn, utn, table, tableAlias[path]));
                 await foreach (string fk1 in GetJoinForeignKeys(fk[1] == table || fk[1] == path ? fk[2] : fk[1], table, path1))
                 {
                     yield return fk1;
@@ -491,7 +494,7 @@
             {
                 joinTables.Add(s);
             }
-            join = $" JOIN\r\n    {String.Join(" JOIN\r\n    ", joinTables)}";
+            join = String.Concat(joinTables);
         }
 
         string sort = "";
