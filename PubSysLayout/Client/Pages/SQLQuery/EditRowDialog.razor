@@ -18,7 +18,7 @@
     }
 
     .editRowContainer{
-        max-height: calc(100vh - 220px);
+        max-height: calc(100vh - 290px);
         overflow-y: scroll;
         padding-right: 12px;
     }
@@ -36,14 +36,23 @@
         </MudText>
     </TitleContent>
     <DialogContent>
+        <div class="d-flex">
+            <MudTextField DebounceInterval="300" @bind-Value="searchField" Placeholder="Search field" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0 mb-4 ml-auto mr-2 flex-grow-0" Clearable="true" Style="width:350px" />
+        </div>
         <MudContainer Class="editRowContainer">
             <MudForm @ref="form" @bind-IsValid="@canSave">
             @for (int i = 0; i < editRow.Length; i++)
             {
                 int p = i; //Intermediate counter
+
                 object val = editRow[p];
                 Type type = Type.GetType(QueryResult.Columns[p].TypeName);
-                @if (type == typeof(string))
+
+                if(!String.IsNullOrEmpty(searchField) && !QueryResult.Columns[p].Name.ToLower().Contains(searchField.ToLower()))
+                {                    
+                    <div style="display:none"/>
+                }
+                else if (type == typeof(string))
                 {
                     if (QueryResult.Columns[p].MaxLength > 300 && !QueryResult.Columns[p].ReadOnly)
                     {
@@ -116,6 +125,8 @@
 
     MudForm form;
     bool canSave;
+
+    private string searchField = "";
 
     protected override void OnInitialized()
     {
