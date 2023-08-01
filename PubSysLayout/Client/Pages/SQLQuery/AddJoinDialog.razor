@@ -93,8 +93,8 @@
             if (!String.IsNullOrEmpty(SelectedTable))
             {
                 var columns = await Http.GetFromJsonAsync<string[][]>($"api/sqlquery/tablecolumns?database={Database}&tablename={SelectedTable}");
-                await js.InvokeVoidAsync("codemirror.setTableHintOptions", "taJOINON", SelectedTable, columns[0]);
-                await js.InvokeAsync<string>("codemirror.setValue", "taJOINON", $"{FromTable}. = {SelectedTable}.");
+                await js.InvokeVoidAsync("codemirror.setTableHintOptions", "taJOINON", SelectedTable + (FromTable == SelectedTable ? "_1" : ""), columns[0]);
+                await js.InvokeAsync<string>("codemirror.setValue", "taJOINON", $"{FromTable}. = {SelectedTable}{(FromTable == SelectedTable ? "_1" : "")}.");
             }
             else
             {

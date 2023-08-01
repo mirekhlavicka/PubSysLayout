@@ -434,7 +434,7 @@
     {
         if (fkName.StartsWith("[join]"))
         {
-            return addJoin.Single(aj => aj[0] == fkName)[3].Replace($"{tn}.", $"{utn}.").Replace($"{tn1}.", $"{utn1}.");
+            return addJoin.Single(aj => aj[0] == fkName)[3].Replace($"{tn}{(tn == tn1 ? "_1" : "")}.", $"{utn}.").Replace($"{tn1}.", $"{utn1}.");
         }
         else
         {
