@@ -1,6 +1,7 @@
 ﻿@inject HttpClient Http
 @inject LocalStorage localStorage
 @inject SessionStorage session
+@inject TableUsage tableUsage
 @inject IJSRuntime js
 
 <style>
@@ -60,7 +61,7 @@
     [Parameter] public bool EditMode{ get; set; }
 
 
-    private bool searchInside = true;
+    private bool searchInside = false;
 
     private ElementReference textarea;
 
@@ -95,6 +96,7 @@
                 var columns = await Http.GetFromJsonAsync<string[][]>($"api/sqlquery/tablecolumns?database={Database}&tablename={SelectedTable}");
                 await js.InvokeVoidAsync("codemirror.setTableHintOptions", "taJOINON", SelectedTable + (FromTable == SelectedTable ? "_1" : ""), columns[0]);
                 await js.InvokeAsync<string>("codemirror.setValue", "taJOINON", $"{FromTable}. = {SelectedTable}{(FromTable == SelectedTable ? "_1" : "")}.");
+                await tableUsage.Add(SelectedTable);
             }
             else
             {
@@ -123,6 +125,14 @@
 
     private async Task<IEnumerable<string>> SearchTable(string value)
     {
-        return await Http.GetFromJsonAsync<string[]>($"api/sqlquery/searchtable?database={Database}&search={value}&searchinside={searchInside}");
+        var usage = await tableUsage.Load();
+        if (String.IsNullOrEmpty(value) && usage.Count > 0)
+        {
+            return usage.OrderByDescending(u => u.Value).ThenBy(u => u.Key).Select(u => u.Key);
+        }
+        else
+        {
+            return (await Http.GetFromJsonAsync<string[]>($"api/sqlquery/searchtable?database={Database}&search={value}&searchinside={searchInside}")).OrderByDescending(tn => !string.IsNullOrEmpty(tn) && usage.ContainsKey(tn) ? usage[tn] : 0).ThenBy(tn => tn);
+        }
     }
 }

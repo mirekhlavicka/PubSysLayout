@@ -17,6 +17,7 @@ builder.Services.AddSingleton<LocalStorage>();
 builder.Services.AddSingleton<SessionStorage>();
 builder.Services.AddSingleton<Clipboard>();
 builder.Services.AddSingleton<CurrentDB>();
+builder.Services.AddSingleton<TableUsage>();
 
 builder.Services.AddTransient/*Scoped*/(sp =>
 {
