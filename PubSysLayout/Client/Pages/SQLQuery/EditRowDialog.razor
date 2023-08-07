@@ -12,20 +12,20 @@
 
 <style>
     .smallField {
-        display:inline-block; 
-        max-width:300px;
-        margin-right:11px;
+        display: inline-block;
+        max-width: 300px;
+        margin-right: 11px;
     }
 
-    .editRowContainer{
+    .editRowContainer {
         max-height: calc(100vh - 290px);
         overflow-y: scroll;
         padding-right: 12px;
     }
 
-    .editRowContainer .mud-input-control{
-        margin-bottom: 10px;
-    }
+        .editRowContainer .mud-input-control {
+            margin-bottom: 10px;
+        }
 </style>
 
 <MudDialog DefaultFocus="DefaultFocus.Element">
@@ -41,66 +41,66 @@
         </div>
         <MudContainer Class="editRowContainer">
             <MudForm @ref="form" @bind-IsValid="@canSave">
-            @for (int i = 0; i < editRow.Length; i++)
-            {
-                int p = i; //Intermediate counter
-
-                object val = editRow[p];
-                Type type = Type.GetType(QueryResult.Columns[p].TypeName);
-
-                if(!String.IsNullOrEmpty(searchField) && !QueryResult.Columns[p].Name.ToLower().Contains(searchField.ToLower()))
-                {                    
-                    <div style="display:none"/>
-                }
-                else if (type == typeof(string))
+                @for (int i = 0; i < editRow.Length; i++)
                 {
-                    if (QueryResult.Columns[p].MaxLength > 300 && !QueryResult.Columns[p].ReadOnly)
+                    int p = i; //Intermediate counter
+
+                    object val = editRow[p];
+                    Type type = Type.GetType(QueryResult.Columns[p].TypeName);
+
+                    if (!String.IsNullOrEmpty(searchField) && !QueryResult.Columns[p].Name.ToLower().Contains(searchField.ToLower()))
                     {
-                        <div style="display:flex;margin-bottom:-8px"><MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.EditNote" Color="Color.Primary" OnClick="@(async () => await CodeEdit(p))" Title="Edit content" Class="ml-auto"></MudIconButton></div>
+                        continue;
                     }
+                    else if (type == typeof(string))
+                    {
+                        if (QueryResult.Columns[p].MaxLength > 300 && !QueryResult.Columns[p].ReadOnly)
+                        {
+                            <div style="display:flex;margin-bottom:-8px"><MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.EditNote" Color="Color.Primary" OnClick="@(async () => await CodeEdit(p))" Title="Edit content" Class="ml-auto"></MudIconButton></div>
+                        }
 
-                    <MudTextField Value="@((string)val)" ValueChanged="(v) => editRow[p] = v" Label="@(QueryResult.Columns[p].Name)" Class='@(QueryResult.Columns[p].MaxLength < 50 ? "smallField" : null)' Variant="@(QueryResult.Columns[p].MaxLength > 100 ? Variant.Outlined : Variant.Text)" T="string" ReadOnly="@(QueryResult.Columns[p].ReadOnly)" MaxLength="@(QueryResult.Columns[p].MaxLength)" Lines="@(QueryResult.Columns[p].MaxLength > 100 ? Math.Min(QueryResult.Columns[p].MaxLength / 100, 5)  : 1)"></MudTextField>
+                        <MudTextField @key="p" Value="@((string)val)" ValueChanged="(v) => editRow[p] = v" Label="@(QueryResult.Columns[p].Name)" Class='@(QueryResult.Columns[p].MaxLength < 50 ? "smallField" : null)' Variant="@(QueryResult.Columns[p].MaxLength > 100 ? Variant.Outlined : Variant.Text)" T="string" ReadOnly="@(QueryResult.Columns[p].ReadOnly)" MaxLength="@(QueryResult.Columns[p].MaxLength)" Lines="@(QueryResult.Columns[p].MaxLength > 100 ? Math.Min(QueryResult.Columns[p].MaxLength / 100, 5)  : 1)"></MudTextField>
+                    }
+                    else if (type == typeof(int))
+                    {
+                        <MudNumericField @key="p" Class="smallField" Value="@((int?)val)" ValueChanged="(v) => editRow[p] = v" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" T="int?" ReadOnly="@(QueryResult.Columns[p].ReadOnly)" Required="@(!QueryResult.Columns[p].AllowDBNull)" RequiredError='@($"{QueryResult.Columns[p].Name} is  required")'></MudNumericField>
+                    }
+                    else if (val is byte)
+                    {
+                        <MudNumericField @key="p" Class="smallField" Value="@((byte?)val)" ValueChanged="(v) => editRow[p] = v" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" T="byte?" ReadOnly="@(QueryResult.Columns[p].ReadOnly)" Required="@(!QueryResult.Columns[p].AllowDBNull)" RequiredError='@($"{QueryResult.Columns[p].Name} is  required")'></MudNumericField>
+                    }
+                    else if (type == typeof(short))
+                    {
+                        <MudNumericField @key="p" Class="smallField" Value="@((short?)val)" ValueChanged="(v) => editRow[p] = v" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" T="short?" ReadOnly="@(QueryResult.Columns[p].ReadOnly)" Required="@(!QueryResult.Columns[p].AllowDBNull)" RequiredError='@($"{QueryResult.Columns[p].Name} is  required")'></MudNumericField>
+                    }
+                    else if (type == typeof(long))
+                    {
+                        <MudNumericField @key="p" Class="smallField" Value="@((long?)val)" ValueChanged="(v) => editRow[p] = v" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" T="long?" ReadOnly="@(QueryResult.Columns[p].ReadOnly)" Required="@(!QueryResult.Columns[p].AllowDBNull)" RequiredError='@($"{QueryResult.Columns[p].Name} is  required")'></MudNumericField>
+                    }
+                    else if (type == typeof(DateTime))
+                    {
+                        <div class="d-flex">
+                            <MudDatePicker @key="p" @ref="datePickers[QueryResult.Columns[p].Name]" AutoClose="true" Editable="true" Placeholder="Select Date" Date="@(((DateTime?)val)?.Date)" DateChanged="(v) => {editRow[p] = v.HasValue ? (v.Value.Date).Add(((DateTime?)editRow[p])?.TimeOfDay ?? new TimeSpan(0)) : null;}" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" ReadOnly="@(QueryResult.Columns[p].ReadOnly)" Required="@(!QueryResult.Columns[p].AllowDBNull)" RequiredError='@($"{QueryResult.Columns[p].Name} is  required")'>
+                                <PickerActions>
+                                    <MudButton Class="mr-auto align-self-start" OnClick="@(() => {editRow[p] = (DateTime.Today).Add(((DateTime?)editRow[p])?.TimeOfDay ?? new TimeSpan(0)); datePickers[QueryResult.Columns[p].Name].Close(); })">Today</MudButton>
+                                </PickerActions>
+                            </MudDatePicker>
+                            <MudTimePicker @key="p+1000" @ref="timePickers[QueryResult.Columns[p].Name]" AutoClose="true" Editable="true" Placeholder="Select Time" Time="@(((DateTime?)val)?.TimeOfDay)" TimeChanged="(v) => {if(v.HasValue) editRow[p] = ((DateTime?)editRow[p])?.Date.Add(v.Value); }" Label="time" Variant="Variant.Text" ReadOnly="@(QueryResult.Columns[p].ReadOnly)" Class="ml-4" Disabled="@(editRow[p] == null)">
+                                <PickerActions>
+                                    <MudButton Class="mr-auto align-self-start" OnClick="@(() => {editRow[p] = ((DateTime?)editRow[p])?.Date.Add(DateTime.Now.TimeOfDay); timePickers[QueryResult.Columns[p].Name].Close(); })">Now</MudButton>
+                                </PickerActions>
+                            </MudTimePicker>
+                        </div>
+                    }
+                    else if (type == typeof(bool))
+                    {
+                        <MudCheckBox @key="p" Checked="@((bool?)val)" CheckedChanged="(v) => editRow[p] = v" Label="@(QueryResult.Columns[p].Name)" T="bool?" ReadOnly="@(QueryResult.Columns[p].ReadOnly)" Dense="true"></MudCheckBox>
+                    }
+                    else
+                    {
+                        <MudTextField @key="p" Class="smallField" Value="@((val??"").ToString())" ValueChanged='async (v) => {try{editRow[p] = TypeDescriptor.GetConverter(type).ConvertFrom(v);} catch(Exception exc){await DialogService.ShowMessageBox(" Error", exc.Message);}}' Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" T="string" ReadOnly="@(QueryResult.Columns[p].ReadOnly)" MaxLength="@(QueryResult.Columns[p].MaxLength)"></MudTextField>
+                    }
                 }
-                else if (type == typeof(int))
-                {
-                    <MudNumericField Class="smallField" Value="@((int?)val)" ValueChanged="(v) => editRow[p] = v" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" T="int?" ReadOnly="@(QueryResult.Columns[p].ReadOnly)" Required="@(!QueryResult.Columns[p].AllowDBNull)" RequiredError='@($"{QueryResult.Columns[p].Name} is  required")'></MudNumericField>
-                }
-                else if (val is byte)
-                {
-                    <MudNumericField Class="smallField" Value="@((byte?)val)" ValueChanged="(v) => editRow[p] = v" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" T="byte?" ReadOnly="@(QueryResult.Columns[p].ReadOnly)" Required="@(!QueryResult.Columns[p].AllowDBNull)" RequiredError='@($"{QueryResult.Columns[p].Name} is  required")'></MudNumericField>
-                }
-                else if (type == typeof(short))
-                {
-                    <MudNumericField Class="smallField" Value="@((short?)val)" ValueChanged="(v) => editRow[p] = v" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" T="short?" ReadOnly="@(QueryResult.Columns[p].ReadOnly)" Required="@(!QueryResult.Columns[p].AllowDBNull)" RequiredError='@($"{QueryResult.Columns[p].Name} is  required")'></MudNumericField>
-                }
-                else if (type == typeof(long))
-                {
-                    <MudNumericField Class="smallField" Value="@((long?)val)" ValueChanged="(v) => editRow[p] = v" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" T="long?" ReadOnly="@(QueryResult.Columns[p].ReadOnly)" Required="@(!QueryResult.Columns[p].AllowDBNull)" RequiredError='@($"{QueryResult.Columns[p].Name} is  required")'></MudNumericField>
-                }
-                else if (type == typeof(DateTime))
-                {
-                    <div class="d-flex">
-                            <MudDatePicker @ref="datePickers[QueryResult.Columns[p].Name]" AutoClose="true" Editable="true" Placeholder="Select Date" Date="@(((DateTime?)val)?.Date)" DateChanged="(v) => {editRow[p] = v.HasValue ? (v.Value.Date).Add(((DateTime?)editRow[p])?.TimeOfDay ?? new TimeSpan(0)) : null;}" Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" ReadOnly="@(QueryResult.Columns[p].ReadOnly)" Required="@(!QueryResult.Columns[p].AllowDBNull)" RequiredError='@($"{QueryResult.Columns[p].Name} is  required")'>
-                            <PickerActions>
-                                <MudButton Class="mr-auto align-self-start" OnClick="@(() => {editRow[p] = (DateTime.Today).Add(((DateTime?)editRow[p])?.TimeOfDay ?? new TimeSpan(0)); datePickers[QueryResult.Columns[p].Name].Close(); })">Today</MudButton>
-                            </PickerActions>
-                        </MudDatePicker>
-                        <MudTimePicker @ref="timePickers[QueryResult.Columns[p].Name]" AutoClose="true" Editable="true" Placeholder="Select Time" Time="@(((DateTime?)val)?.TimeOfDay)" TimeChanged="(v) => {if(v.HasValue) editRow[p] = ((DateTime?)editRow[p])?.Date.Add(v.Value); }" Label="time" Variant="Variant.Text" ReadOnly="@(QueryResult.Columns[p].ReadOnly)" Class="ml-4" Disabled="@(editRow[p] == null)">
-                            <PickerActions>
-                                <MudButton Class="mr-auto align-self-start" OnClick="@(() => {editRow[p] = ((DateTime?)editRow[p])?.Date.Add(DateTime.Now.TimeOfDay); timePickers[QueryResult.Columns[p].Name].Close(); })">Now</MudButton>
-                            </PickerActions>
-                        </MudTimePicker>
-                    </div>
-                }
-                else if (type == typeof(bool))
-                {
-                    <MudCheckBox Checked="@((bool?)val)" CheckedChanged="(v) => editRow[p] = v" Label="@(QueryResult.Columns[p].Name)" T="bool?" ReadOnly="@(QueryResult.Columns[p].ReadOnly)" Dense="true"></MudCheckBox>
-                }
-                else
-                {
-                    <MudTextField Class="smallField" Value="@((val??"").ToString())" ValueChanged='async (v) => {try{editRow[p] = TypeDescriptor.GetConverter(type).ConvertFrom(v);} catch(Exception exc){await DialogService.ShowMessageBox(" Error", exc.Message);}}' Label="@(QueryResult.Columns[p].Name)" Variant="Variant.Text" T="string" ReadOnly="@(QueryResult.Columns[p].ReadOnly)" MaxLength="@(QueryResult.Columns[p].MaxLength)"></MudTextField>
-                }
-            }
             </MudForm>
         </MudContainer>
     </DialogContent>
@@ -150,7 +150,7 @@
             Query.Row = editRow;
             Query.OriginalRow = row;
         }
-        else //new 
+        else //new
         {
             row = null;
             editRow = QueryResult.Columns.Select(c => GetDefault(Type.GetType(c.TypeName), c.AllowDBNull)).ToArray();
@@ -216,7 +216,7 @@
                 {
                     try
                     {
-                    row[p] = ((JsonElement)(updrow[p])).Deserialize(Type.GetType(QueryResult.Columns[p].TypeName));
+                        row[p] = ((JsonElement)(updrow[p])).Deserialize(Type.GetType(QueryResult.Columns[p].TypeName));
                     }
                     catch
                     {
@@ -268,7 +268,7 @@
     }
 
     private void Cancel()
-    {        
+    {
         MudDialog.Cancel();
     }
 }
