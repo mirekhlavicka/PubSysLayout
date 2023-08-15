@@ -486,7 +486,7 @@
             whereClause.Keys.SelectMany(utn =>
             whereClause[utn]
                 .Where(kv => !String.IsNullOrEmpty(kv.Value))
-                .Select(kv => utn + "." + (reservedKeywords.Contains(kv.Key.ToLower()) ? $"[{kv.Key}]" : kv.Key) + (kv.Value.Contains('%') ? " LIKE " : "=") + (double.TryParse(kv.Value, out _) ? kv.Value : $"'{kv.Value}'"))));
+                .Select(kv => utn + "." + (reservedKeywords.Contains(kv.Key.ToLower()) ? $"[{kv.Key}]" : kv.Key) + (kv.Value.Contains('=') || kv.Value.Contains("<>") ? " " + kv.Value : (kv.Value.Contains('%') ? " LIKE " : " = ") + (double.TryParse(kv.Value, out _) ? kv.Value : $"'{kv.Value}'")))));
 
         string join = "";
         if (joinForeignKeys.Count > 0)
@@ -502,7 +502,7 @@
         string sort = "";
         if (sortColumns.Count > 0)
         {
-            sort = String.Join(",\r\n    ", sortColumns.OrderBy(sc => sc.Order).Select(sc => $"{sc.TableName}.{sc.ColumnName}{(sc.Desc ? " DESC" : "")}"));
+            sort = String.Join(",\r\n    ", sortColumns.OrderBy(sc => sc.Order).Select(sc => $"{sc.TableName}.{((reservedKeywords.Contains(sc.ColumnName.ToLower()) ? $"[{sc.ColumnName}]" : sc.ColumnName))}{(sc.Desc ? " DESC" : "")}"));
         }
 
         string sql =
