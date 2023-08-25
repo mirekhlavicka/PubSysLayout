@@ -130,3 +130,42 @@
 </body>
 
 </html>
+
+<script>
+    document.querySelector('#app').addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter' && e.key !== 'Escape') {
+            return;
+        }
+
+        var row = e.target.closest('tr');
+
+        if (!row) {
+            return;
+        }
+
+        var tmp = row.getElementsByTagName('td');
+
+        if (!tmp || tmp.length == 0) {
+            return;
+        }
+
+        var td = tmp[tmp.length - 1];
+
+        var buttons = td.getElementsByTagName('button');
+
+        if (!buttons || buttons.length != 2) {
+            return;
+        }
+
+        if (e.key === 'Enter') {
+            buttons[0].focus();
+            buttons[0].click();
+            
+        }
+        if (e.key === 'Escape') {
+            buttons[1].focus();
+            buttons[1].click();
+            e.stopPropagation();
+        }
+    }, true);
+</script>
