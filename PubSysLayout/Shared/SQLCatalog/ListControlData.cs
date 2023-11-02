@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace PubSysLayout.Shared.SQLQuery
+namespace PubSysLayout.Shared.CatalogQuery
 {
     public class ListControlData
     {
@@ -16,9 +16,9 @@ namespace PubSysLayout.Shared.SQLQuery
         {
             get 
             {
-                if (items == null) //!!! distinct values !!!
+                if (items == null)
                 {
-                    items = Items.ToDictionary(it => it.Value, it => it.Text);
+                    items = Items.GroupBy(it => it.Value).ToDictionary(it => it.Key, it => it.First().Text);
                 }
                 string res;
                 if (!items.TryGetValue(v, out res))

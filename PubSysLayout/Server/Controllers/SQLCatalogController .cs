@@ -3,13 +3,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using System.Data;
 using PubSysLayout.Shared.SQLQuery;
+using PubSysLayout.Shared.CatalogQuery;
 using Query = PubSysLayout.Shared.SQLQuery.Query;
-using System.Text.RegularExpressions;
-using System.Text.Json;
-using System.Net.Http;
-using System.Linq;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
-using Microsoft.EntityFrameworkCore.Storage;
+using PubSysLayout.Shared.SQLCatalog;
 
 namespace PubSysLayout.Server.Controllers
 {
@@ -33,20 +29,20 @@ namespace PubSysLayout.Server.Controllers
         [HttpPost]
         public IActionResult Run(Query query)
         {
-            if (query.SQL.StartsWith("catalog"))
+            int id_form;
+
+            if (Int32.TryParse(query.SQL, out id_form))
             {
-                return Ok(QueryCatalog(query));
+                return Ok(QueryCatalog(query, id_form));
             }
             else
             {
-                return BadRequest("Invalid catalog");
+                return BadRequest("Invalid id of catalog");
             }
         }
 
-        private QueryResult QueryCatalog(Query query)
+        private QueryResult QueryCatalog(Query query, int id_form)
         {
-            int id_form = Int32.Parse(query.SQL.Split(":")[1]);
-
             using (var httpClient = httpClientFactory.CreateClient())
             using (var conn = new SqlConnection(String.Format(_configuration.GetConnectionString("PubSysDefault"), query.Database)))
             {
@@ -106,6 +102,30 @@ namespace PubSysLayout.Server.Controllers
                 .Select(dr => new KeyValuePair<int, string>(dr.Field<int>("id_form"), dr.Field<string>("catalogname")));
         }
 
+        [HttpGet("formcontrols")]
+        public IEnumerable<FormControl> GetFormControls(string database, int id_form)
+        {
+            return GetData(@$"
+                        SELECT
+                            id_fcontrol, id_control, title, sortorder, required, datatype, searchable, sortable, cat_showinlist
+                        FROM
+                            FormControls
+                        WHERE
+                            id_form = {id_form}
+                        ORDER BY
+                            sortorder", database)
+                .AsEnumerable()
+                .Select(dr => new FormControl 
+                { 
+                    IdControl = dr.Field<int>("id_control"),
+                    IdFControl = dr.Field<int>("id_fcontrol"),
+                    Title = dr.Field<string>("Title"),
+                    ShowInList = dr.Field<bool>("cat_showinlist"),
+                    Searchable = dr.Field<bool> ("searchable"),
+                    DataType = dr.Field<byte>("datatype")
+                });
+        }
+
         private DataTable GetData(string sql, string database)
         {
             using (var conn = new SqlConnection(String.Format(_configuration.GetConnectionString("PubSysDefault"), database)))
@@ -113,7 +133,6 @@ namespace PubSysLayout.Server.Controllers
                 return GetData(sql, conn);
             }
         }
-
 
         private DataTable GetData(string sql, SqlConnection conn)
         {
@@ -133,7 +152,6 @@ namespace PubSysLayout.Server.Controllers
             }
             return res;
         }
-
 
         private object[][] ConvertToArray(DataTable dataTable)
         {
