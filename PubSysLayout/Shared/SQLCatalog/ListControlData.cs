@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace PubSysLayout.Shared.CatalogQuery
+namespace PubSysLayout.Shared.SQLCatalog
 {
     public class ListControlData
     {

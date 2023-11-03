@@ -68,24 +68,28 @@
         <div class="d-flex mb-4">
             <div class="d-flex" style="max-width:800px;flex-grow:3">
                 <MudAutocomplete T="string" Label="Database" AnchorOrigin="Origin.BottomCenter" Value="Database" ValueChanged="DBChanged" FullWidth="false" Variant="Variant.Outlined" Class="mr-6" SearchFunc="@SearchDB" Clearable="true" spellcheck="false" MaxItems="100" />
-                <MudSelect Value="@id_form" ValueChanged="CatChanged" Label="Catalog" Placeholder="Select catalog" Required="false" T="int?" Variant="Variant.Outlined" Class="mr-6"  ToStringFunc='(id) => id.HasValue ? catList.FirstOrDefault(kv => kv.Key == id).Value : "" '>
+                <MudSelect Value="@query.IdForm" ValueChanged="CatChanged" Label="Catalog" Placeholder="Select catalog" Required="false" T="int?" Variant="Variant.Outlined" Class="mr-6"  ToStringFunc='(id) => id.HasValue ? catList.FirstOrDefault(kv => kv.Key == id).Value : "" '>
                     @foreach (var kv in catList)
                     {
                         <MudSelectItem Value="@kv.Key">@kv.Value</MudSelectItem>
                     }
                 </MudSelect>
-                <MudFab OnClick="async () => await LoadData()" StartIcon="@Icons.Material.Filled.PlayArrow" Color="Color.Default" IconColor="Color.Secondary" IconSize="Size.Large" Size="Size.Large" Label="Run&nbsp;" DisableElevation="true" accesskey="r" Style="margin-top:10px"></MudFab>
+                <MudFab OnClick="async () => await LoadData()" Disabled="@(!query.IdForm.HasValue)" StartIcon="@Icons.Material.Filled.PlayArrow" Color="Color.Default" IconColor="Color.Secondary" IconSize="Size.Large" Size="Size.Large" Label="Run&nbsp;" DisableElevation="true" accesskey="r" Style="margin-top:10px"></MudFab>
             </div>
             <MudSpacer />
         </div>
         <MudDivider />
-        <div style="width:100%; height: calc(100vh - 290px); overflow:scroll">
-            @foreach (var fc in formControls)
+
+        <MudContainer Style="height: calc(100vh - 290px); overflow-y: scroll; " MaxWidth="MaxWidth.Small">
+            @foreach (var fc in formControls.Where(c => c.Searchable))
             {
-                @fc.Title
-                <br />
+                <div class="d-flex" @key="fc.IdFControl">
+                    <MudCheckBox T="bool" title="include in SELECT" Class="mt-3"></MudCheckBox>
+                    <MudTextField Label="@fc.Title" Variant="Variant.Text" T="string" @bind-Value="query.Where[fc.IdFControl]"></MudTextField>
+                </div>
             }
-        </div>
+        </MudContainer>
+
     </MudTabPanel>
     <MudTabPanel Text="Results" Icon="@Icons.Material.Filled.Dataset">
         @if (queryResult != null && queryResult.Columns.Length > 0)
@@ -200,11 +204,10 @@
     private string[] dbList = { };
 
     private KeyValuePair<int?, string>[] catList = { };
-    private int? id_form = null;
 
     private FormControl[] formControls = { };
 
-    private Query query = null;
+    private PubSysLayout.Shared.SQLCatalog.Query query = new PubSysLayout.Shared.SQLCatalog.Query { Database = "", IdForm = 0, Where = new Dictionary<int, string>()};
     private QueryResult queryResult = null;
     private string errorMsg = "No result";
     private bool inProgress = false;
@@ -222,7 +225,7 @@
 
     [Parameter]
     [SupplyParameterFromQuery(Name = "db")]
-    public string Database { get; set; } = null;
+    public string Database { get { return query.Database; } set { query.Database = value; } } 
 
     protected override async Task OnInitializedAsync()
     {
@@ -242,7 +245,7 @@
             }
         }
         await LoadCatList();
-        id_form = await localStorage.GetAsync<int?>("CATQuery_currentIDForm");
+        query.IdForm = await localStorage.GetAsync<int?>("CATQuery_currentIDForm");
         await LoadFormControls();
     }
 
@@ -252,7 +255,8 @@
         {
             Database = value;
             await LoadCatList();
-            id_form = null;
+            query.IdForm = null;
+            query.Where.Clear();
             await localStorage.SetAsync("CATQuery_currentDB", Database); 
             await LoadFormControls();
         }
@@ -260,13 +264,13 @@
 
     private async Task CatChanged(int? value)
     {
-        id_form = value;
-        if (id_form.HasValue)
+        query.IdForm = value;
+        if (query.IdForm.HasValue)
         {
             queryResult = null;
             errorMsg = "No result";
-            await localStorage.SetAsync("CATQuery_currentIDForm", id_form);
-            await LoadFormControls();
+            await localStorage.SetAsync("CATQuery_currentIDForm", query.IdForm);
+            await LoadFormControls();            
         }
     }
 
@@ -291,11 +295,11 @@
 
     private async Task LoadFormControls()
     {
-        if (!String.IsNullOrEmpty(Database) && id_form != null)
+        if (!String.IsNullOrEmpty(Database) && query.IdForm != null)
         {
             try
             {
-                formControls = await Http.GetFromJsonAsync<FormControl[]>($"api/sqlcatalog/formcontrols?database={Database}&id_form={id_form}");
+                formControls = await Http.GetFromJsonAsync<FormControl[]>($"api/sqlcatalog/formcontrols?database={Database}&id_form={query.IdForm}");
             }
             catch (Exception ex)
             {
@@ -306,6 +310,7 @@
         {
             formControls = new FormControl[] { };
         }
+        query.Where = formControls.Where(fc => fc.Searchable).ToDictionary(fc => fc.IdFControl, fc => "");
     }
 
     protected async Task LoadData()
@@ -320,12 +325,7 @@
 
         try
         {
-            query = new Query
-            {
-                Database = Database,
-                SQL = id_form.ToString(),
-                AllowUpdate = true
-            };
+
             var res = (await Http.PostAsJsonAsync("api/sqlcatalog",query));
 
             if (res.IsSuccessStatusCode)

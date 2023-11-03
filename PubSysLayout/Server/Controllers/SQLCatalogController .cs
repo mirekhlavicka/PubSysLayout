@@ -3,8 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using System.Data;
 using PubSysLayout.Shared.SQLQuery;
-using PubSysLayout.Shared.CatalogQuery;
-using Query = PubSysLayout.Shared.SQLQuery.Query;
+using Query = PubSysLayout.Shared.SQLCatalog.Query;
 using PubSysLayout.Shared.SQLCatalog;
 
 namespace PubSysLayout.Server.Controllers
@@ -29,27 +28,18 @@ namespace PubSysLayout.Server.Controllers
         [HttpPost]
         public IActionResult Run(Query query)
         {
-            int id_form;
-
-            if (Int32.TryParse(query.SQL, out id_form))
-            {
-                return Ok(QueryCatalog(query, id_form));
-            }
-            else
-            {
-                return BadRequest("Invalid id of catalog");
-            }
+            return Ok(QueryCatalog(query));
         }
 
-        private QueryResult QueryCatalog(Query query, int id_form)
+        private QueryResult QueryCatalog(Query query)
         {
             using (var httpClient = httpClientFactory.CreateClient())
             using (var conn = new SqlConnection(String.Format(_configuration.GetConnectionString("PubSysDefault"), query.Database)))
             {
-                var formControls = GetData($"SELECT * FROM FormControls WHERE id_form={id_form} AND cat_showinlist=1 ORDER BY sortorder", conn);
+                var formControls = GetData($"SELECT * FROM FormControls WHERE id_form={query.IdForm} AND (cat_showinlist=1 OR searchable=1) ORDER BY sortorder", conn);
                 var serverName = GetData("SELECT TOP 1 server_name FROM ServerNames WHERE [default] = 1", conn).Rows[0][0];
 
-                var selectList = String.Join(",", formControls.AsEnumerable().Select(dr => $"fif{dr.Field<int>("id_fcontrol")}." + dr.Field<byte>("datatype") switch
+                var selectList = String.Join(",", formControls.AsEnumerable().Where(fc => fc.Field<bool>("cat_showinlist")).Select(dr => $"fif{dr.Field<int>("id_fcontrol")}." + dr.Field<byte>("datatype") switch
                 {
                     0 => "strvalue",
                     1 or 5 or 6 or 8 or 9 => "intvalue",
@@ -58,17 +48,30 @@ namespace PubSysLayout.Server.Controllers
                     _ => "strvalue"
                 } + $" AS [{dr.Field<string>("title")}]"));
                 var joinList = String.Join("\r\n", formControls.AsEnumerable().Select(dr => $"LEFT JOIN FormItemFields fif{dr.Field<int>("id_fcontrol")} ON fi.id_item=fif{dr.Field<int>("id_fcontrol")}.id_item AND fif{dr.Field<int>("id_fcontrol")}.id_fcontrol={dr.Field<int>("id_fcontrol")}"));
-                var dtItems = GetData($"SELECT TOP 200 fi.id_item, fi.released AS [Publikován], {selectList} FROM FormItems fi {joinList} WHERE fi.id_form={id_form} ORDER BY id_item DESC", conn);
+
+                var where = "";
+
+                if (query.Where.Values.Any(v => !String.IsNullOrEmpty(v)))
+                {
+                    where = " AND " + String.Join(" AND ", query.Where.Where(kv => !String.IsNullOrEmpty(kv.Value)).Select(kv => $"fif{kv.Key}.strvalue = '{kv.Value}'"));
+                }
+                
+                
+                var dtItems = GetData($"SELECT TOP 200 fi.id_item, fi.released AS [Publikován], {selectList} FROM FormItems fi {joinList} WHERE fi.id_form={query.IdForm}{where} ORDER BY id_item DESC", conn);
                 var items = ConvertToArray(dtItems);
 
                 var listData = formControls.AsEnumerable()
+                    .Where(fc => fc.Field<bool>("cat_showinlist"))
                     .Where(dr => new int[] { 2, 3, 4, 5 }.Contains(dr.Field<int>("id_control")))
                     .Select(dr => dr.Field<int>("id_fcontrol"))
                     .ToDictionary(id => id, id => httpClient.GetFromJsonAsync<ListControlData>($"https://{serverName}/systools/FormControlData.ashx?id_fcontrol={id}").Result);
 
-                for (int i = 0; i < formControls.Rows.Count; i++)
+                var shown = formControls.AsEnumerable().Where(fc => fc.Field<bool>("cat_showinlist")).ToArray();
+
+
+                for (int i = 0; i < shown.Length; i++)
                 {
-                    int id_fcontrol = (int)formControls.Rows[i]["id_fcontrol"];
+                    int id_fcontrol = (int)shown[i]["id_fcontrol"];
                     if (listData.ContainsKey(id_fcontrol) && !listData[id_fcontrol].Multival)
                     {
                         foreach (var r in items)
