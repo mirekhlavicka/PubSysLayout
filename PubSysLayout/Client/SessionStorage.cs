@@ -41,6 +41,14 @@ namespace PubSysLayout.Client
             await localStorage.SetAsync("Session_Types", items.ToDictionary(i => i.Key, i => i.Value != null ? i.Value.GetType().FullName : "null"));
         }
 
+        private Type GetType(string typeName)
+        {
+            var type = Type.GetType(typeName);
+            if (type != null) return type;
+
+            return GetType($"{typeName},  PubSysLayout.Shared");
+        }
+
         public async Task Load()
         {
             if (items == null)
@@ -52,7 +60,7 @@ namespace PubSysLayout.Client
                 {
                     foreach (var kv in items.ToArray()) 
                     {
-                        items[kv.Key] = types[kv.Key] == "null" ? null : ((JsonElement)(kv.Value)).Deserialize(Type.GetType(types[kv.Key]));
+                        items[kv.Key] = types[kv.Key] == "null" ? null : ((JsonElement)(kv.Value)).Deserialize(GetType(types[kv.Key]));
                     }
                 }
 

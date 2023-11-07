@@ -52,4 +52,9 @@ builder.Services.AddAuthorizationCore();
 builder.Services.AddScoped<AuthStateProvider>();
 builder.Services.AddScoped<AuthenticationStateProvider>(provider => provider.GetRequiredService<AuthStateProvider>());
 
-await builder.Build().RunAsync();
+var host = builder.Build();
+
+var session = host.Services.GetRequiredService<SessionStorage>();
+await session.Load();
+
+await host.RunAsync();

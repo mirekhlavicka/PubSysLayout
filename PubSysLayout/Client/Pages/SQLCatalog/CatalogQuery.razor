@@ -7,7 +7,6 @@
 @using System.Text.Json.Serialization;
 @using System.Text.Json;
 @using PubSysLayout.Shared.SQLCatalog;
-@using PubSysLayout.Shared.SQLQuery;
 
 @inject HttpClient Http
 @inject IJSRuntime js
@@ -16,33 +15,33 @@
 @inject NavigationManager uriHelper
 @inject IDialogService DialogService
 @inject Clipboard clipboard
+@inject SessionStorage session
 
 <style>
-    .valTD
-    {
+    .valTD {
         max-width: 400px;
         overflow-x: hidden;
         white-space: nowrap;
         position: relative
     }
 
-    .valTD .btnMore {
-        display: none;
-        position: absolute;
-        z-index:100;
-        right:2px;
-        top:7px;
-        width:40px;
-        height:20px;
-        border-radius: 4px;
-        background-color: #e0e0e0;
-        padding-left:14px;
-        cursor:pointer;
-    }
+        .valTD .btnMore {
+            display: none;
+            position: absolute;
+            z-index: 100;
+            right: 2px;
+            top: 7px;
+            width: 40px;
+            height: 20px;
+            border-radius: 4px;
+            background-color: #e0e0e0;
+            padding-left: 14px;
+            cursor: pointer;
+        }
 
-    .valTD:hover .btnMore {
-        display: block
-    }
+        .valTD:hover .btnMore {
+            display: block
+        }
 
     .btnMore:hover {
         background-color: #b0b0b0;
@@ -61,67 +60,76 @@
         }
 </style>
 
-<PageTitle>Catalog query – @Database</PageTitle>
+<PageTitle>Catalog query – @query.Database</PageTitle>
 
 <MudTabs Elevation="5" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6" @ref="tabs" KeepPanelsAlive="true" @onclick="() => flagsFilterOpened = false " ActivePanelIndexChanged="(index) => {if(mudTable != null && !flagsFilterOpened){ mudTable.StopRender = (index == 0);}}">
     <MudTabPanel Text="Query" Icon="@Icons.Material.Filled.Build">
         <div class="d-flex mb-4">
             <div class="d-flex" style="max-width:800px;flex-grow:3">
-                <MudAutocomplete T="string" Label="Database" AnchorOrigin="Origin.BottomCenter" Value="Database" ValueChanged="DBChanged" FullWidth="false" Variant="Variant.Outlined" Class="mr-6" SearchFunc="@SearchDB" Clearable="true" spellcheck="false" MaxItems="100" />
-                <MudSelect Value="@query.IdForm" ValueChanged="CatChanged" Label="Catalog" Placeholder="Select catalog" Required="false" T="int?" Variant="Variant.Outlined" Class="mr-6"  ToStringFunc='(id) => id.HasValue ? catList.FirstOrDefault(kv => kv.Key == id).Value : "" '>
+                <MudAutocomplete T="string" Label="Database" AnchorOrigin="Origin.BottomCenter" Value="query.Database" ValueChanged="DBChanged" FullWidth="false" Variant="Variant.Outlined" Class="mr-6" SearchFunc="@SearchDB" Clearable="true" spellcheck="false" MaxItems="100" />
+                <MudSelect Value="@query.IdForm" ValueChanged="CatChanged" Label="Catalog" Placeholder="Select catalog" Required="false" T="int" Variant="Variant.Outlined" Class="mr-6" ToStringFunc='(id) => id != 0 ? catList.FirstOrDefault(kv => kv.Key == id).Value : "" '>
                     @foreach (var kv in catList)
                     {
                         <MudSelectItem Value="@kv.Key">@kv.Value</MudSelectItem>
                     }
                 </MudSelect>
-                <MudFab OnClick="async () => await LoadData()" Disabled="@(!query.IdForm.HasValue)" StartIcon="@Icons.Material.Filled.PlayArrow" Color="Color.Default" IconColor="Color.Secondary" IconSize="Size.Large" Size="Size.Large" Label="Run&nbsp;" DisableElevation="true" accesskey="r" Style="margin-top:10px"></MudFab>
+                <MudFab OnClick="async () => await LoadData()" Disabled="@(query.IdForm == 0)" StartIcon="@Icons.Material.Filled.PlayArrow" Color="Color.Default" IconColor="Color.Secondary" IconSize="Size.Large" Size="Size.Large" Label="Run&nbsp;" DisableElevation="true" accesskey="r" Style="margin-top:10px" Class="mr-6"></MudFab>
+                <MudFab OnClick="async () => await ShowSQL()" Disabled="@(query.IdForm == 0)" StartIcon="@Icons.Material.Filled.ArrowForward" Color="Color.Default" IconColor="Color.Default" IconSize="Size.Large" Size="Size.Large" Label="SQL&nbsp;" DisableElevation="true" Style="margin-top:10px"></MudFab>
             </div>
             <MudSpacer />
         </div>
         <MudDivider />
 
-        <MudContainer Style="height: calc(100vh - 290px); overflow-y: scroll; " MaxWidth="MaxWidth.Small">
-            @foreach (var fc in formControls.Where(c => c.Searchable))
-            {
-                <div class="d-flex" @key="fc.IdFControl">
-                    <MudCheckBox T="bool" title="include in SELECT" Class="mt-3"></MudCheckBox>
+        <div style="height: calc(100vh - 290px); overflow-y: scroll; " class="d-flex">
+            <div class="flex-grow-1 mr-4" style="flex-basis: 50%">
+                <MudText Typo="Typo.subtitle1" Class="mt-4">Include fields:</MudText>
+                @foreach (var fc in formControls)
+                {
+                    <MudCheckBox T="bool" title="include in SELECT" Class="mt-3" Label="@fc.Title" Style="display: inline-block; width: 150px" Checked="@query.Include.Contains(fc.IdFControl)" CheckedChanged="@(ch => {if (ch) {query.Include.Add(fc.IdFControl);} else {query.Include.Remove(fc.IdFControl);}})"></MudCheckBox>
+                }
+
+            </div>
+            <div class="flex-grow-1 mr-4" style="flex-basis: 50%">
+                <MudText Typo="Typo.subtitle1" Class="mt-4">Filter:</MudText>
+                @foreach (var fc in formControls.Where(c => c.Searchable))
+                {
                     <MudTextField Label="@fc.Title" Variant="Variant.Text" T="string" @bind-Value="query.Where[fc.IdFControl]"></MudTextField>
-                </div>
-            }
-        </MudContainer>
+                }
+            </div>
+        </div>
 
     </MudTabPanel>
     <MudTabPanel Text="Results" Icon="@Icons.Material.Filled.Dataset">
         @if (queryResult != null && queryResult.Columns.Length > 0)
         {
             <MudTableFix @ref="mudTable" Items="@queryResult.Rows" RowsPerPage="50" SortLabel="Sort By" AllowUnsorted="true" Virtualize="false"
-                  Hover="true" FixedHeader="true" FixedFooter="true" HorizontalScrollbar="true" Dense="true" Bordered="true" Striped="true"
-                  Height="calc(100vh - 323px)" HeaderClass="table-head-bordered" FooterClass="table-foot-bordered" Elevation="2"
-                  Filter="new Func<object[],bool>(FilterFunc)"
-                  RowClassFunc="@SelectedRowClassFunc"  
-                  T="object[]">
+                     Hover="true" FixedHeader="true" FixedFooter="true" HorizontalScrollbar="true" Dense="true" Bordered="true" Striped="true"
+                     Height="calc(100vh - 323px)" HeaderClass="table-head-bordered" FooterClass="table-foot-bordered" Elevation="2"
+                     Filter="new Func<object[],bool>(FilterFunc)"
+                     RowClassFunc="@SelectedRowClassFunc"
+                     T="object[]">
                 <ToolBarContent>
                     <MudTooltip Text="Copy tabular data to clipboard">
                         <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Medium" IconSize="Size.Medium" Class="mt-4 mb-4 ml-3" OnClick='async () => await CopyToClipboard(GetTableText(), "Tabular data was copied to clipboard")' Disabled="@(queryResult == null || queryResult.Columns.Length == 0)" />
                     </MudTooltip>
                     <MudSpacer />
                     <div class="d-flex">
-                    @if (flagsFilter.Count > 0)
-                    {
-                        <div class="d-flex" style="width:130px; padding-bottom: 2px" @onclick:stopPropagation="true">
-                            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => flagsFilterOpened = !flagsFilterOpened)" EndIcon="@(flagsFilterOpened ? Icons.Material.Filled.ArrowDropUp : Icons.Material.Filled.ArrowDropDown)">Filter</MudButton>
-                            <MudPopover Open="flagsFilterOpened" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft">
-                                <MudPaper Outlined="true" Class="px-4 py-4" MinWidth="200px">
-                                    @foreach (var fi in flagsFilter.Keys)
-                                    {
-                                        <MudCheckBox @bind-Checked="flagsFilter[fi]" Color="@Color.Secondary" TriState="true">@queryResult.Columns[fi].Name</MudCheckBox>
-                                    }
-                                    <MudButton OnClick="@(() => { foreach(var f in flagsFilter){ flagsFilter[f.Key] = null;} })">Reset</MudButton>
-                                </MudPaper>
-                            </MudPopover>
-                        </div>
-                    }
-                    <MudTextField DebounceInterval="300" @bind-Value="searchString" Placeholder="Search by text or ID" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true" Style="width:350px"></MudTextField>
+                        @if (flagsFilter.Count > 0)
+                        {
+                            <div class="d-flex" style="width:130px; padding-bottom: 2px" @onclick:stopPropagation="true">
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => flagsFilterOpened = !flagsFilterOpened)" EndIcon="@(flagsFilterOpened ? Icons.Material.Filled.ArrowDropUp : Icons.Material.Filled.ArrowDropDown)">Filter</MudButton>
+                                <MudPopover Open="flagsFilterOpened" AnchorOrigin="Origin.BottomLeft" TransformOrigin="Origin.TopLeft">
+                                    <MudPaper Outlined="true" Class="px-4 py-4" MinWidth="200px">
+                                        @foreach (var fi in flagsFilter.Keys)
+                                        {
+                                            <MudCheckBox @bind-Checked="flagsFilter[fi]" Color="@Color.Secondary" TriState="true">@queryResult.Columns[fi].Name</MudCheckBox>
+                                        }
+                                        <MudButton OnClick="@(() => { foreach(var f in flagsFilter){ flagsFilter[f.Key] = null;} })">Reset</MudButton>
+                                    </MudPaper>
+                                </MudPopover>
+                            </div>
+                        }
+                        <MudTextField DebounceInterval="300" @bind-Value="searchString" Placeholder="Search by text or ID" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0" Clearable="true" Style="width:350px"></MudTextField>
                     </div>
                 </ToolBarContent>
                 <HeaderContent>
@@ -179,7 +187,7 @@
             <MudDialog @bind-IsVisible="showMore" Options="showMoreDialogOptions">
                 <DialogContent>
                     <MudPaper Elevation="0" Class="mt-4">
-                        <MudTextField T="string" Variant="Variant.Filled"  @bind-Value="showMoreText" Lines="25" AutoFocus="false" ReadOnly="true" />
+                        <MudTextField T="string" Variant="Variant.Filled" @bind-Value="showMoreText" Lines="25" AutoFocus="false" ReadOnly="true" />
                     </MudPaper>
                     <div class="fixed pointer-events-none" tabindex="-1" @ref="focusShowMoreDialog"></div>
                 </DialogContent>
@@ -203,12 +211,27 @@
 
     private string[] dbList = { };
 
-    private KeyValuePair<int?, string>[] catList = { };
+    private KeyValuePair<int, string>[] catList = { };
 
     private FormControl[] formControls = { };
 
-    private PubSysLayout.Shared.SQLCatalog.Query query = new PubSysLayout.Shared.SQLCatalog.Query { Database = "", IdForm = 0, Where = new Dictionary<int, string>()};
-    private QueryResult queryResult = null;
+    private Query query
+
+    {
+        get
+        {
+            session["CQ_query"] ??= new Query
+                {
+                    Database = "",
+                    IdForm = 0,
+                    Include = new HashSet<int>(),
+                    Where = new Dictionary<int, string>()
+                };
+            return session["CQ_query"] as Query;
+        }
+    }
+
+    private PubSysLayout.Shared.SQLQuery.QueryResult queryResult = null;
     private string errorMsg = "No result";
     private bool inProgress = false;
 
@@ -223,85 +246,71 @@
     private ElementReference focusShowMoreDialog;
 
 
-    [Parameter]
-    [SupplyParameterFromQuery(Name = "db")]
-    public string Database { get { return query.Database; } set { query.Database = value; } } 
-
     protected override async Task OnInitializedAsync()
     {
         dbList = await Http.GetFromJsonAsync<string[]>("api/sqlquery/dblist");
 
-        if (!String.IsNullOrEmpty(Database))
+        if (String.IsNullOrEmpty(query.Database))
         {
-            Database = dbList.FirstOrDefault(s => String.Equals(s, Database, StringComparison.OrdinalIgnoreCase));
+            query.Database = await Http.GetStringAsync("api/sqlquery/defaultdb");
         }
 
-        if (String.IsNullOrEmpty(Database))
-        {
-            Database = await localStorage.GetAsync<string>("CATQuery_currentDB");
-            if (String.IsNullOrEmpty(Database))
-            {
-                Database = await Http.GetStringAsync("api/sqlquery/defaultdb");
-            }
-        }
         await LoadCatList();
-        query.IdForm = await localStorage.GetAsync<int?>("CATQuery_currentIDForm");
-        await LoadFormControls();
+        await LoadFormControls(query.IdForm == 0);
     }
 
     private async Task DBChanged(string value)
     {
-        if (Database != value)
+        if (query.Database != value)
         {
-            Database = value;
+            query.Database = value;
             await LoadCatList();
-            query.IdForm = null;
+            query.IdForm = 0;
             query.Where.Clear();
-            await localStorage.SetAsync("CATQuery_currentDB", Database); 
-            await LoadFormControls();
+            query.Include.Clear();
+            await LoadFormControls(true);
         }
     }
 
-    private async Task CatChanged(int? value)
+    private async Task CatChanged(int value)
     {
         query.IdForm = value;
-        if (query.IdForm.HasValue)
+        if (query.IdForm != 0)
         {
             queryResult = null;
             errorMsg = "No result";
-            await localStorage.SetAsync("CATQuery_currentIDForm", query.IdForm);
-            await LoadFormControls();            
+            await LoadFormControls(true);
         }
     }
 
     private async Task LoadCatList()
     {
-        if (!String.IsNullOrEmpty(Database))
+        if (!String.IsNullOrEmpty(query.Database))
         {
             try
             {
-                catList = await Http.GetFromJsonAsync<KeyValuePair<int?, string>[]>($"api/sqlcatalog/catlist?database={Database}");
+                catList = await Http.GetFromJsonAsync<KeyValuePair<int, string>[]>($"api/sqlcatalog/catlist?database={query.Database}");
             }
-            catch (Exception ex)
+            catch
             {
-                catList = new KeyValuePair<int?, string>[] { };
+                catList = new KeyValuePair<int, string>[] { };
             }
         }
         else
         {
-            catList = new KeyValuePair<int?, string>[]{ } ;
+            catList = new KeyValuePair<int, string>[] { };
         }
     }
 
-    private async Task LoadFormControls()
+    private async Task LoadFormControls(bool clear)
     {
-        if (!String.IsNullOrEmpty(Database) && query.IdForm != null)
+        if (!String.IsNullOrEmpty(query.Database) && query.IdForm != 0)
         {
             try
             {
-                formControls = await Http.GetFromJsonAsync<FormControl[]>($"api/sqlcatalog/formcontrols?database={Database}&id_form={query.IdForm}");
+                formControls = await Http.GetFromJsonAsync<FormControl[]>($"api/sqlcatalog/formcontrols?database={query.Database}&id_form={query.IdForm}");
             }
-            catch (Exception ex)
+            catch
             {
                 formControls = new FormControl[] { };
             }
@@ -310,12 +319,17 @@
         {
             formControls = new FormControl[] { };
         }
-        query.Where = formControls.Where(fc => fc.Searchable).ToDictionary(fc => fc.IdFControl, fc => "");
+        if (clear)
+        {
+            query.Where = formControls.Where(fc => fc.Searchable).ToDictionary(fc => fc.IdFControl, fc => "");
+            query.Include = formControls.Where(fc => fc.ShowInList).Select(fc => fc.IdFControl).ToHashSet();
+        }
     }
 
     protected async Task LoadData()
     {
         inProgress = true;
+        await session.Save();
 
         if (queryResult != null)
         {
@@ -326,12 +340,12 @@
         try
         {
 
-            var res = (await Http.PostAsJsonAsync("api/sqlcatalog",query));
+            var res = (await Http.PostAsJsonAsync("api/sqlcatalog", query));
 
             if (res.IsSuccessStatusCode)
             {
                 errorMsg = "";
-                queryResult = await res.Content.ReadFromJsonAsync<QueryResult>();
+                queryResult = await res.Content.ReadFromJsonAsync<PubSysLayout.Shared.SQLQuery.QueryResult>();
                 if (queryResult.Columns.Length == 0)
                 {
                     errorMsg = "No result";
@@ -355,6 +369,16 @@
         }
         inProgress = false;
         tabs.ActivatePanel(1);
+    }
+
+    protected async Task ShowSQL()
+    {
+        await session.Save();
+        using var response = await Http.PostAsJsonAsync("api/sqlcatalog/sql", query);
+        var SQL = await response.Content.ReadAsStringAsync();
+        await localStorage.SetAsync("SQLQuery_SQL", SQL);
+        await localStorage.SetAsync("SQLQuery_currentDB", query.Database);
+        uriHelper.NavigateTo("sqlquery");
     }
 
     private bool FilterFunc(object[] row)

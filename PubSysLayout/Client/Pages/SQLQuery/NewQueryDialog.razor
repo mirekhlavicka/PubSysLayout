@@ -157,10 +157,10 @@
         public int Order { get; set; }
     }
 
-    protected async override Task OnInitializedAsync()
-    {
-        await session.Load();
-    }
+    //protected async override Task OnInitializedAsync()
+    //{
+    //    await session.Load();
+    //}
 
     private async Task TableChanged(string value)
     {
