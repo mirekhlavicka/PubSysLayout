@@ -58,6 +58,12 @@
         .selected > td, .selected .mud-icon-default {
             color: white !important;
         }
+
+    .smallField {
+        display: inline-flex;
+        width: 300px;
+        margin-right: 25px;
+    }
 </style>
 
 <PageTitle>Catalog query – @query.Database</PageTitle>
@@ -85,7 +91,7 @@
                 <MudText Typo="Typo.subtitle1" Class="mt-4">Include fields:</MudText>
                 @foreach (var fc in formControls)
                 {
-                    <MudCheckBox T="bool" title="include in SELECT" Class="mt-3" Label="@fc.Title" Style="display: inline-block; width: 150px" Checked="@query.Include.Contains(fc.IdFControl)" CheckedChanged="@(ch => {if (ch) {query.Include.Add(fc.IdFControl);} else {query.Include.Remove(fc.IdFControl);}})"></MudCheckBox>
+                    <MudCheckBox @key="fc.IdFControl" Dense="true" T="bool" title="include in SELECT" Class="mt-3 smallField" Label="@fc.Title" Checked="@query.Include.Contains(fc.IdFControl)" CheckedChanged="@(ch => {if (ch) {query.Include.Add(fc.IdFControl);} else {query.Include.Remove(fc.IdFControl);}})"></MudCheckBox>
                 }
 
             </div>
@@ -93,7 +99,21 @@
                 <MudText Typo="Typo.subtitle1" Class="mt-4">Filter:</MudText>
                 @foreach (var fc in formControls.Where(c => c.Searchable))
                 {
-                    <MudTextField Label="@fc.Title" Variant="Variant.Text" T="string" @bind-Value="query.Where[fc.IdFControl]"></MudTextField>
+                    if (new int[] { 2, 3, 4, 5 }.Contains(fc.IdControl) && listControlData.ContainsKey(fc.IdFControl))
+                    {
+                        <div class="smallField" @key="fc.IdFControl">
+                        <MudSelect Label="@fc.Title" Variant="Variant.Text" T="string" @bind-Value="query.Where[fc.IdFControl]" Clearable="true">
+                            @foreach (var li in listControlData[fc.IdFControl].Items)
+                            {
+                                <MudSelectItem Value="@li.Value">@li.Text</MudSelectItem>
+                            }
+                        </MudSelect>
+                        </div>
+                    }
+                    else
+                    {
+                        <MudTextField @key="fc.IdFControl" Class="smallField" Label="@fc.Title" Variant="Variant.Text" T="string" @bind-Value="query.Where[fc.IdFControl]" Clearable="true"></MudTextField>
+                    }
                 }
             </div>
         </div>
@@ -214,6 +234,7 @@
     private KeyValuePair<int, string>[] catList = { };
 
     private FormControl[] formControls = { };
+    private Dictionary<int, ListControlData> listControlData = null;
 
     private Query query
 
@@ -309,15 +330,18 @@
             try
             {
                 formControls = await Http.GetFromJsonAsync<FormControl[]>($"api/sqlcatalog/formcontrols?database={query.Database}&id_form={query.IdForm}");
+                listControlData = await Http.GetFromJsonAsync<Dictionary<int, ListControlData>>($"api/sqlcatalog/listcontroldata?database={query.Database}&id_form={query.IdForm}");
             }
             catch
             {
                 formControls = new FormControl[] { };
+                listControlData = new Dictionary<int, ListControlData>();
             }
         }
         else
         {
             formControls = new FormControl[] { };
+            listControlData = new Dictionary<int, ListControlData>();
         }
         if (clear)
         {

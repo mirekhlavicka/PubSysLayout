@@ -60,7 +60,14 @@ namespace PubSysLayout.Client
                 {
                     foreach (var kv in items.ToArray()) 
                     {
-                        items[kv.Key] = types[kv.Key] == "null" ? null : ((JsonElement)(kv.Value)).Deserialize(GetType(types[kv.Key]));
+                        try
+                        {
+                            items[kv.Key] = types[kv.Key] == "null" ? null : ((JsonElement)(kv.Value)).Deserialize(GetType(types[kv.Key]));
+                        }
+                        catch
+                        {
+                            items[kv.Key] = null;
+                        }
                     }
                 }
 

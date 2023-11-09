@@ -21,7 +21,7 @@ namespace PubSysLayout.Server.Controllers
         {
             _configuration = configuration;
             _environment = environment;
-            maxRowCount = _configuration.GetValue<int>("SQLQuery:maxRowCount");
+            maxRowCount = _configuration.GetValue<int>("SQLQuery:maxRowCount", 1000);
         }
 
         [HttpPost]
