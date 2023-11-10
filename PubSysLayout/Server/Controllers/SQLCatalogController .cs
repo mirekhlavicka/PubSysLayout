@@ -7,6 +7,7 @@ using Query = PubSysLayout.Shared.SQLCatalog.Query;
 using PubSysLayout.Shared.SQLCatalog;
 using System.Linq;
 using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace PubSysLayout.Server.Controllers
 {
@@ -18,11 +19,13 @@ namespace PubSysLayout.Server.Controllers
         private readonly IConfiguration _configuration;
         private readonly IWebHostEnvironment _environment;
         private readonly IHttpClientFactory httpClientFactory;
+        private readonly IMemoryCache _memoryCache;
         private int maxRowCount = 200;
-        public SQLCatalogController(IConfiguration configuration, IWebHostEnvironment environment, IHttpClientFactory httpClientFactory)
+        public SQLCatalogController(IConfiguration configuration, IWebHostEnvironment environment, IHttpClientFactory httpClientFactory, IMemoryCache memoryCache)
         {
             _configuration = configuration;
             _environment = environment;
+            _memoryCache = memoryCache;
             maxRowCount = _configuration.GetValue<int>("CatalogQuery:maxRowCount", 200);
             this.httpClientFactory = httpClientFactory;
         }
@@ -39,12 +42,12 @@ namespace PubSysLayout.Server.Controllers
                     var dtItems = GetData(BuildSQL(query, formControls), conn);
                     var items = ConvertToArray(dtItems);
 
-                    var listData = GetListControlData(formControls, conn);
+                    var listData = GetListControlData(query.Database, query.IdForm);
                     var shown = formControls.AsEnumerable().Where(fc => query.Include.Contains(fc.Field<int>("id_fcontrol"))).ToArray();
                     for (int i = 0; i < shown.Length; i++)
                     {
                         int id_fcontrol = (int)shown[i]["id_fcontrol"];
-                        if (listData.ContainsKey(id_fcontrol) /*&& !listData[id_fcontrol].Multival*/)
+                        if (listData.ContainsKey(id_fcontrol))
                         {
                             foreach (var r in items)
                             {
@@ -128,11 +131,29 @@ namespace PubSysLayout.Server.Controllers
         [HttpGet("listcontroldata")]
         public Dictionary<int, ListControlData> GetListControlData(string database, int id_form)
         {
+            string cacheKey = $"ListControlData_{database}_{id_form}";
+
+            if (_memoryCache.TryGetValue(cacheKey, out Dictionary<int, ListControlData> result))
+            { 
+                return result;
+            }
+
             using (var conn = new SqlConnection(String.Format(_configuration.GetConnectionString("PubSysDefault"), database)))
+            using (var httpClient = httpClientFactory.CreateClient())
             {
                 var formControls = GetData($"SELECT * FROM FormControls WHERE id_form={id_form} ORDER BY sortorder", conn);
 
-                return GetListControlData(formControls, conn);
+                var serverName = GetData("SELECT TOP 1 server_name FROM ServerNames WHERE [default] = 1", conn).Rows[0][0];
+
+                result = formControls.AsEnumerable()
+                    .Where(dr => new int[] { 2, 3, 4, 5 }.Contains(dr.Field<int>("id_control")))
+                    .Select(dr => dr.Field<int>("id_fcontrol"))
+                    .ToDictionary(id => id, id => httpClient.GetFromJsonAsync<ListControlData>($"https://{serverName}/systools/FormControlData.ashx?id_fcontrol={id}").Result);
+
+                var cacheEntryOptions = new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromSeconds(1800));
+                _memoryCache.Set(cacheKey, result, cacheEntryOptions);
+
+                return result;
             }
         }
 
@@ -159,33 +180,29 @@ namespace PubSysLayout.Server.Controllers
             {
                 where = " AND\r\n\t" + String.Join(" AND\r\n\t", query.Where
                     .Where(kv => !String.IsNullOrEmpty(kv.Value))
-                    .Select(kv => $"fif{kv.Key}." + formControls.AsEnumerable().Single(dr => dr.Field<int>("id_fcontrol") == kv.Key).Field<byte>("datatype") switch
-                    {
-                        0 => "strvalue" + $" {(kv.Value.Contains('%') ? "LIKE" : "=")} '{kv.Value}'",
-                        1 or 5 or 6 or 8 or 9 => "intvalue" + $" = {kv.Value}",
-                        2 => "numvalue" + $" = {kv.Value}",
-                        3 => "datevalue" + $" = '{kv.Value}'",
-                        10 => "richvalue" + $" = '{kv.Value}'",
-                        _ => "strvalue" + $" = '{kv.Value}'"
+                    .Select(kv => {
+                        var fc = formControls.AsEnumerable().Single(dr => dr.Field<int>("id_fcontrol") == kv.Key);
+                        if (fc.Field<bool>("parse_multival"))
+                        {
+                            return $"fi.id_item IN (SELECT fif.id_item FROM FormItemFieldsMultival mv JOIN FormItemFields fif ON mv.id_field=fif.id_field WHERE fif.id_fcontrol={kv.Key} AND mv.intvalue={kv.Value})";
+                        }
+                        else
+                        {
+                            return $"fif{kv.Key}." + fc.Field<byte>("datatype") switch
+                            {
+                                0 => "strvalue" + $" {(kv.Value.Contains('%') ? "LIKE" : "=")} '{kv.Value}'",
+                                1 or 5 or 6 or 8 or 9 => "intvalue" + $" = {kv.Value}",
+                                2 => "numvalue" + $" = {kv.Value}",
+                                3 => "datevalue" + $" = '{kv.Value}'",
+                                10 => "richvalue" + $" = '{kv.Value}'",
+                                _ => "strvalue" + $" = '{kv.Value}'"
+                            };
+                        }
                     }));
             }
 
             return $"SELECT TOP {maxRowCount}\r\n\tfi.id_item,\r\n\tfi.released AS [Released],\r\n{selectList}\r\nFROM\r\n\tFormItems fi {joinList}\r\nWHERE\r\n\tfi.id_form={query.IdForm}{where}\r\nORDER BY\r\n\tid_item DESC";
         }
-
-        private Dictionary<int, ListControlData> GetListControlData(DataTable formControls, SqlConnection conn)
-        {
-            using (var httpClient = httpClientFactory.CreateClient())
-            {
-                var serverName = GetData("SELECT TOP 1 server_name FROM ServerNames WHERE [default] = 1", conn).Rows[0][0];
-
-                return formControls.AsEnumerable()
-                    .Where(dr => new int[] { 2, 3, 4, 5 }.Contains(dr.Field<int>("id_control")))
-                    .Select(dr => dr.Field<int>("id_fcontrol"))
-                    .ToDictionary(id => id, id => httpClient.GetFromJsonAsync<ListControlData>($"https://{serverName}/systools/FormControlData.ashx?id_fcontrol={id}").Result);
-            }
-        }
-
 
         private DataTable GetData(string sql, string database)
         {

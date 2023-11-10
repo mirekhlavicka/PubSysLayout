@@ -62,8 +62,29 @@
     .smallField {
         display: inline-flex;
         width: 300px;
-        margin-right: 25px;
+        margin-right: 25px !important;
     }
+
+    .mud-input-label {
+        white-space: nowrap;
+        overflow: hidden;
+        max-width: 300px;
+    }
+
+    .mud-input:focus-within ~ label.mud-input-label.mud-input-label-inputcontrol {
+        max-width: initial;
+    }
+
+    label.mud-checkbox p {
+        white-space: nowrap;
+        overflow: hidden;
+    }
+
+        label.mud-checkbox p:hover {
+            overflow: visible;
+            background-color: #f0f0f0;
+            z-index: 10;
+        }
 </style>
 
 <PageTitle>Catalog query – @query.Database</PageTitle>
@@ -86,51 +107,63 @@
         </div>
         <MudDivider />
 
-        <div style="height: calc(100vh - 290px); overflow-y: scroll; " class="d-flex">
-            <div class="flex-grow-1 mr-4" style="flex-basis: 50%">
-                <MudText Typo="Typo.subtitle1" Class="mt-4">Include fields:</MudText>
-                @foreach (var fc in formControls)
-                {
-                    <MudCheckBox @key="fc.IdFControl" Dense="true" T="bool" title="include in SELECT" Class="mt-3 smallField" Label="@fc.Title" Checked="@query.Include.Contains(fc.IdFControl)" CheckedChanged="@(ch => {if (ch) {query.Include.Add(fc.IdFControl);} else {query.Include.Remove(fc.IdFControl);}})"></MudCheckBox>
-                }
+        @if (query != null && query.IdForm != 0)
+        {
+            <div style="height: calc(100vh - 290px); overflow-y: scroll; " class="d-flex">
+                <div class="flex-grow-1 mr-4" style="flex-basis: 50%">
+                    <MudText Typo="Typo.h6" Class="mt-4">Include fields:</MudText>
+                    <div class="rounded-lg mud-alert-text-normal mt-2 pa-4">
+                        @foreach (var fc in formControls)
+                        {
+                            <MudCheckBox @key="fc.IdFControl" Dense="true" T="bool" Class="mt-1 smallField" Label="@fc.Title" Checked="@query.Include.Contains(fc.IdFControl)" CheckedChanged="@(ch => {if (ch) {query.Include.Add(fc.IdFControl);} else {query.Include.Remove(fc.IdFControl);}})"></MudCheckBox>
+                        }
+                    </div>
+                </div>
+                <div class="flex-grow-1 mr-4" style="flex-basis: 50%">
+                    <MudText Typo="Typo.h6" Class="mt-4">Search by ID and state:</MudText>
+                    <div class="rounded-lg mud-alert-text-normal mt-2 pa-4">
+                        <MudTextField Class="smallField" Placeholder="Enter ID of item" Variant="Variant.Outlined" T="int?" Clearable="true" Margin="Margin.Dense"></MudTextField>
+                        <MudCheckBox Class="smallField" Color="@Color.Secondary" TriState="true" T="bool?">Released</MudCheckBox>
+                    </div>
 
-            </div>
-            <div class="flex-grow-1 mr-4" style="flex-basis: 50%">
-                <MudText Typo="Typo.subtitle1" Class="mt-4">Filter:</MudText>
-                @foreach (var fc in formControls.Where(c => c.Searchable))
-                {
-                    if (new int[] { 2, 3, 4, 5 }.Contains(fc.IdControl) && listControlData.ContainsKey(fc.IdFControl))
-                    {
-                        <div class="smallField" @key="fc.IdFControl">
-                        <MudSelect Label="@fc.Title" Variant="Variant.Text" T="string" @bind-Value="query.Where[fc.IdFControl]" Clearable="true">
-                            @foreach (var li in listControlData[fc.IdFControl].Items)
+                    <MudText Typo="Typo.h6" Class="mt-4">Filter by values:</MudText>
+                    <div class="rounded-lg mud-alert-text-normal mt-2 pa-4">
+                        @foreach (var fc in formControls.Where(c => c.Searchable))
+                        {
+                            if (new int[] { 2, 3, 4, 5 }.Contains(fc.IdControl) && listControlData.ContainsKey(fc.IdFControl))
                             {
-                                <MudSelectItem Value="@li.Value">@li.Text</MudSelectItem>
+                                <div class="smallField" @key="fc.IdFControl">
+                                    <MudSelect Label="@fc.Title" Variant="Variant.Text" T="string" @bind-Value="query.Where[fc.IdFControl]" Clearable="true">
+                                        @foreach (var li in listControlData[fc.IdFControl].Items.Where(li => !String.IsNullOrEmpty(li.Value)))
+                                        {
+                                            <MudSelectItem Value="@li.Value">@li.Text</MudSelectItem>
+                                        }
+                                    </MudSelect>
+                                </div>
                             }
-                        </MudSelect>
-                        </div>
-                    }
-                    else
-                    {
-                        <MudTextField @key="fc.IdFControl" Class="smallField" Label="@fc.Title" Variant="Variant.Text" T="string" @bind-Value="query.Where[fc.IdFControl]" Clearable="true"></MudTextField>
-                    }
-                }
+                            else
+                            {
+                                <MudTextField @key="fc.IdFControl" Class="smallField" Label="@fc.Title" Variant="Variant.Text" T="string" @bind-Value="query.Where[fc.IdFControl]" Clearable="true"></MudTextField>
+                            }
+                        }
+                    </div>
+                </div>
             </div>
-        </div>
+        }
 
     </MudTabPanel>
     <MudTabPanel Text="Results" Icon="@Icons.Material.Filled.Dataset">
         @if (queryResult != null && queryResult.Columns.Length > 0)
         {
             <MudTableFix @ref="mudTable" Items="@queryResult.Rows" RowsPerPage="50" SortLabel="Sort By" AllowUnsorted="true" Virtualize="false"
-                     Hover="true" FixedHeader="true" FixedFooter="true" HorizontalScrollbar="true" Dense="true" Bordered="true" Striped="true"
-                     Height="calc(100vh - 323px)" HeaderClass="table-head-bordered" FooterClass="table-foot-bordered" Elevation="2"
-                     Filter="new Func<object[],bool>(FilterFunc)"
-                     RowClassFunc="@SelectedRowClassFunc"
-                     T="object[]">
+                         Hover="true" FixedHeader="true" FixedFooter="true" HorizontalScrollbar="true" Dense="true" Bordered="true" Striped="true"
+                         Height="calc(100vh - 323px)" HeaderClass="table-head-bordered" FooterClass="table-foot-bordered" Elevation="2"
+                         Filter="new Func<object[],bool>(FilterFunc)"
+                         RowClassFunc="@SelectedRowClassFunc"
+                         T="object[]">
                 <ToolBarContent>
                     <MudTooltip Text="Copy tabular data to clipboard">
-                        <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Medium" IconSize="Size.Medium" Class="mt-4 mb-4 ml-3" OnClick='async () => await CopyToClipboard(GetTableText(), "Tabular data was copied to clipboard")' Disabled="@(queryResult == null || queryResult.Columns.Length == 0)" />
+                        <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" Size="Size.Medium" IconSize="Size.Medium" Class="mt-4 mb-4 ml-3" OnClick='async () => await CopyToClipboard(GetTableText(), "Tabular data was copied to clipboard")' Disabled="@(queryResult == null || queryResult.Columns.Length == 0)" />
                     </MudTooltip>
                     <MudSpacer />
                     <div class="d-flex">
