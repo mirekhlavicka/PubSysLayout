@@ -21,7 +21,7 @@ else
     <MudGrid>
         <MudItem xs="5">
             <MudTooltip Text="Back to list">
-                <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.ArrowBack" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-1" OnClick="GoBack" />
+                <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.ArrowBack" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-1" OnClick="GoBack" />
             </MudTooltip>
             <MudCard Elevation="5" Class="mt-4">
                 <MudCardHeader>
@@ -70,7 +70,7 @@ else
         {
         <MudItem xs="7">
             <MudTooltip Text="Add module to layout definition">
-                <MudFab Color="Color.Primary" Icon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-1" OnClick="AddModuleUsage" Disabled="@(newModuleUsage!=null || beforeEditModuleUsage != null)" />
+                <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-0 mb-1" OnClick="AddModuleUsage" Disabled="@(newModuleUsage!=null || beforeEditModuleUsage != null)" />
             </MudTooltip>
             <MudTable @ref="moduleUsageTable" Items="layoutDefinition.ModuleUsages" Hover="true" SortLabel="Sort By" AllowUnsorted="false" Elevation="5" Class="mt-4" Dense="true" CanCancelEdit="true" CommitEditTooltip="Commit Edit" CancelEditTooltip="Cancel Edit"
                 RowEditPreview="BackupModuleUsage" RowEditCancel="ResetEditModuleUsage" RowEditCommit="ModuleUsageHasBeenCommitted" IsEditRowSwitchingBlocked="true" 
@@ -100,7 +100,7 @@ else
                     <MudTd DataLabel="Spot">@(context.IdSpot == 0 ? "(not selected)" : spots[context.IdSpot]?.Name)</MudTd>
                     <MudTd DataLabel="Module">
                         @(context.IdModule == 0 ? "(not selected)" : modules[context.IdModule]?.Name)
-                        <MudIconButton Icon="@Icons.Material.Filled.ArrowRightAlt" Link='@($"modules/?id_module={context.IdModule}")' Color="Color.Primary" Size="Size.Small" Variant="Variant.Text" Title="Edit module"/>
+                        <MudIconButton Icon="@Icons.Material.Filled.ArrowRightAlt" Href='@($"modules/?id_module={context.IdModule}")' Color="Color.Primary" Size="Size.Small" Variant="Variant.Text" Title="Edit module"/>
                     </MudTd>
                     <MudTd DataLabel="Order">@context.Order</MudTd>
                     <MudTd DataLabel="CacheTime">@context.CacheTime</MudTd>

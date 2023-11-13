@@ -41,12 +41,12 @@ namespace PubSysLayout.Server.Controllers
 
                     var dtItems = GetData(BuildSQL(query, formControls), conn);
                     var items = ConvertToArray(dtItems);
-
-                    var listData = GetListControlData(query.Database, query.IdForm);
+                    var serverName = (string)GetData("SELECT TOP 1 server_name FROM ServerNames WHERE [default] = 1", conn).Rows[0][0];
+                    var listData = GetListControlData(query.Database, query.IdForm, serverName);
                     var shown = formControls.AsEnumerable().Where(fc => query.Include.Contains(fc.Field<int>("id_fcontrol"))).ToArray();
                     for (int i = 0; i < shown.Length; i++)
                     {
-                        int id_fcontrol = (int)shown[i]["id_fcontrol"];
+                        int id_fcontrol = shown[i].Field<int>("id_fcontrol");
                         if (listData.ContainsKey(id_fcontrol))
                         {
                             foreach (var r in items)
@@ -61,15 +61,22 @@ namespace PubSysLayout.Server.Controllers
                                 }
                             }
                         }
+                        else if (shown[i].Field<byte>("datatype") == 5)
+                        {
+                            foreach (var r in items)
+                            {
+                                r[i + 2] = (int)r[i + 2] > 0 ? $"https://{serverName}/getfile.aspx?id_file={r[i + 2]}" : null;
+                            }
+                        }
                     }
 
                     return Ok(new QueryResult
                     {
                         TableName = "",
-                        Columns = dtItems.Columns.Cast<DataColumn>().Select(dc => new QueryResultColumn
+                        Columns = dtItems.Columns.Cast<DataColumn>().Select((dc, i) => new QueryResultColumn
                         {
                             Name = dc.ColumnName,
-                            TypeName = dc.DataType.ToString(),
+                            TypeName = (i > 1 && shown[i - 2].Field<byte>("datatype") == 5 ? "System.String" : dc.DataType.ToString()),
                             ReadOnly = dc.ReadOnly,
                             MaxLength = dc.MaxLength,
                             AllowDBNull = dc.AllowDBNull
@@ -129,7 +136,7 @@ namespace PubSysLayout.Server.Controllers
         }
 
         [HttpGet("listcontroldata")]
-        public Dictionary<int, ListControlData> GetListControlData(string database, int id_form)
+        public Dictionary<int, ListControlData> GetListControlData(string database, int id_form, string serverName)
         {
             string cacheKey = $"ListControlData_{database}_{id_form}";
 
@@ -143,7 +150,10 @@ namespace PubSysLayout.Server.Controllers
             {
                 var formControls = GetData($"SELECT * FROM FormControls WHERE id_form={id_form} ORDER BY sortorder", conn);
 
-                var serverName = GetData("SELECT TOP 1 server_name FROM ServerNames WHERE [default] = 1", conn).Rows[0][0];
+                if (String.IsNullOrEmpty(serverName))
+                {
+                    serverName = (string)GetData("SELECT TOP 1 server_name FROM ServerNames WHERE [default] = 1", conn).Rows[0][0];
+                }
 
                 result = formControls.AsEnumerable()
                     .Where(dr => new int[] { 2, 3, 4, 5 }.Contains(dr.Field<int>("id_control")))
@@ -174,11 +184,21 @@ namespace PubSysLayout.Server.Controllers
                 .Where(fc => query.Include.Contains(fc.Field<int>("id_fcontrol")) || query.Where.Any(kv => !String.IsNullOrEmpty(kv.Value) && kv.Key == fc.Field<int>("id_fcontrol")))
                 .Select(dr => $"LEFT JOIN\r\n\tFormItemFields fif{dr.Field<int>("id_fcontrol")} ON fi.id_item=fif{dr.Field<int>("id_fcontrol")}.id_item AND fif{dr.Field<int>("id_fcontrol")}.id_fcontrol={dr.Field<int>("id_fcontrol")}"));
 
-            var where = "";
+            var where = $"\r\n\tfi.id_form={query.IdForm}";
+
+            if (query.Id.HasValue)
+            {
+                where += $" AND\r\n\tfi.id_item = {query.Id}";
+            }
+
+            if (query.Released.HasValue)
+            {
+                where += $" AND\r\n\tfi.released = {(query.Released.Value ? "1" : "0")}";
+            }
 
             if (query.Where.Values.Any(v => !String.IsNullOrEmpty(v)))
             {
-                where = " AND\r\n\t" + String.Join(" AND\r\n\t", query.Where
+                where += " AND\r\n\t" + String.Join(" AND\r\n\t", query.Where
                     .Where(kv => !String.IsNullOrEmpty(kv.Value))
                     .Select(kv => {
                         var fc = formControls.AsEnumerable().Single(dr => dr.Field<int>("id_fcontrol") == kv.Key);
@@ -201,7 +221,7 @@ namespace PubSysLayout.Server.Controllers
                     }));
             }
 
-            return $"SELECT TOP {maxRowCount}\r\n\tfi.id_item,\r\n\tfi.released AS [Released],\r\n{selectList}\r\nFROM\r\n\tFormItems fi {joinList}\r\nWHERE\r\n\tfi.id_form={query.IdForm}{where}\r\nORDER BY\r\n\tid_item DESC";
+            return $"SELECT TOP {maxRowCount}\r\n\tfi.id_item AS [Id],\r\n\tfi.released AS [Released],\r\n{selectList}\r\nFROM\r\n\tFormItems fi {joinList}\r\nWHERE{where}\r\nORDER BY\r\n\tfi.id_item DESC";
         }
 
         private DataTable GetData(string sql, string database)

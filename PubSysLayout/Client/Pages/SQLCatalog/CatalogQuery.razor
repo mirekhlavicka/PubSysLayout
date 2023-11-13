@@ -82,7 +82,7 @@
 
         label.mud-checkbox p:hover {
             overflow: visible;
-            background-color: #f0f0f0;
+            background-color: #e0e0e0;
             z-index: 10;
         }
 </style>
@@ -92,7 +92,7 @@
 <MudTabs Elevation="5" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6" @ref="tabs" KeepPanelsAlive="true" @onclick="() => flagsFilterOpened = false " ActivePanelIndexChanged="(index) => {if(mudTable != null && !flagsFilterOpened){ mudTable.StopRender = (index == 0);}}">
     <MudTabPanel Text="Query" Icon="@Icons.Material.Filled.Build">
         <div class="d-flex mb-4">
-            <div class="d-flex" style="max-width:800px;flex-grow:3">
+            <div class="d-flex" style="max-width:1100px;flex-grow:3">
                 <MudAutocomplete T="string" Label="Database" AnchorOrigin="Origin.BottomCenter" Value="query.Database" ValueChanged="DBChanged" FullWidth="false" Variant="Variant.Outlined" Class="mr-6" SearchFunc="@SearchDB" Clearable="true" spellcheck="false" MaxItems="100" />
                 <MudSelect Value="@query.IdForm" ValueChanged="CatChanged" Label="Catalog" Placeholder="Select catalog" Required="false" T="int" Variant="Variant.Outlined" Class="mr-6" ToStringFunc='(id) => id != 0 ? catList.FirstOrDefault(kv => kv.Key == id).Value : "" '>
                     @foreach (var kv in catList)
@@ -109,10 +109,10 @@
 
         @if (query != null && query.IdForm != 0)
         {
-            <div style="height: calc(100vh - 290px); overflow-y: scroll; " class="d-flex">
+            <div style="height: calc(100vh - 290px); overflow-y: scroll" class="d-flex">
                 <div class="flex-grow-1 mr-4" style="flex-basis: 50%">
-                    <MudText Typo="Typo.h6" Class="mt-4">Include fields:</MudText>
-                    <div class="rounded-lg mud-alert-text-normal mt-2 pa-4">
+                    <MudText Typo="Typo.h6" Class="mt-4">Display selected fields in list:</MudText>
+                    <div class="rounded-lg mud-alert-text-normal mt-2 pa-4" style="height: calc(100vh - 347px); overflow-y: scroll">
                         @foreach (var fc in formControls)
                         {
                             <MudCheckBox @key="fc.IdFControl" Dense="true" T="bool" Class="mt-1 smallField" Label="@fc.Title" Checked="@query.Include.Contains(fc.IdFControl)" CheckedChanged="@(ch => {if (ch) {query.Include.Add(fc.IdFControl);} else {query.Include.Remove(fc.IdFControl);}})"></MudCheckBox>
@@ -122,12 +122,12 @@
                 <div class="flex-grow-1 mr-4" style="flex-basis: 50%">
                     <MudText Typo="Typo.h6" Class="mt-4">Search by ID and state:</MudText>
                     <div class="rounded-lg mud-alert-text-normal mt-2 pa-4">
-                        <MudTextField Class="smallField" Placeholder="Enter ID of item" Variant="Variant.Outlined" T="int?" Clearable="true" Margin="Margin.Dense"></MudTextField>
-                        <MudCheckBox Class="smallField" Color="@Color.Secondary" TriState="true" T="bool?">Released</MudCheckBox>
+                        <MudTextField Class="smallField" Placeholder="Enter ID of item" Variant="Variant.Outlined" T="int?" Margin="Margin.Dense" @bind-Value="query.Id" Clearable="true"></MudTextField>
+                        <MudCheckBox Class="smallField" Color="@Color.Secondary" TriState="true" T="bool?" @bind-Checked="query.Released">Released</MudCheckBox>
                     </div>
 
-                    <MudText Typo="Typo.h6" Class="mt-4">Filter by values:</MudText>
-                    <div class="rounded-lg mud-alert-text-normal mt-2 pa-4">
+                    <MudText Typo="Typo.h6" Class="mt-4">Filter by field values:</MudText>
+                    <div class="rounded-lg mud-alert-text-normal mt-2 pa-4" style="height: calc(100vh - 483px); overflow-y: scroll">
                         @foreach (var fc in formControls.Where(c => c.Searchable))
                         {
                             if (new int[] { 2, 3, 4, 5 }.Contains(fc.IdControl) && listControlData.ContainsKey(fc.IdFControl))
@@ -380,6 +380,8 @@
         {
             query.Where = formControls.Where(fc => fc.Searchable).ToDictionary(fc => fc.IdFControl, fc => "");
             query.Include = formControls.Where(fc => fc.ShowInList).Select(fc => fc.IdFControl).ToHashSet();
+            query.Id = null;
+            query.Released = null;
         }
     }
 
@@ -501,7 +503,7 @@
         switch (Type.GetTypeCode(val.GetType()))
         {
             case TypeCode.Int32:
-                return ((Int32)val).ToString(queryResult.Columns[index].Name.StartsWith("id_") ? "g0" : "n0");
+                return ((Int32)val).ToString(queryResult.Columns[index].Name.ToLower().StartsWith("id") ? "g0" : "n0");
             case TypeCode.DateTime:
                 return ((DateTime)val).ToString("g");
             default:
