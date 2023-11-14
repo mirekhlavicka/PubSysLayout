@@ -19,5 +19,7 @@ namespace PubSysLayout.Shared.SQLCatalog
 
         public Dictionary<int, string> Where { get; set; }
 
+        public int MaxRowCount { get; set; }
+
     }
 }

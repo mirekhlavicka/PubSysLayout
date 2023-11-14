@@ -65,6 +65,11 @@
         margin-right: 25px !important;
     }
 
+    .xsmallField {
+        width: 150px!important;
+        flex-grow: 0;
+    }
+
     .mud-input-label {
         white-space: nowrap;
         overflow: hidden;
@@ -87,7 +92,7 @@
         }
 </style>
 
-<PageTitle>Catalog query – @query.Database</PageTitle>
+<PageTitle>Catalog data – @query.Database</PageTitle>
 
 <MudTabs Elevation="5" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6" @ref="tabs" KeepPanelsAlive="true" @onclick="() => flagsFilterOpened = false " ActivePanelIndexChanged="(index) => {if(mudTable != null && !flagsFilterOpened){ mudTable.StopRender = (index == 0);}}">
     <MudTabPanel Text="Query" Icon="@Icons.Material.Filled.Build">
@@ -104,6 +109,7 @@
                 <MudFab OnClick="async () => await ShowSQL()" Disabled="@(query.IdForm == 0)" StartIcon="@Icons.Material.Filled.ArrowForward" Color="Color.Default" IconColor="Color.Default" IconSize="Size.Large" Size="Size.Large" Label="SQL&nbsp;" DisableElevation="true" Style="margin-top:10px"></MudFab>
             </div>
             <MudSpacer />
+            <MudNumericField Class="smallField xsmallField ml-6" Label="Max row count" Variant="Variant.Outlined" T="int" @bind-Value="query.MaxRowCount"></MudNumericField>
         </div>
         <MudDivider />
 
@@ -279,7 +285,8 @@
                     Database = "",
                     IdForm = 0,
                     Include = new HashSet<int>(),
-                    Where = new Dictionary<int, string>()
+                    Where = new Dictionary<int, string>(),
+                    MaxRowCount = 200
                 };
             return session["CQ_query"] as Query;
         }
@@ -382,6 +389,7 @@
             query.Include = formControls.Where(fc => fc.ShowInList).Select(fc => fc.IdFControl).ToHashSet();
             query.Id = null;
             query.Released = null;
+            query.MaxRowCount = 200;
         }
     }
 

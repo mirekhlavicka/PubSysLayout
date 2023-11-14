@@ -20,13 +20,13 @@ namespace PubSysLayout.Server.Controllers
         private readonly IWebHostEnvironment _environment;
         private readonly IHttpClientFactory httpClientFactory;
         private readonly IMemoryCache _memoryCache;
-        private int maxRowCount = 200;
+        //private int maxRowCount = 200;
         public SQLCatalogController(IConfiguration configuration, IWebHostEnvironment environment, IHttpClientFactory httpClientFactory, IMemoryCache memoryCache)
         {
             _configuration = configuration;
             _environment = environment;
             _memoryCache = memoryCache;
-            maxRowCount = _configuration.GetValue<int>("CatalogQuery:maxRowCount", 200);
+            //maxRowCount = _configuration.GetValue<int>("CatalogQuery:maxRowCount", 200);
             this.httpClientFactory = httpClientFactory;
         }
 
@@ -221,7 +221,7 @@ namespace PubSysLayout.Server.Controllers
                     }));
             }
 
-            return $"SELECT TOP {maxRowCount}\r\n\tfi.id_item AS [Id],\r\n\tfi.released AS [Released],\r\n{selectList}\r\nFROM\r\n\tFormItems fi {joinList}\r\nWHERE{where}\r\nORDER BY\r\n\tfi.id_item DESC";
+            return $"SELECT TOP {query.MaxRowCount}\r\n\tfi.id_item AS [Id],\r\n\tfi.released AS [Released],\r\n{selectList}\r\nFROM\r\n\tFormItems fi {joinList}\r\nWHERE{where}\r\nORDER BY\r\n\tfi.id_item DESC";
         }
 
         private DataTable GetData(string sql, string database)
