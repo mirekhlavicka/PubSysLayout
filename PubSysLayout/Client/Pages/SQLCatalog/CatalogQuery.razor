@@ -237,6 +237,8 @@
                         </MudTd>
                     }
                     <MudTd DataLabel="" Class="valTD">
+                        <MudIconButton Icon="@Icons.Material.Filled.Edit" @onclick="@(()=>OpenEditRowDialog(@context))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text" Title="Edit row" />
+                        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" @onclick="@(()=> clipboard.Content = context)" Color="Color.Default" Size="Size.Small" Variant="Variant.Text" Title="Copy row" />
                     </MudTd>
                 </RowTemplate>
                 <PagerContent>
@@ -446,6 +448,66 @@
         await localStorage.SetAsync("SQLQuery_SQL", SQL);
         await localStorage.SetAsync("SQLQuery_currentDB", query.Database);
         uriHelper.NavigateTo("sqlquery");
+    }
+
+    private async Task OpenEditRowDialog(object[] row, bool copy = false)
+    {
+        var options = new DialogOptions
+            {
+                MaxWidth = MaxWidth.Medium,
+                CloseButton = true
+            };
+
+        var parameters = new DialogParameters();
+
+        // if (copy && row != null)
+        // {
+        //     if (row.Length != queryResult.Columns.Length || row.Select((v, i) => v != null && v.GetType().ToString() != queryResult.Columns[i].TypeName).Any(b => b))
+        //     {
+        //         await DialogService.ShowMessageBox("Error", "Incompatible row format");
+        //         return;
+        //     }
+
+        //     query.OriginalRow = row;
+        //     query.Row = null;
+        //     row = null;
+        // }
+        // else
+        // {
+        //     query.Row = row;
+        //     query.OriginalRow = null;
+        // }
+
+        // parameters.Add("Query", query);
+        parameters.Add("IdForm", query.IdForm);
+        parameters.Add("IdItem", row[0]);
+        parameters.Add("FormControls", formControls);
+        parameters.Add("ListControlData", listControlData);
+        //parameters.Add("QueryResult", queryResult);
+
+        mudTable.SelectedItem = row;
+        var result = await DialogService.Show<EditRowDialog>($"{query.Database} - {catList.Single(kv => kv.Key == query.IdForm).Value}{(row == null ? " - new row" : "")}", parameters, options).Result;
+        if (!result.Canceled)
+        {
+            // row = (object[])result.Data;
+            // mudTable.SelectedItem = row;
+            // StateHasChanged();
+            // if (row != null)
+            // {
+            //     await Task.Delay(300);
+            //     int pageIndex = (int)System.Math.Floor((double)(mudTable.FilteredItems.TakeWhile(r => r != row).Count()) / mudTable.RowsPerPage);
+            //     if (pageIndex != mudTable.CurrentPage)
+            //     {
+            //         mudTable.NavigateTo(pageIndex);
+            //         await Task.Delay(100);
+            //         await js.InvokeVoidAsync("scrollToElementClass", "selected");
+            //     }
+            // }
+            // if (copy)
+            // {
+            //     clipboard.Content = null;
+            // }
+        }
     }
 
     private bool FilterFunc(object[] row)

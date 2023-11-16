@@ -14,5 +14,12 @@ namespace PubSysLayout.Shared.SQLCatalog
         public int DataType { get; set; }
         public bool Searchable { get; set; }
         public bool ShowInList { get; set; }
-    }
+
+        public bool Required { get; set; }
+        public bool MultiLine { get; set; } 
+        public int MaxLength { get; set; }
+        public bool Multival { get; set; }
+        public int Width { get; set; }
+        public int Height { get; set; }
+}
 }

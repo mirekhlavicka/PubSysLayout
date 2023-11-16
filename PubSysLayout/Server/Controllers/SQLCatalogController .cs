@@ -65,7 +65,7 @@ namespace PubSysLayout.Server.Controllers
                         {
                             foreach (var r in items)
                             {
-                                r[i + 2] = (int)r[i + 2] > 0 ? $"https://{serverName}/getfile.aspx?id_file={r[i + 2]}" : null;
+                                r[i + 2] = (r[i + 2] != System.DBNull.Value && (int)r[i + 2] > 0) ? $"https://{serverName}/getfile.aspx?id_file={r[i + 2]}" : null;
                             }
                         }
                     }
@@ -111,29 +111,54 @@ namespace PubSysLayout.Server.Controllers
                 .Select(dr => new KeyValuePair<int, string>(dr.Field<int>("id_form"), dr.Field<string>("catalogname")));
         }
 
+        //[HttpGet("formcontrols")]
+        //public IEnumerable<FormControl> GetFormControls(string database, int id_form)
+        //{
+        //    return GetData(@$"
+        //                SELECT
+        //                    id_fcontrol, id_control, title, sortorder, required, datatype, searchable, sortable, cat_showinlist
+        //                FROM
+        //                    FormControls
+        //                WHERE
+        //                    id_form = {id_form}
+        //                ORDER BY
+        //                    sortorder", database)
+        //        .AsEnumerable()
+        //        .Select(dr => new FormControl 
+        //        { 
+        //            IdControl = dr.Field<int>("id_control"),
+        //            IdFControl = dr.Field<int>("id_fcontrol"),
+        //            Title = dr.Field<string>("Title"),
+        //            ShowInList = dr.Field<bool>("cat_showinlist"),
+        //            Searchable = dr.Field<bool> ("searchable"),
+        //            DataType = dr.Field<byte>("datatype")
+        //        });
+        //}
+
         [HttpGet("formcontrols")]
         public IEnumerable<FormControl> GetFormControls(string database, int id_form)
         {
-            return GetData(@$"
-                        SELECT
-                            id_fcontrol, id_control, title, sortorder, required, datatype, searchable, sortable, cat_showinlist
-                        FROM
-                            FormControls
-                        WHERE
-                            id_form = {id_form}
-                        ORDER BY
-                            sortorder", database)
-                .AsEnumerable()
-                .Select(dr => new FormControl 
-                { 
-                    IdControl = dr.Field<int>("id_control"),
-                    IdFControl = dr.Field<int>("id_fcontrol"),
-                    Title = dr.Field<string>("Title"),
-                    ShowInList = dr.Field<bool>("cat_showinlist"),
-                    Searchable = dr.Field<bool> ("searchable"),
-                    DataType = dr.Field<byte>("datatype")
-                });
+            string cacheKey = $"FormControls_{database}_{id_form}";
+
+            if (_memoryCache.TryGetValue(cacheKey, out IEnumerable<FormControl> result))
+            {
+                return result;
+            }
+
+            using (var conn = new SqlConnection(String.Format(_configuration.GetConnectionString("PubSysDefault"), database)))
+            using (var httpClient = httpClientFactory.CreateClient())
+            {
+                string serverName = (string)GetData("SELECT TOP 1 server_name FROM ServerNames WHERE [default] = 1", conn).Rows[0][0];
+
+                result = httpClient.GetFromJsonAsync<FormControl[]>($"https://{serverName}/systools/FormControlData.ashx?id_form={id_form}").Result;
+
+                var cacheEntryOptions = new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromSeconds(1800));
+                _memoryCache.Set(cacheKey, result, cacheEntryOptions);
+
+                return result;
+            }
         }
+
 
         [HttpGet("listcontroldata")]
         public Dictionary<int, ListControlData> GetListControlData(string database, int id_form, string serverName)
