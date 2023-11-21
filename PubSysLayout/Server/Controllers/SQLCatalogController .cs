@@ -106,7 +106,7 @@ namespace PubSysLayout.Server.Controllers
         [HttpGet("catlist")]
         public IEnumerable<KeyValuePair<int, string>> GetCatalogList(string database)
         {
-            return GetData(@"SELECT id_form, catalogname FROM Catalogs WHERE pub_only = 0 ORDER BY id_catalog", database)
+            return GetData(@"SELECT id_form, catalogname FROM Catalogs WHERE pub_only = 0 ORDER BY catalogname", database)
                 .AsEnumerable()
                 .Select(dr => new KeyValuePair<int, string>(dr.Field<int>("id_form"), dr.Field<string>("catalogname")));
         }
@@ -159,6 +159,32 @@ namespace PubSysLayout.Server.Controllers
             }
         }
 
+        [HttpGet("formitem")]
+        public object[] GetFormItem(string database, int id_form, int id_item)
+        {
+            var data = GetData(@$"
+                    SELECT
+                        fc.id_fcontrol, fc.datatype, fif.strvalue, fif.intvalue, fif.numvalue, fif.moneyvalue, fif.datevalue, fif.richvalue
+                    FROM
+                        FormControls fc LEFT JOIN
+	                    FormItemFields fif ON fif.id_fcontrol = fc.id_fcontrol AND fif.id_item={id_item}
+                    WHERE
+                        fc.id_form = {id_form}    
+                    ORDER BY
+	                    fc.sortorder, fc.id_fcontrol", database)
+                .AsEnumerable();
+
+            return data.Select(dr => dr.Field<byte>("datatype") switch
+                {
+                    0 => (object)dr.Field<string>("strvalue"),
+                    1 or 5 or 6 or 8 or 9 => dr.Field<int?>("intvalue"),
+                    2 => dr.Field<decimal?>("numvalue"),
+                    4 => dr.Field<decimal?>("moneyvalue"),
+                    3 => dr.Field<DateTime?>("datevalue"),
+                    10 => dr.Field<string>("strvalue"),
+                    _ => dr.Field<string>("strvalue")
+                }).ToArray();
+        }
 
         [HttpGet("listcontroldata")]
         public Dictionary<int, ListControlData> GetListControlData(string database, int id_form, string serverName)
