@@ -17,11 +17,15 @@
         margin-right: 20px;
     }
 
-        .smallFieldEdit .mud-input-label {
+    .multiLineEdit {
+        margin-right: 20px;
+    }
+
+    .smallFieldEdit .mud-input-label {
         white-space: nowrap;
         overflow: hidden;
         max-width: 500px;
-        }
+    }
 
     .editRowContainer {
         max-height: calc(100vh - 290px);
@@ -53,26 +57,38 @@
                         int p = i; //Intermediate counter
                         var fc = FormControls[p];
                         object val = editRow[p];
+                        Type type = fc.Type;
 
                         if (!String.IsNullOrEmpty(searchField) && !FormControls[p].Title.ToLower().Contains(searchField.ToLower()))
                         {
                             continue;
                         }
-
-                        @if (fc.IdControl == 2 && fc.Type == typeof(string))
+                        else if (fc.Multival && type == typeof(string))
+                        {
+                            <MudTextField @key="p" Class="multiLineEdit" Variant="Variant.Filled" Value="@(String.Join(", ", val?.ToString().Split(',').Select(v => ListControlData[fc.IdFControl][v.Trim()])))" T="string" Label="@(fc.Title)" T="string" ReadOnly="@(true)" Lines="@(1)"></MudTextField>
+                        }
+                        else if (fc.IdControl == 2 && type == typeof(string))
                         {
                             <div class="smallFieldEdit" @key="@p">
-                            <MudSelect Value="@((string)val)" Label="@fc.Title" Variant="Variant.Text" T="string">
-                                @foreach (var li in ListControlData[fc.IdFControl].Items/*.Where(li => !String.IsNullOrEmpty(li.Value))*/)
-                                {
-                                    <MudSelectItem Value="@li.Value">@li.Text</MudSelectItem>
-                                }
-                            </MudSelect>
+                                <MudSelect Value="@((string)val)" ValueChanged="(v) => editRow[p] = v" Label="@fc.Title" Variant="Variant.Text" T="string">
+                                    @foreach (var li in ListControlData[fc.IdFControl].Items/*.Where(li => !String.IsNullOrEmpty(li.Value))*/)
+                                    {
+                                        <MudSelectItem Value="@li.Value">@li.Text</MudSelectItem>
+                                    }
+                                </MudSelect>
                             </div>
+                        }
+                        else if (type == typeof(string))
+                        {
+                            <MudTextField @key="p" Class='@(fc.MultiLine ? "multiLineEdit": "smallFieldEdit")' Variant="@(fc.MultiLine ? Variant.Outlined : Variant.Text)" Value="@((string)val)" ValueChanged="(v) => editRow[p] = v" T="string" Label="@(fc.Title)" T="string" ReadOnly="@(false)" MaxLength="@(fc.MaxLength > 0 ? fc.MaxLength : 524288)" Lines="@(fc.MultiLine ? 5 : 1)"></MudTextField>
+                        }
+                        else if (type == typeof(int))
+                        {
+                            <MudNumericField @key="p" Class="smallFieldEdit" Value="@((int?)val)" ValueChanged="(v) => editRow[p] = v" Label="@(fc.Title)" Variant="Variant.Text" T="int?" ReadOnly="@(false)" Required="@(fc.Required)" RequiredError='@($"{fc.Title} is  required")'></MudNumericField>
                         }
                         else
                         {
-                            <MudTextField @key="p" Value="@(val?.ToString())" Label="@(fc.Title)" Class='@(!fc.MultiLine ? "smallFieldEdit" : null)' Variant="@(fc.MultiLine ? Variant.Outlined : Variant.Text)" T="string" ReadOnly="@(false)" MaxLength="@(fc.MaxLength > 0 ? fc.MaxLength : 524288)" Lines="@(fc.MultiLine ? 5 : 1)"></MudTextField>
+                            <MudTextField @key="p" Class='@(fc.MultiLine ? "multiLineEdit": "smallFieldEdit")' Variant="@(fc.MultiLine ? Variant.Outlined : Variant.Text)" Value="@((val??"").ToString())" ValueChanged='async (v) => {try{editRow[p] = TypeDescriptor.GetConverter(type).ConvertFrom(v);} catch(Exception exc){await DialogService.ShowMessageBox(" Error", exc.Message);}}' Label="@(fc.Title)" T="string" ReadOnly="@(false)" MaxLength="@(fc.MaxLength > 0 ? fc.MaxLength : 524288)" Lines="@(fc.MultiLine ? 5 : 1)"></MudTextField>
                         }
                     }
 
@@ -250,50 +266,51 @@
 
     private async Task OK()
     {
-        // await form.Validate();
+        await form.Validate();
 
-        // if (!form.IsValid)
-        // {
-        //     await DialogService.ShowMessageBox("Error", $"Fill required fields: {String.Join("; ", form.Errors)}");
-        //     return;
-        // }
+        if (!form.IsValid)
+        {
+            await DialogService.ShowMessageBox("Error", $"Fill required fields: {String.Join("; ", form.Errors)}");
+            return;
+        }
 
-        // var response = (await Http.PutAsJsonAsync($"api/sqlquery", Query));
+        var response = (await Http.PutAsJsonAsync($"api/sqlcatalog?database={Query.Database}&id_form={Query.IdForm}&id_item={IdItem}", editRow));
 
-        // if (!response.IsSuccessStatusCode)
-        // {
-        //     var msg = await response.Content.ReadAsStringAsync();
-        //     await DialogService.ShowMessageBox("Error", msg);
-        // }
-        // else
-        // {
-        //     if (row != null)
-        //     {
-        //         editRow.CopyTo(row, 0);
-        //         snackBar.Add($"Row updated", Severity.Success);
-        //     }
-        //     else
-        //     {
-        //         row = editRow;
-        //         var updrow = await response.Content.ReadFromJsonAsync<object[]>();
-        //         for (int p = 0; p < row.Length; p++)
-        //         {
-        //             try
-        //             {
-        //                 row[p] = ((JsonElement)(updrow[p])).Deserialize(Type.GetType(QueryResult.Columns[p].TypeName));
-        //             }
-        //             catch
-        //             {
-        //                 row[p] = null;
-        //             }
-        //         }
-        //         var tmp = QueryResult.Rows.ToList();
-        //         tmp.Add(row);
-        //         QueryResult.Rows = tmp.ToArray();
-        //         snackBar.Add($"Row added", Severity.Success);
-        //     }
-        //     MudDialog.Close(DialogResult.Ok(row));
-        // }
+        if (!response.IsSuccessStatusCode)
+        {
+            var msg = await response.Content.ReadAsStringAsync();
+            await DialogService.ShowMessageBox("Error", msg);
+        }
+        else
+        {
+            /*if (row != null)
+            {
+                editRow.CopyTo(row, 0);
+                snackBar.Add($"Row updated", Severity.Success);
+            }
+            else
+            {
+                row = editRow;
+                var updrow = await response.Content.ReadFromJsonAsync<object[]>();
+                for (int p = 0; p < row.Length; p++)
+                {
+                    try
+                    {
+                        row[p] = ((JsonElement)(updrow[p])).Deserialize(Type.GetType(QueryResult.Columns[p].TypeName));
+                    }
+                    catch
+                    {
+                        row[p] = null;
+                    }
+                }
+                var tmp = QueryResult.Rows.ToList();
+                tmp.Add(row);
+                QueryResult.Rows = tmp.ToArray();
+                snackBar.Add($"Row added", Severity.Success);
+            }*/
+            snackBar.Add($"Row updated", Severity.Success);
+            MudDialog.Close(DialogResult.Ok(IdItem/*row*/));
+        }
     }
 
     private async Task Delete()

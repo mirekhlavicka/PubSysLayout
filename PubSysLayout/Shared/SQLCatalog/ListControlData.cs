@@ -23,7 +23,7 @@ namespace PubSysLayout.Shared.SQLCatalog
                 string res;
                 if (!items.TryGetValue(v, out res))
                 {
-                    res = "???";
+                    res = String.IsNullOrEmpty(v) ? "" : "???";
                 };
                 return res;
             }

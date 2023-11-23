@@ -5,9 +5,8 @@ using System.Data;
 using PubSysLayout.Shared.SQLQuery;
 using Query = PubSysLayout.Shared.SQLCatalog.Query;
 using PubSysLayout.Shared.SQLCatalog;
-using System.Linq;
-using static Microsoft.EntityFrameworkCore.DbLoggerCategory;
 using Microsoft.Extensions.Caching.Memory;
+using System.Text.Json;
 
 namespace PubSysLayout.Server.Controllers
 {
@@ -20,13 +19,12 @@ namespace PubSysLayout.Server.Controllers
         private readonly IWebHostEnvironment _environment;
         private readonly IHttpClientFactory httpClientFactory;
         private readonly IMemoryCache _memoryCache;
-        //private int maxRowCount = 200;
+
         public SQLCatalogController(IConfiguration configuration, IWebHostEnvironment environment, IHttpClientFactory httpClientFactory, IMemoryCache memoryCache)
         {
             _configuration = configuration;
             _environment = environment;
             _memoryCache = memoryCache;
-            //maxRowCount = _configuration.GetValue<int>("CatalogQuery:maxRowCount", 200);
             this.httpClientFactory = httpClientFactory;
         }
 
@@ -111,36 +109,12 @@ namespace PubSysLayout.Server.Controllers
                 .Select(dr => new KeyValuePair<int, string>(dr.Field<int>("id_form"), dr.Field<string>("catalogname")));
         }
 
-        //[HttpGet("formcontrols")]
-        //public IEnumerable<FormControl> GetFormControls(string database, int id_form)
-        //{
-        //    return GetData(@$"
-        //                SELECT
-        //                    id_fcontrol, id_control, title, sortorder, required, datatype, searchable, sortable, cat_showinlist
-        //                FROM
-        //                    FormControls
-        //                WHERE
-        //                    id_form = {id_form}
-        //                ORDER BY
-        //                    sortorder", database)
-        //        .AsEnumerable()
-        //        .Select(dr => new FormControl 
-        //        { 
-        //            IdControl = dr.Field<int>("id_control"),
-        //            IdFControl = dr.Field<int>("id_fcontrol"),
-        //            Title = dr.Field<string>("Title"),
-        //            ShowInList = dr.Field<bool>("cat_showinlist"),
-        //            Searchable = dr.Field<bool> ("searchable"),
-        //            DataType = dr.Field<byte>("datatype")
-        //        });
-        //}
-
         [HttpGet("formcontrols")]
-        public IEnumerable<FormControl> GetFormControls(string database, int id_form)
+        public FormControl[] GetFormControls(string database, int id_form)
         {
             string cacheKey = $"FormControls_{database}_{id_form}";
 
-            if (_memoryCache.TryGetValue(cacheKey, out IEnumerable<FormControl> result))
+            if (_memoryCache.TryGetValue(cacheKey, out FormControl[] result))
             {
                 return result;
             }
@@ -192,7 +166,7 @@ namespace PubSysLayout.Server.Controllers
             string cacheKey = $"ListControlData_{database}_{id_form}";
 
             if (_memoryCache.TryGetValue(cacheKey, out Dictionary<int, ListControlData> result))
-            { 
+            {
                 return result;
             }
 
@@ -217,6 +191,36 @@ namespace PubSysLayout.Server.Controllers
                 return result;
             }
         }
+
+        [HttpPut]
+        public IActionResult UpdateRow(object[] row, string database, int id_form, int id_item)
+        {
+            try
+            {
+                var formControls = GetFormControls(database, id_form);
+
+                for (int i = 0; i < row.Length; i++)
+                {
+                    try
+                    {
+                        row[i] = row[i] == null ? null/*System.DBNull.Value*/ : ((JsonElement)(row[i])).Deserialize(formControls[i].Type);
+                    }
+                    catch
+                    {
+                        row[i] = null;// System.DBNull.Value;
+                    }
+                }
+
+                SetFormData(database, id_form, ref id_item, formControls, row);
+
+                return Ok(id_item);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
+        }
+
 
 
         private string BuildSQL(Query query, DataTable formControls)
@@ -251,7 +255,8 @@ namespace PubSysLayout.Server.Controllers
             {
                 where += " AND\r\n\t" + String.Join(" AND\r\n\t", query.Where
                     .Where(kv => !String.IsNullOrEmpty(kv.Value))
-                    .Select(kv => {
+                    .Select(kv =>
+                    {
                         var fc = formControls.AsEnumerable().Single(dr => dr.Field<int>("id_fcontrol") == kv.Key);
                         if (fc.Field<bool>("parse_multival"))
                         {
@@ -310,6 +315,124 @@ namespace PubSysLayout.Server.Controllers
                 result[p] = dataTable.Rows[p].ItemArray;
             }
             return result;
+        }
+
+
+        private void SetFormData(string database, int id_form, ref int id_item, FormControl[] formControls, object[] row)
+        {
+            SqlConnection conn = new SqlConnection(String.Format(_configuration.GetConnectionString("PubSysDefault"), database));
+            SqlCommand cmd = new SqlCommand("spFormDataSave;1");
+            SqlTransaction oTran = null;
+            try
+            {
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.Parameters.Add("@id_server", SqlDbType.Int);
+                cmd.Parameters.Add("@id_user", SqlDbType.Int);
+                cmd.Parameters.Add("@id_language", SqlDbType.Int);
+                cmd.Parameters.Add("@id_form", SqlDbType.Int);
+                cmd.Parameters.Add("@id_item", SqlDbType.Int);
+                cmd.Parameters.Add("@id_fcontrol", SqlDbType.Int);
+                cmd.Parameters.Add("@datatype", SqlDbType.TinyInt);
+                cmd.Parameters.Add("@strvalue", SqlDbType.NVarChar, 3500);
+                cmd.Parameters.Add("@intvalue", SqlDbType.Int);
+                cmd.Parameters.Add("@numvalue", SqlDbType.Float, 19);
+                cmd.Parameters.Add("@moneyvalue", SqlDbType.Money);
+                cmd.Parameters.Add("@datevalue", SqlDbType.DateTime);
+                cmd.Parameters.Add("@richvalue", SqlDbType.NText);
+                cmd.Parameters[4].Direction = ParameterDirection.InputOutput;
+                cmd.Parameters[0].Value = 1;
+                cmd.Parameters[1].Value = 1;
+                cmd.Parameters[2].Value = 1029;
+                cmd.Parameters[3].Value = id_form;
+
+                try
+                {
+                    conn.Open();
+                    oTran = conn.BeginTransaction();
+                    cmd.Connection = conn;
+                    cmd.Transaction = oTran;
+                    foreach (var (ctrl, val) in formControls.Select((ctrl, i) => (ctrl, row[i])))
+                    {
+                        cmd.Parameters[4].Value = id_item;
+                        cmd.Parameters[5].Value = ctrl.IdFControl;
+                        cmd.Parameters[6].Value = ctrl.DataType;
+                        cmd.Parameters[7].Value = "";
+                        cmd.Parameters[8].Value = 0;
+                        cmd.Parameters[9].Value = 0;
+                        cmd.Parameters[10].Value = 0;
+                        cmd.Parameters[11].Value = new DateTime(1900, 1, 1);
+                        cmd.Parameters[12].Value = System.Convert.DBNull;
+                        switch (ctrl.DataType)
+                        {
+                            case 0:
+                                cmd.Parameters[7].Value = (string)val;
+                                break;
+                            case 1:
+                            case 5:
+                            case 6:
+                            case 7:
+                            case 8:
+                            case 9:
+                            case 11:
+                                cmd.Parameters[8].Value = 0;
+                                try
+                                {
+                                    cmd.Parameters[8].Value = (int)val;
+                                }
+                                catch { }
+                                break;
+                            case 2:
+                                cmd.Parameters[9].Value = 0;
+                                try
+                                {
+                                    cmd.Parameters[9].Value = (decimal)val;
+                                }
+                                catch { }
+                                break;
+                            case 3:
+                                cmd.Parameters[11].Value = new DateTime(1900, 1, 1);
+                                try
+                                {
+                                    cmd.Parameters[11].Value = (DateTime)val;
+                                }
+                                catch { }
+                                break;
+                            case 4:
+                                cmd.Parameters[10].Value = 0;
+                                try
+                                {
+                                    cmd.Parameters[10].Value = (decimal)val;
+                                }
+                                catch { }
+                                break;
+                            case 10:
+                                try
+                                {
+                                    cmd.Parameters[12].Value = (string)val;
+                                }
+                                catch { }
+                                break;
+                        }
+                        cmd.ExecuteNonQuery();
+                        id_item = (int)cmd.Parameters[4].Value;
+                    }
+                    oTran.Commit();
+                }
+                catch
+                {
+                    oTran.Rollback();
+                    throw;
+                }
+            }
+            finally
+            {
+                if (conn.State == ConnectionState.Open)
+                {
+                    conn.Close();
+                }
+                conn.Dispose();
+                cmd.Dispose();
+            }
         }
     }
 }
