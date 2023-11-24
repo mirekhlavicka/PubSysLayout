@@ -65,12 +65,19 @@
                         }
                         else if (fc.Multival && type == typeof(string))
                         {
-                            <MudTextField @key="p" Class="multiLineEdit" Variant="Variant.Filled" Value="@(String.Join(", ", val?.ToString().Split(',').Select(v => ListControlData[fc.IdFControl][v.Trim()])))" T="string" Label="@(fc.Title)" T="string" ReadOnly="@(true)" Lines="@(1)"></MudTextField>
+                            <div class="smallFieldEdit" @key="@p">
+                                <MudSelect MultiSelection="true" SelectAll="true" SelectedValues="@(((string)val)?.Split(',').Select(v => v.Trim()).Where(v => !String.IsNullOrEmpty(v)))" SelectedValuesChanged='(v) => editRow[p] = String.Join(", ", v) ' Label="@fc.Title" Variant="Variant.Text" T="string" Clearable="true" ToStringFunc="(v) => ListControlData[fc.IdFControl][v]" AnchorOrigin="Origin.BottomCenter">
+                                    @foreach (var li in ListControlData[fc.IdFControl].Items/*.Where(li => !String.IsNullOrEmpty(li.Value))*/)
+                                    {
+                                        <MudSelectItem Value="@li.Value">@li.Text</MudSelectItem>
+                                    }
+                                </MudSelect>
+                            </div>
                         }
                         else if (fc.IdControl == 2 && type == typeof(string))
                         {
                             <div class="smallFieldEdit" @key="@p">
-                                <MudSelect Value="@((string)val)" ValueChanged="(v) => editRow[p] = v" Label="@fc.Title" Variant="Variant.Text" T="string">
+                                <MudSelect Value="@((string)val)" ValueChanged="(v) => editRow[p] = v" Label="@fc.Title" Variant="Variant.Text" T="string" Clearable="true" ToStringFunc="(v) => ListControlData[fc.IdFControl][v]" AnchorOrigin="Origin.BottomCenter">
                                     @foreach (var li in ListControlData[fc.IdFControl].Items/*.Where(li => !String.IsNullOrEmpty(li.Value))*/)
                                     {
                                         <MudSelectItem Value="@li.Value">@li.Text</MudSelectItem>
@@ -274,7 +281,14 @@
             return;
         }
 
-        var response = (await Http.PutAsJsonAsync($"api/sqlcatalog?database={Query.Database}&id_form={Query.IdForm}&id_item={IdItem}", editRow));
+        var response = (await Http.PutAsJsonAsync("api/sqlcatalog", new UpdateRow
+        {
+            Database = Query.Database,
+            IdForm = Query.IdForm,
+            IdItem = IdItem,
+            Row = editRow,
+            Include = Query.Include
+        }));
 
         if (!response.IsSuccessStatusCode)
         {
@@ -283,33 +297,50 @@
         }
         else
         {
-            /*if (row != null)
-            {
+                /*if (row != null)
+                {
                 editRow.CopyTo(row, 0);
-                snackBar.Add($"Row updated", Severity.Success);
-            }
-            else
-            {
+            snackBar.Add($"Row updated", Severity.Success);
+                }
+                else
+                {
                 row = editRow;
                 var updrow = await response.Content.ReadFromJsonAsync<object[]>();
-                for (int p = 0; p < row.Length; p++)
-                {
-                    try
-                    {
+                    for (int p = 0; p < row.Length; p++)
+                        {
+                        try
+                        {
                         row[p] = ((JsonElement)(updrow[p])).Deserialize(Type.GetType(QueryResult.Columns[p].TypeName));
                     }
-                    catch
-                    {
-                        row[p] = null;
-                    }
+                        catch
+                        {
+                    row[p] = null;
+                }
                 }
                 var tmp = QueryResult.Rows.ToList();
                 tmp.Add(row);
                 QueryResult.Rows = tmp.ToArray();
                 snackBar.Add($"Row added", Severity.Success);
             }*/
+
+            var res = await response.Content.ReadFromJsonAsync<PubSysLayout.Shared.SQLQuery.QueryResult>();
+
+            var row = res.Rows[0];
+
+            for (int p = 0; p < row.Length; p++)
+            {
+                try
+                {
+                    row[p] = ((JsonElement)(row[p])).Deserialize(Type.GetType(res.Columns[p].TypeName));
+                }
+                catch
+                {
+                    row[p] = null;
+                }
+            }
+
             snackBar.Add($"Row updated", Severity.Success);
-            MudDialog.Close(DialogResult.Ok(IdItem/*row*/));
+            MudDialog.Close(DialogResult.Ok(row));
         }
     }
 

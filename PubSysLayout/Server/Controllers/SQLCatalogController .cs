@@ -193,27 +193,36 @@ namespace PubSysLayout.Server.Controllers
         }
 
         [HttpPut]
-        public IActionResult UpdateRow(object[] row, string database, int id_form, int id_item)
+        public IActionResult UpdateRow(UpdateRow update)
         {
             try
             {
-                var formControls = GetFormControls(database, id_form);
+                var formControls = GetFormControls(update.Database, update.IdForm);
 
-                for (int i = 0; i < row.Length; i++)
+                for (int i = 0; i < update.Row.Length; i++)
                 {
                     try
                     {
-                        row[i] = row[i] == null ? null/*System.DBNull.Value*/ : ((JsonElement)(row[i])).Deserialize(formControls[i].Type);
+                        update.Row[i] = update.Row[i] == null ? null/*System.DBNull.Value*/ : ((JsonElement)(update.Row[i])).Deserialize(formControls[i].Type);
                     }
                     catch
                     {
-                        row[i] = null;// System.DBNull.Value;
+                        update.Row[i] = null;// System.DBNull.Value;
                     }
                 }
 
-                SetFormData(database, id_form, ref id_item, formControls, row);
+                SetFormData(update, formControls);
 
-                return Ok(id_item);
+                return Run(new Query
+                {
+                    Database = update.Database,
+                    IdForm = update.IdForm,
+                    Id = update.IdItem,
+                    Include = update .Include,
+                    MaxRowCount = 1,
+                    Released = null,
+                    Where = new Dictionary<int, string>()
+                });
             }
             catch (Exception ex)
             {
@@ -318,9 +327,9 @@ namespace PubSysLayout.Server.Controllers
         }
 
 
-        private void SetFormData(string database, int id_form, ref int id_item, FormControl[] formControls, object[] row)
+        private void SetFormData(UpdateRow update, FormControl[] formControls)
         {
-            SqlConnection conn = new SqlConnection(String.Format(_configuration.GetConnectionString("PubSysDefault"), database));
+            SqlConnection conn = new SqlConnection(String.Format(_configuration.GetConnectionString("PubSysDefault"), update.Database));
             SqlCommand cmd = new SqlCommand("spFormDataSave;1");
             SqlTransaction oTran = null;
             try
@@ -343,7 +352,7 @@ namespace PubSysLayout.Server.Controllers
                 cmd.Parameters[0].Value = 1;
                 cmd.Parameters[1].Value = 1;
                 cmd.Parameters[2].Value = 1029;
-                cmd.Parameters[3].Value = id_form;
+                cmd.Parameters[3].Value = update.IdForm;
 
                 try
                 {
@@ -351,9 +360,9 @@ namespace PubSysLayout.Server.Controllers
                     oTran = conn.BeginTransaction();
                     cmd.Connection = conn;
                     cmd.Transaction = oTran;
-                    foreach (var (ctrl, val) in formControls.Select((ctrl, i) => (ctrl, row[i])))
+                    foreach (var (ctrl, val) in formControls.Select((ctrl, i) => (ctrl, update.Row[i])))
                     {
-                        cmd.Parameters[4].Value = id_item;
+                        cmd.Parameters[4].Value = update.IdItem;
                         cmd.Parameters[5].Value = ctrl.IdFControl;
                         cmd.Parameters[6].Value = ctrl.DataType;
                         cmd.Parameters[7].Value = "";
@@ -414,7 +423,7 @@ namespace PubSysLayout.Server.Controllers
                                 break;
                         }
                         cmd.ExecuteNonQuery();
-                        id_item = (int)cmd.Parameters[4].Value;
+                        update.IdItem= (int)cmd.Parameters[4].Value;
                     }
                     oTran.Commit();
                 }

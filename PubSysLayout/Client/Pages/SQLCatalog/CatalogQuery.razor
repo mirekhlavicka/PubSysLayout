@@ -507,6 +507,14 @@
             // {
             //     clipboard.Content = null;
             // }
+
+            var updrow = (object[])result.Data;
+            for (int i = 0; i < row.Length; i++)
+            {
+                row[i] = updrow[i];
+            }
+            mudTable.SelectedItem = row;
+            StateHasChanged();
         }
     }
 
