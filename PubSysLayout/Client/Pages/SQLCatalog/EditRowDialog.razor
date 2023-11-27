@@ -77,7 +77,7 @@
                         else if (fc.IdControl == 2 && type == typeof(string))
                         {
                             <div class="smallFieldEdit" @key="@p">
-                                <MudSelect Value="@((string)val)" ValueChanged="(v) => editRow[p] = v" Label="@fc.Title" Variant="Variant.Text" T="string" Clearable="true" ToStringFunc="(v) => ListControlData[fc.IdFControl][v]" AnchorOrigin="Origin.BottomCenter">
+                                <MudSelect Value="@((string)val)" ValueChanged="(v) => editRow[p] = v" Label="@fc.Title" Variant="Variant.Text" T="string" Clearable="true" ToStringFunc="(v) => ListControlData[fc.IdFControl][v]" AnchorOrigin="Origin.BottomCenter" Required="@(fc.Required)" RequiredError='@($"{fc.Title} is  required")'>
                                     @foreach (var li in ListControlData[fc.IdFControl].Items/*.Where(li => !String.IsNullOrEmpty(li.Value))*/)
                                     {
                                         <MudSelectItem Value="@li.Value">@li.Text</MudSelectItem>
@@ -231,20 +231,25 @@
 
     private async Task LoadRow()
     {
-        editRow = await Http.GetFromJsonAsync<object[]>($"api/sqlcatalog/formitem?database={Query.Database}&id_form={Query.IdForm}&id_item={IdItem}");
-
-        for (int p = 0; p < editRow.Length; p++)
+        if (IdItem > 0)
         {
-            try
+            editRow = await Http.GetFromJsonAsync<object[]>($"api/sqlcatalog/formitem?database={Query.Database}&id_form={Query.IdForm}&id_item={IdItem}");
+            for (int p = 0; p < editRow.Length; p++)
             {
-                editRow[p] = ((JsonElement)(editRow[p])).Deserialize(FormControls[p].Type);
-            }
-            catch
-            {
-                editRow[p] = null;
+                try
+                {
+                    editRow[p] = ((JsonElement)(editRow[p])).Deserialize(FormControls[p].Type);
+                }
+                catch
+                {
+                    editRow[p] = null;
+                }
             }
         }
-
+        else
+        {
+            editRow = FormControls.Select(fc => GetDefault(fc.Type, false/*!fc.Required*/)).ToArray();
+        }
     }
 
     private object GetDefault(Type type, bool allowDBNull)
@@ -339,7 +344,7 @@
                 }
             }
 
-            snackBar.Add($"Row updated", Severity.Success);
+            snackBar.Add($"Row {(IdItem > 0 ? "updated" : "added")}", Severity.Success);
             MudDialog.Close(DialogResult.Ok(row));
         }
     }

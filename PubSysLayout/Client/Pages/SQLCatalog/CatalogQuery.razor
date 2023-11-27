@@ -172,6 +172,10 @@
                         <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentCopy" Size="Size.Medium" IconSize="Size.Medium" Class="mt-4 mb-4 ml-3" OnClick='async () => await CopyToClipboard(GetTableText(), "Tabular data was copied to clipboard")' Disabled="@(queryResult == null || queryResult.Columns.Length == 0)" />
                     </MudTooltip>
                     <MudSpacer />
+                    <MudTooltip Text="Add new row">
+                        <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-4 mb-4 ml-3" OnClick='@(()=>OpenEditRowDialog(null))' />
+                    </MudTooltip>
+                    <MudSpacer />
                     <div class="d-flex">
                         @if (flagsFilter.Count > 0)
                         {
@@ -196,7 +200,7 @@
                     {
                         int p = i; //Intermediate counter
                         <MudTh>
-                            <MudTableSortLabel InitialDirection="SortDirection.None" SortBy="new Func<object[], object>(row => row[p])">
+                            <MudTableSortLabel InitialDirection="p == 0 ? SortDirection.Descending : SortDirection.None" SortBy="new Func<object[], object>(row => row[p])">
                                 @(queryResult.Columns[p].Name)
                             </MudTableSortLabel>
                         </MudTh>
@@ -480,7 +484,7 @@
 
         parameters.Add("Query", query);
         //parameters.Add("IdForm", query.IdForm);
-        parameters.Add("IdItem", row[0]);
+        parameters.Add("IdItem", row != null ? row[0] : 0);
         parameters.Add("FormControls", formControls);
         parameters.Add("ListControlData", listControlData);
         //parameters.Add("QueryResult", queryResult);
@@ -509,12 +513,33 @@
             // }
 
             var updrow = (object[])result.Data;
-            for (int i = 0; i < row.Length; i++)
+
+            if (row != null)
             {
-                row[i] = updrow[i];
+                for (int i = 0; i < row.Length; i++)
+                {
+                    row[i] = updrow[i];
+                }
+                mudTable.SelectedItem = row;
+                StateHasChanged();
             }
-            mudTable.SelectedItem = row;
-            StateHasChanged();
+            else
+            {
+                row = updrow;
+                var tmp = queryResult.Rows.ToList();
+                tmp.Add(row);
+                queryResult.Rows = tmp.ToArray();
+                mudTable.SelectedItem = row;
+                StateHasChanged();
+                await Task.Delay(300);
+                int pageIndex = (int)System.Math.Floor((double)(mudTable.FilteredItems.TakeWhile(r => r != row).Count()) / mudTable.RowsPerPage);
+                if (pageIndex != mudTable.CurrentPage)
+                {
+                    mudTable.NavigateTo(pageIndex);
+                    await Task.Delay(100);
+                    await js.InvokeVoidAsync("scrollToElementClass", "selected");
+                }
+            }
         }
     }
 
