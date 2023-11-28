@@ -181,6 +181,8 @@
     //[Parameter] public QueryResult QueryResult { get; set; }
     [Parameter] public Query Query { get; set; }
 
+    [Parameter] public object[] SourcercRow { get; set; }
+
     private object[] editRow = null;
     // private object[] row = null;
 
@@ -248,7 +250,7 @@
         }
         else
         {
-            editRow = FormControls.Select(fc => GetDefault(fc.Type, false/*!fc.Required*/)).ToArray();
+            editRow = SourcercRow != null ? SourcercRow : FormControls.Select(fc => GetDefault(fc.Type, false/*!fc.Required*/)).ToArray();
         }
     }
 

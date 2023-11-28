@@ -175,6 +175,9 @@
                     <MudTooltip Text="Add new row">
                         <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.Add" Size="Size.Medium" IconSize="Size.Medium" Class="mt-4 mb-4 ml-3" OnClick='@(()=>OpenEditRowDialog(null))' />
                     </MudTooltip>
+                    <MudTooltip Text="Paste row">
+                        <MudFab Color="Color.Primary" StartIcon="@Icons.Material.Filled.ContentPaste" Size="Size.Medium" IconSize="Size.Medium" Class="mt-4 mb-4 ml-3" OnClick="@(async ()=> {await OpenEditRowDialog(clipboard.Content as object[], true); })" Disabled="@(!(clipboard.Content is object[]) )" />
+                    </MudTooltip>
                     <MudSpacer />
                     <div class="d-flex">
                         @if (flagsFilter.Count > 0)
@@ -242,7 +245,7 @@
                     }
                     <MudTd DataLabel="" Class="valTD">
                         <MudIconButton Icon="@Icons.Material.Filled.Edit" @onclick="@(()=>OpenEditRowDialog(@context))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text" Title="Edit row" />
-                        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" @onclick="@(()=> clipboard.Content = context)" Color="Color.Default" Size="Size.Small" Variant="Variant.Text" Title="Copy row" />
+                        <MudIconButton Icon="@Icons.Material.Filled.ContentCopy" @onclick="@(async ()=> clipboard.Content = await LoadFullRow((int)context[0]))" Color="Color.Default" Size="Size.Small" Variant="Variant.Text" Title="Copy row" />
                     </MudTd>
                 </RowTemplate>
                 <PagerContent>
@@ -464,33 +467,28 @@
 
         var parameters = new DialogParameters();
 
-        // if (copy && row != null)
-        // {
-        //     if (row.Length != queryResult.Columns.Length || row.Select((v, i) => v != null && v.GetType().ToString() != queryResult.Columns[i].TypeName).Any(b => b))
-        //     {
-        //         await DialogService.ShowMessageBox("Error", "Incompatible row format");
-        //         return;
-        //     }
-
-        //     query.OriginalRow = row;
-        //     query.Row = null;
-        //     row = null;
-        // }
-        // else
-        // {
-        //     query.Row = row;
-        //     query.OriginalRow = null;
-        // }
+        if (copy && row != null)
+        {
+            if (row.Length != formControls.Length || row.Select((v, i) => v != null && v.GetType() != formControls[i].Type).Any(b => b))
+            {
+                await DialogService.ShowMessageBox("Error", "Incompatible row format");
+                return;
+            }
+            parameters.Add("IdItem", 0); 
+            parameters.Add("SourcercRow", row);
+            row = null;
+        }
+        else
+        {
+            parameters.Add("IdItem", row != null ? row[0] : 0);
+        }
 
         parameters.Add("Query", query);
-        //parameters.Add("IdForm", query.IdForm);
-        parameters.Add("IdItem", row != null ? row[0] : 0);
         parameters.Add("FormControls", formControls);
         parameters.Add("ListControlData", listControlData);
-        //parameters.Add("QueryResult", queryResult);
 
         mudTable.SelectedItem = row;
-        var result = await DialogService.Show<EditRowDialog>($"{query.Database} - {catList.Single(kv => kv.Key == query.IdForm).Value}{(row == null ? " - new row" : "")}", parameters, options).Result;
+        var result = await DialogService.Show<EditRowDialog>($"{query.Database} - {catList.Single(kv => kv.Key == query.IdForm).Value}{(copy ? " - copy row" : (row == null ? " - new row" : ""))}", parameters, options).Result;
         if (!result.Canceled)
         {
             // row = (object[])result.Data;
@@ -542,6 +540,24 @@
             }
         }
     }
+
+    private async Task<object[]> LoadFullRow(int id_item)
+    {
+        var res = await Http.GetFromJsonAsync<object[]>($"api/sqlcatalog/formitem?database={query.Database}&id_form={query.IdForm}&id_item={id_item}");
+        for (int p = 0; p < res.Length; p++)
+        {
+            try
+            {
+                res[p] = ((JsonElement)(res[p])).Deserialize(formControls[p].Type);
+            }
+            catch
+            {
+                res[p] = null;
+            }
+        }
+        return res;
+    }
+
 
     private bool FilterFunc(object[] row)
     {
