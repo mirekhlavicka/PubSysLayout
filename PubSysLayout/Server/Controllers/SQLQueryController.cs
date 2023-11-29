@@ -382,12 +382,12 @@ namespace PubSysLayout.Server.Controllers
             return directoryPath;
         }
 
-        private object[][] ConvertToArray(DataTable dataTable)
+        private List<object[]> ConvertToArray(DataTable dataTable)
         {
-            var result = new object[dataTable.Rows.Count][];
+            var result = new List<object[]>(dataTable.Rows.Count);
             for (int p = 0; p < dataTable.Rows.Count; p++)
             {
-                result[p] = dataTable.Rows[p].ItemArray;
+                result.Add(dataTable.Rows[p].ItemArray);
             }
             return result;
         }

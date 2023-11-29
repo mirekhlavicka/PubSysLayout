@@ -10,7 +10,7 @@ namespace PubSysLayout.Shared.SQLQuery
     {
         public string TableName { get; set; }
         public QueryResultColumn[] Columns { get; set; }   
-        public object[][] Rows { get; set; }
+        public List<object[]> Rows { get; set; }
     }
 
     public class QueryResultColumn 

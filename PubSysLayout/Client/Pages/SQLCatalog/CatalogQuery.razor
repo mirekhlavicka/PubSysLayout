@@ -491,28 +491,9 @@
         var result = await DialogService.Show<EditRowDialog>($"{query.Database} - {catList.Single(kv => kv.Key == query.IdForm).Value}{(copy ? " - copy row" : (row == null ? " - new row" : ""))}", parameters, options).Result;
         if (!result.Canceled)
         {
-            // row = (object[])result.Data;
-            // mudTable.SelectedItem = row;
-            // StateHasChanged();
-            // if (row != null)
-            // {
-            //     await Task.Delay(300);
-            //     int pageIndex = (int)System.Math.Floor((double)(mudTable.FilteredItems.TakeWhile(r => r != row).Count()) / mudTable.RowsPerPage);
-            //     if (pageIndex != mudTable.CurrentPage)
-            //     {
-            //         mudTable.NavigateTo(pageIndex);
-            //         await Task.Delay(100);
-            //         await js.InvokeVoidAsync("scrollToElementClass", "selected");
-            //     }
-            // }
-            // if (copy)
-            // {
-            //     clipboard.Content = null;
-            // }
-
             var updrow = (object[])result.Data;
 
-            if (row != null)
+            if (row != null && updrow != null) //update
             {
                 for (int i = 0; i < row.Length; i++)
                 {
@@ -521,12 +502,10 @@
                 mudTable.SelectedItem = row;
                 StateHasChanged();
             }
-            else
+            else if (updrow != null) //insert
             {
                 row = updrow;
-                var tmp = queryResult.Rows.ToList();
-                tmp.Add(row);
-                queryResult.Rows = tmp.ToArray();
+                queryResult.Rows.Add(row);
                 mudTable.SelectedItem = row;
                 StateHasChanged();
                 await Task.Delay(300);
@@ -537,6 +516,14 @@
                     await Task.Delay(100);
                     await js.InvokeVoidAsync("scrollToElementClass", "selected");
                 }
+            }
+            else if (row != null) //delete
+            {
+                queryResult.Rows.Remove(row);
+            }
+            if (copy)
+            {
+                clipboard.Content = null;
             }
         }
     }

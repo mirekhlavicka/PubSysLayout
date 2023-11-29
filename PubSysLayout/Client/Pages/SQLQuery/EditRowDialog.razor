@@ -223,9 +223,7 @@
                         row[p] = null;
                     }
                 }
-                var tmp = QueryResult.Rows.ToList();
-                tmp.Add(row);
-                QueryResult.Rows = tmp.ToArray();
+                QueryResult.Rows.Add(row);
                 snackBar.Add($"Row added", Severity.Success);
             }
             MudDialog.Close(DialogResult.Ok(row));
@@ -253,9 +251,7 @@
             }
             else
             {
-                var tmp = QueryResult.Rows.ToList();
-                tmp.Remove(row);
-                QueryResult.Rows = tmp.ToArray();
+                QueryResult.Rows.Remove(row);
                 snackBar.Add($"Row deleted", Severity.Success);
                 MudDialog.Close(DialogResult.Ok((object[])(null)));
             }

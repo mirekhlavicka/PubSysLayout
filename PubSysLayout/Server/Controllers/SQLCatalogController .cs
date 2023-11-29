@@ -230,6 +230,13 @@ namespace PubSysLayout.Server.Controllers
             }
         }
 
+        // DELETE: api/sqlcatalog/5?database=
+        [HttpDelete("{id_item}")]
+        public IActionResult DeleteRow(string database, int id_item)
+        {
+            DelCatalogItem(database, id_item);
+            return NoContent();
+        }
 
 
         private string BuildSQL(Query query, DataTable formControls)
@@ -316,12 +323,12 @@ namespace PubSysLayout.Server.Controllers
             return res;
         }
 
-        private object[][] ConvertToArray(DataTable dataTable)
+        private List<object[]> ConvertToArray(DataTable dataTable)
         {
-            var result = new object[dataTable.Rows.Count][];
+            var result = new List<object[]>(dataTable.Rows.Count);
             for (int p = 0; p < dataTable.Rows.Count; p++)
             {
-                result[p] = dataTable.Rows[p].ItemArray;
+                result.Add(dataTable.Rows[p].ItemArray);
             }
             return result;
         }
@@ -432,6 +439,40 @@ namespace PubSysLayout.Server.Controllers
                     oTran.Rollback();
                     throw;
                 }
+            }
+            finally
+            {
+                if (conn.State == ConnectionState.Open)
+                {
+                    conn.Close();
+                }
+                conn.Dispose();
+                cmd.Dispose();
+            }
+        }
+
+        private void DelCatalogItem(string database, int id_item)
+        {
+            SqlConnection conn = new SqlConnection(String.Format(_configuration.GetConnectionString("PubSysDefault"), database));
+            SqlCommand cmd = new SqlCommand("spAdminDelCatalogItem;1");
+            try
+            {
+                cmd.Parameters.Add(new SqlParameter("@id_server", SqlDbType.Int));
+                cmd.Parameters.Add(new SqlParameter("@id_user", SqlDbType.Int));
+                cmd.Parameters.Add(new SqlParameter("@id_language", SqlDbType.Int));
+                cmd.Parameters.Add(new SqlParameter("@id_item", SqlDbType.Int));
+                cmd.Parameters["@id_user"].Value = 1;
+                cmd.Parameters["@id_server"].Value = 1;
+                cmd.Parameters["@id_language"].Value = 1029;
+                cmd.Parameters["@id_item"].Value = id_item;
+
+                if (conn.State == ConnectionState.Closed)
+                {
+                    conn.Open();
+                }
+                cmd.Connection = conn;
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.ExecuteNonQuery();
             }
             finally
             {

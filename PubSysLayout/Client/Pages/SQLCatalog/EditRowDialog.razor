@@ -163,7 +163,7 @@
         </MudContainer>
     </DialogContent>
     <DialogActions>
-        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Secondary" OnClick="Delete" Class="ml-6" Title="Delete row" Disabled="@(true/*Query.OriginalRow == null*/)"></MudIconButton>
+        <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Secondary" OnClick="Delete" Class="ml-6" Title="Delete row" Disabled="@(IdItem <= 0)"></MudIconButton>
         <MudButton OnClick="Cancel" Variant="Variant.Filled" Class="ml-auto">Cancel</MudButton>
         <MudButton Color="Color.Primary" OnClick="OK" Variant="Variant.Filled" accesskey="s" Class="mr-5" Disabled="@(false/*!canSave*/)">Save</MudButton>
     </DialogActions>
@@ -172,19 +172,16 @@
 @code {
     [CascadingParameter] MudDialogInstance MudDialog { get; set; }
 
-    //[Parameter] public int IdForm { get; set; }
     [Parameter] public int IdItem { get; set; }
 
     [Parameter] public FormControl[] FormControls { get; set; }
     [Parameter] public Dictionary<int, ListControlData> ListControlData { get; set; }
 
-    //[Parameter] public QueryResult QueryResult { get; set; }
     [Parameter] public Query Query { get; set; }
 
     [Parameter] public object[] SourcercRow { get; set; }
 
     private object[] editRow = null;
-    // private object[] row = null;
 
     private Dictionary<string, MudDatePicker> datePickers = new Dictionary<string, MudDatePicker>();
     private Dictionary<string, MudTimePicker> timePickers = new Dictionary<string, MudTimePicker>();
@@ -193,38 +190,6 @@
     bool canSave;
 
     private string searchField = "";
-
-    protected override void OnInitialized()
-    {
-        // if (Query.OriginalRow != null) //copy
-        // {
-        //     row = null;
-        //     editRow = (object[])Query.OriginalRow.Clone();
-        //     foreach (int p in QueryResult.Columns.Select((c, i) => new { c, i }).Where(c => c.c.ReadOnly).Select(c => c.i))
-        //     {
-        //         editRow[p] = GetDefault(editRow[p].GetType(), false);
-        //     }
-        //     Query.Action = "INSERT";
-        //     Query.Row = editRow;
-        //     Query.OriginalRow = null;
-        // }
-        // else if (Query.Row != null) //edit
-        // {
-        //     row = Query.Row;
-        //     editRow = (object[])Query.Row.Clone();
-        //     Query.Action = "UPDATE";
-        //     Query.Row = editRow;
-        //     Query.OriginalRow = row;
-        // }
-        // else //new
-        // {
-        //     row = null;
-        //     editRow = QueryResult.Columns.Select(c => GetDefault(Type.GetType(c.TypeName), c.AllowDBNull)).ToArray();
-        //     Query.Action = "INSERT";
-        //     Query.Row = editRow;
-        //     Query.OriginalRow = null;
-        // }
-    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -304,32 +269,6 @@
         }
         else
         {
-                /*if (row != null)
-                {
-                editRow.CopyTo(row, 0);
-            snackBar.Add($"Row updated", Severity.Success);
-                }
-                else
-                {
-                row = editRow;
-                var updrow = await response.Content.ReadFromJsonAsync<object[]>();
-                    for (int p = 0; p < row.Length; p++)
-                        {
-                        try
-                        {
-                        row[p] = ((JsonElement)(updrow[p])).Deserialize(Type.GetType(QueryResult.Columns[p].TypeName));
-                    }
-                        catch
-                        {
-                    row[p] = null;
-                }
-                }
-                var tmp = QueryResult.Rows.ToList();
-                tmp.Add(row);
-                QueryResult.Rows = tmp.ToArray();
-                snackBar.Add($"Row added", Severity.Success);
-            }*/
-
             var res = await response.Content.ReadFromJsonAsync<PubSysLayout.Shared.SQLQuery.QueryResult>();
 
             var row = res.Rows[0];
@@ -353,32 +292,25 @@
 
     private async Task Delete()
     {
-        // if ((await DialogService.ShowMessageBox(
-        //             "Warning",
-        //             $"Do you want to delete row in table \"{QueryResult.TableName}\" ?",
-        //             yesText: "Delete!", cancelText: "Cancel") != null))
-        // {
+        if ((await DialogService.ShowMessageBox(
+                    "Warning",
+                    $"Do you want to delete this row in catalog ?",
+                    yesText: "Delete!", cancelText: "Cancel") != null))
+        {
 
-        //     Query.Action = "DELETE";
-        //     Query.Row = row;
-        //     var response = (await Http.PutAsJsonAsync($"api/sqlquery", Query));
+            var response = await Http.DeleteAsync($"api/sqlcatalog/{IdItem}?database={Query.Database}");
 
-        //     if (!response.IsSuccessStatusCode)
-        //     {
-        //         var msg = await response.Content.ReadAsStringAsync();
-        //         await DialogService.ShowMessageBox("Error", msg);
-        //         Query.Action = "UPDATE";
-        //         Query.Row = editRow;
-        //     }
-        //     else
-        //     {
-        //         var tmp = QueryResult.Rows.ToList();
-        //         tmp.Remove(row);
-        //         QueryResult.Rows = tmp.ToArray();
-        //         snackBar.Add($"Row deleted", Severity.Success);
-        //         MudDialog.Close(DialogResult.Ok((object[])(null)));
-        //     }
-        // }
+            if (!response.IsSuccessStatusCode)
+            {
+                var msg = await response.Content.ReadAsStringAsync();
+                await DialogService.ShowMessageBox("Error", msg);
+            }
+            else
+            {
+                snackBar.Add($"Row deleted", Severity.Success);
+                MudDialog.Close(DialogResult.Ok((object[])(null)));
+            }
+        }
     }
 
     private async Task CodeEdit(int p)
