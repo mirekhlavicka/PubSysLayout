@@ -16,14 +16,12 @@ namespace PubSysLayout.Server.Controllers
     public class SQLCatalogController : ControllerBase
     {
         private readonly IConfiguration _configuration;
-        private readonly IWebHostEnvironment _environment;
         private readonly IHttpClientFactory httpClientFactory;
         private readonly IMemoryCache _memoryCache;
 
-        public SQLCatalogController(IConfiguration configuration, IWebHostEnvironment environment, IHttpClientFactory httpClientFactory, IMemoryCache memoryCache)
+        public SQLCatalogController(IConfiguration configuration, IHttpClientFactory httpClientFactory, IMemoryCache memoryCache)
         {
             _configuration = configuration;
-            _environment = environment;
             _memoryCache = memoryCache;
             this.httpClientFactory = httpClientFactory;
         }

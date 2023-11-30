@@ -89,6 +89,21 @@
                         {
                             <MudTextField @key="p" Class='@(fc.MultiLine ? "multiLineEdit": "smallFieldEdit")' Variant="@(fc.MultiLine ? Variant.Outlined : Variant.Text)" Value="@((string)val)" ValueChanged="(v) => editRow[p] = v" T="string" Label="@(fc.Title)" T="string" ReadOnly="@(false)" MaxLength="@(fc.MaxLength > 0 ? fc.MaxLength : 524288)" Lines="@(fc.MultiLine ? 5 : 1)"></MudTextField>
                         }
+                        else if (type == typeof(DateTime))
+                        {
+                            <div>
+                                <MudDatePicker @key="p" @ref="datePickers[fc.IdFControl]" AutoClose="true" Editable="true" Placeholder="Select Date" Date="@(((DateTime?)val)?.Date)" DateChanged="(v) => {editRow[p] = v.HasValue ? (v.Value.Date).Add(((DateTime?)editRow[p])?.TimeOfDay ?? new TimeSpan(0)) : null;}" Label="@(fc.Title)" Variant="Variant.Text" ReadOnly="@(false)" Class="smallFieldEdit" Required="@(fc.Required)" RequiredError='@($"{fc.Title} is  required")'>
+                                    <PickerActions>
+                                        <MudButton Class="mr-auto align-self-start" OnClick="@(() => {editRow[p] = (DateTime.Today).Add(((DateTime?)editRow[p])?.TimeOfDay ?? new TimeSpan(0)); datePickers[fc.IdFControl].Close(); })">Today</MudButton>
+                                    </PickerActions>
+                                </MudDatePicker>
+                                <MudTimePicker @key="p+1000" @ref="timePickers[fc.IdFControl]" AutoClose="true" Editable="true" Placeholder="Select Time" Time="@(((DateTime?)val)?.TimeOfDay)" TimeChanged="(v) => {if(v.HasValue) editRow[p] = ((DateTime?)editRow[p])?.Date.Add(v.Value); }" Variant="Variant.Text" ReadOnly="@(false)" Class="smallFieldEdit" Disabled="@(editRow[p] == null)">
+                                    <PickerActions>
+                                        <MudButton Class="mr-auto align-self-start" OnClick="@(() => {editRow[p] = ((DateTime?)editRow[p])?.Date.Add(DateTime.Now.TimeOfDay); timePickers[fc.IdFControl].Close(); })">Now</MudButton>
+                                    </PickerActions>
+                                </MudTimePicker>
+                            </div>
+                        }
                         else if (type == typeof(int))
                         {
                             <MudNumericField @key="p" Class="smallFieldEdit" Value="@((int?)val)" ValueChanged="(v) => editRow[p] = v" Label="@(fc.Title)" Variant="Variant.Text" T="int?" ReadOnly="@(false)" Required="@(fc.Required)" RequiredError='@($"{fc.Title} is  required")'></MudNumericField>
@@ -179,12 +194,12 @@
 
     [Parameter] public Query Query { get; set; }
 
-    [Parameter] public object[] SourcercRow { get; set; }
+    [Parameter] public object[] SourceRow { get; set; }
 
     private object[] editRow = null;
 
-    private Dictionary<string, MudDatePicker> datePickers = new Dictionary<string, MudDatePicker>();
-    private Dictionary<string, MudTimePicker> timePickers = new Dictionary<string, MudTimePicker>();
+    private Dictionary<int, MudDatePicker> datePickers = new Dictionary<int, MudDatePicker>();
+    private Dictionary<int, MudTimePicker> timePickers = new Dictionary<int, MudTimePicker>();
 
     MudForm form;
     bool canSave;
@@ -215,7 +230,7 @@
         }
         else
         {
-            editRow = SourcercRow != null ? SourcercRow : FormControls.Select(fc => GetDefault(fc.Type, false/*!fc.Required*/)).ToArray();
+            editRow = SourceRow != null ? SourceRow : FormControls.Select(fc => GetDefault(fc.Type, false/*!fc.Required*/)).ToArray();
         }
     }
 
@@ -227,7 +242,7 @@
         }
         if (type == typeof(DateTime))
         {
-            return DateTime.Now;
+            return DateTime.Today;
         }
         else if (type == typeof(string))
         {

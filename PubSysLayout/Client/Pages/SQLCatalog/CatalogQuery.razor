@@ -475,7 +475,7 @@
                 return;
             }
             parameters.Add("IdItem", 0); 
-            parameters.Add("SourcercRow", row);
+            parameters.Add("SourceRow", row);
             row = null;
         }
         else
@@ -488,7 +488,7 @@
         parameters.Add("ListControlData", listControlData);
 
         mudTable.SelectedItem = row;
-        var result = await DialogService.Show<EditRowDialog>($"{query.Database} - {catList.Single(kv => kv.Key == query.IdForm).Value}{(copy ? " - copy row" : (row == null ? " - new row" : ""))}", parameters, options).Result;
+        var result = await DialogService.Show<EditRowDialog>($"{query.Database} - {catList.Single(kv => kv.Key == query.IdForm).Value}{(copy ? " - copy row" : (row == null ? " - new row" : " - edit row"))}", parameters, options).Result;
         if (!result.Canceled)
         {
             var updrow = (object[])result.Data;
