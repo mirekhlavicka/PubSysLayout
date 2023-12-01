@@ -17,13 +17,17 @@
         margin-right: 20px;
     }
 
+    .longFieldEdit {
+        display: block;
+        margin-right: 30px;
+    }
     .multiLineEdit {
         margin-right: 20px;
     }
 
     .smallFieldEdit .mud-input-label {
         white-space: nowrap;
-        overflow: hidden;
+        overflow-x: clip;
         max-width: 500px;
     }
 
@@ -58,14 +62,14 @@
                         var fc = FormControls[p];
                         object val = editRow[p];
                         Type type = fc.Type;
-
+                            
                         if (!String.IsNullOrEmpty(searchField) && !FormControls[p].Title.ToLower().Contains(searchField.ToLower()))
                         {
                             continue;
                         }
                         else if (fc.Multival && type == typeof(string))
                         {
-                            <div class="smallFieldEdit" @key="@p">
+                            <div class="@(fc.Width < 400 ? "smallFieldEdit" : "longFieldEdit")" @key="@p">
                                 <MudSelect MultiSelection="true" SelectAll="true" SelectedValues="@(((string)val)?.Split(',').Select(v => v.Trim()).Where(v => !String.IsNullOrEmpty(v)))" SelectedValuesChanged='(v) => editRow[p] = String.Join(", ", v) ' Label="@fc.Title" Variant="Variant.Text" T="string" Clearable="true" ToStringFunc="(v) => ListControlData[fc.IdFControl][v]" AnchorOrigin="Origin.BottomCenter">
                                     @foreach (var li in ListControlData[fc.IdFControl].Items/*.Where(li => !String.IsNullOrEmpty(li.Value))*/)
                                     {
@@ -74,9 +78,9 @@
                                 </MudSelect>
                             </div>
                         }
-                        else if (fc.IdControl == 2 && type == typeof(string))
+                        else if (new int[] { 2, 3, 4, 5 }.Contains(fc.IdControl) && type == typeof(string))
                         {
-                            <div class="smallFieldEdit" @key="@p">
+                            <div class="@(fc.Width < 400 ? "smallFieldEdit" : "longFieldEdit")" @key="@p">
                                 <MudSelect Value="@((string)val)" ValueChanged="(v) => editRow[p] = v" Label="@fc.Title" Variant="Variant.Text" T="string" Clearable="true" ToStringFunc="(v) => ListControlData[fc.IdFControl][v]" AnchorOrigin="Origin.BottomCenter" Required="@(fc.Required)" RequiredError='@($"{fc.Title} is  required")'>
                                     @foreach (var li in ListControlData[fc.IdFControl].Items/*.Where(li => !String.IsNullOrEmpty(li.Value))*/)
                                     {
@@ -87,7 +91,7 @@
                         }
                         else if (type == typeof(string))
                         {
-                            <MudTextField @key="p" Class='@(fc.MultiLine ? "multiLineEdit": "smallFieldEdit")' Variant="@(fc.MultiLine ? Variant.Outlined : Variant.Text)" Value="@((string)val)" ValueChanged="(v) => editRow[p] = v" T="string" Label="@(fc.Title)" T="string" ReadOnly="@(false)" MaxLength="@(fc.MaxLength > 0 ? fc.MaxLength : 524288)" Lines="@(fc.MultiLine ? 5 : 1)"></MudTextField>
+                            <MudTextField @key="p" Class='@(fc.MultiLine ? "multiLineEdit": (fc.Width < 400 ? "smallFieldEdit" : "longFieldEdit"))' Variant="@(fc.MultiLine ? Variant.Outlined : Variant.Text)" Value="@((string)val)" ValueChanged="(v) => editRow[p] = v" T="string" Label="@(fc.Title)" T="string" ReadOnly="@(false)" MaxLength="@(fc.MaxLength > 0 ? fc.MaxLength : 524288)" Lines="@(fc.MultiLine ? 5 : 1)"></MudTextField>
                         }
                         else if (type == typeof(DateTime))
                         {
@@ -230,7 +234,7 @@
         }
         else
         {
-            editRow = SourceRow != null ? SourceRow : FormControls.Select(fc => GetDefault(fc.Type, false/*!fc.Required*/)).ToArray();
+            editRow = SourceRow ?? FormControls.Select(fc => GetDefault(fc.Type, false/*!fc.Required*/)).ToArray();
         }
     }
 
