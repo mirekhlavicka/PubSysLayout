@@ -153,7 +153,7 @@ namespace PubSysLayout.Server.Controllers
                     2 => dr.Field<decimal?>("numvalue"),
                     4 => dr.Field<decimal?>("moneyvalue"),
                     3 => dr.Field<DateTime?>("datevalue"),
-                    10 => dr.Field<string>("strvalue"),
+                    10 => dr.Field<string>("richvalue"),
                     _ => dr.Field<string>("strvalue")
                 }).ToArray();
         }
@@ -184,7 +184,7 @@ namespace PubSysLayout.Server.Controllers
                     .ToDictionary(id => id, id => httpClient.GetFromJsonAsync<ListControlData>($"https://{serverName}/systools/FormControlData.ashx?id_fcontrol={id}").Result);
 
                 var cacheEntryOptions = new MemoryCacheEntryOptions().SetSlidingExpiration(TimeSpan.FromSeconds(1800));
-                _memoryCache.Set(cacheKey, result, cacheEntryOptions);
+                _memoryCache.Set(cacheKey, result, cacheEntryOptions);                
 
                 return result;
             }

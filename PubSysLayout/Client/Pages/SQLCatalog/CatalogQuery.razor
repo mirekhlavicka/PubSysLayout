@@ -105,15 +105,15 @@
                         <MudSelectItem Value="@kv.Key">@kv.Value</MudSelectItem>
                     }
                 </MudSelect>
-                <MudFab OnClick="async () => await LoadData()" Disabled="@(query.IdForm == 0)" StartIcon="@Icons.Material.Filled.PlayArrow" Color="Color.Default" IconColor="Color.Secondary" IconSize="Size.Large" Size="Size.Large" Label="Run&nbsp;" DisableElevation="true" accesskey="r" Style="margin-top:10px" Class="mr-6"></MudFab>
-                <MudFab OnClick="async () => await ShowSQL()" Disabled="@(query.IdForm == 0)" StartIcon="@Icons.Material.Filled.ArrowForward" Color="Color.Default" IconColor="Color.Default" IconSize="Size.Large" Size="Size.Large" Label="SQL&nbsp;" DisableElevation="true" Style="margin-top:10px"></MudFab>
+                <MudFab OnClick="async () => await LoadData()" Disabled="@(query.IdForm == 0 || !formControlsReady)" StartIcon="@Icons.Material.Filled.PlayArrow" Color="Color.Default" IconColor="Color.Secondary" IconSize="Size.Large" Size="Size.Large" Label="Run&nbsp;" DisableElevation="true" accesskey="r" Style="margin-top:10px" Class="mr-6"></MudFab>
+                <MudFab OnClick="async () => await ShowSQL()" Disabled="@(query.IdForm == 0 || !formControlsReady)" StartIcon="@Icons.Material.Filled.ArrowForward" Color="Color.Default" IconColor="Color.Default" IconSize="Size.Large" Size="Size.Large" Label="SQL&nbsp;" DisableElevation="true" Style="margin-top:10px"></MudFab>
             </div>
             <MudSpacer />
             <MudNumericField Class="smallField xsmallField ml-6" Label="Max row count" Variant="Variant.Outlined" T="int" @bind-Value="query.MaxRowCount"></MudNumericField>
         </div>
         <MudDivider />
 
-        @if (query != null && query.IdForm != 0)
+        @if (query != null && query.IdForm != 0 && formControlsReady)
         {
             <div style="height: calc(100vh - 290px); overflow-y: scroll" class="d-flex">
                 <div class="flex-grow-1 mr-4" style="flex-basis: 50%">
@@ -304,6 +304,7 @@
     private PubSysLayout.Shared.SQLQuery.QueryResult queryResult = null;
     private string errorMsg = "No result";
     private bool inProgress = false;
+    private bool formControlsReady = false;
 
     private string searchString = "";
 
@@ -326,6 +327,7 @@
         }
 
         await LoadCatList();
+        formControlsReady = false;
         await LoadFormControls(query.IdForm == 0);
     }
 
@@ -338,6 +340,7 @@
             query.IdForm = 0;
             query.Where.Clear();
             query.Include.Clear();
+            formControlsReady = false;
             await LoadFormControls(true);
         }
     }
@@ -349,6 +352,7 @@
         {
             queryResult = null;
             errorMsg = "No result";
+            formControlsReady = false;
             await LoadFormControls(true);
         }
     }
@@ -373,7 +377,7 @@
     }
 
     private async Task LoadFormControls(bool clear)
-    {
+    {        
         if (!String.IsNullOrEmpty(query.Database) && query.IdForm != 0)
         {
             try
@@ -400,6 +404,7 @@
             query.Released = null;
             query.MaxRowCount = 200;
         }
+        formControlsReady = true;
     }
 
     protected async Task LoadData()
