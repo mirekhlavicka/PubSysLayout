@@ -60,29 +60,44 @@
             @if (FormControls != null && editRow != null && FormControls.Length == editRow.Length)
             {
                 <MudTabs Elevation="2" Rounded="true" ApplyEffectsToContainer="true" PanelClass="pa-6" KeepPanelsAlive="true">
-                    @for (int j = 0; j < 2; j++)
+                    @* @for (int tp = 0; tp < 2; tp++) *@
+                    @foreach (var tp in tabPages)
                     {
-                        int tp = j;
-                        <MudTabPanel Text='@(tp == 0 ? "Data" : "Pictures")'>
+                        //int tp = j;
+
+                        var ind = FormControls
+                            .Select((fc, i) => new { fc, i })
+                            .Where(fc => String.IsNullOrEmpty(searchField) || fc.fc.Title.ToLower().Contains(searchField.ToLower()))
+                            .Where(fc => fc.fc.IdTabPage == tp.Key)
+                            .Select(fc => fc.i).ToArray();
+                            //.Where(fc => (tp == 0 && fc.fc.DataType != 5) || (tp == 1 && fc.fc.DataType == 5)).Select(fc => fc.i).ToArray();
+
+                        if (ind.Length == 0)
+                        {
+                            continue;
+                        }
+
+                        <MudTabPanel Text='@(tp.Value)'>
                             <MudContainer Class="editRowContainer">
-                                @for (int i = 0; i < FormControls.Length; i++)
+                                @foreach (int i in ind)
                                 {
                                     int p = i; //Intermediate counter
                                     var fc = FormControls[p];
 
-                                    if (tp == 0 && fc.DataType == 5 || tp == 1 && fc.DataType != 5)
+                                    /*if ((tp == 0 && fc.DataType == 5) || (tp == 1 && fc.DataType != 5))
                                     {
-                                        continue;
-                                    }
+                                    continue;
+                                    }*/
 
                                     object val = editRow[p];
                                     Type type = fc.Type;
 
-                                    if (!String.IsNullOrEmpty(searchField) && !fc.Title.ToLower().Contains(searchField.ToLower()))
+                                    /*if (!String.IsNullOrEmpty(searchField) && !fc.Title.ToLower().Contains(searchField.ToLower()))
                                     {
-                                        continue;
+                                    continue;
                                     }
-                                    else if (fc.Multival && type == typeof(string))
+                                    else */
+                                    if (fc.Multival && type == typeof(string))
                                     {
                                         <div class="@(fc.Width < 400 ? "smallFieldEdit" : "longFieldEdit")" @key="@p">
                                             <MudSelect MultiSelection="true" SelectAll="true" SelectedValues="@(((string)val)?.Split(',').Select(v => v.Trim()).Where(v => !String.IsNullOrEmpty(v)))" SelectedValuesChanged='(v) => editRow[p] = String.Join(", ", v) ' Label="@fc.Title" Variant="Variant.Text" T="string" Clearable="true" ToStringFunc="(v) => ListControlData[fc.IdFControl][v]" AnchorOrigin="Origin.BottomCenter">
@@ -220,6 +235,8 @@
 
     private object[] editRow = null;
 
+    private List<KeyValuePair<int, string>> tabPages = null;
+
     private Dictionary<int, MudDatePicker> datePickers = new Dictionary<int, MudDatePicker>();
     private Dictionary<int, MudTimePicker> timePickers = new Dictionary<int, MudTimePicker>();
 
@@ -230,6 +247,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await LoadTabPages();
         await LoadRow();
     }
 
@@ -254,6 +272,12 @@
         {
             editRow = SourceRow ?? FormControls.Select(fc => GetDefault(fc.Type, false/*!fc.Required*/)).ToArray();
         }
+    }
+
+    private async Task LoadTabPages()
+    {
+        tabPages = await Http.GetFromJsonAsync<List<KeyValuePair<int, string>>>($"api/sqlcatalog/tabpages?database={Query.Database}&id_form={Query.IdForm}");
+        tabPages.Insert(0, new KeyValuePair<int, string>(0, "Data"));
     }
 
     private object GetDefault(Type type, bool allowDBNull)

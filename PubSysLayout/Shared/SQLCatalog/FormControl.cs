@@ -11,6 +11,7 @@ namespace PubSysLayout.Shared.SQLCatalog
     {
         public int IdControl { get; set; }
         public int IdFControl { get; set; }
+        public int IdTabPage { get; set; }
         public string Title { get; set; }
         public int DataType { get; set; }
         public bool Searchable { get; set; }
@@ -19,6 +20,7 @@ namespace PubSysLayout.Shared.SQLCatalog
         public bool MultiLine { get; set; }
         public int MaxLength { get; set; }
         public bool Multival { get; set; }
+        public bool ParseMultival { get; set; }
         public int Width { get; set; }
         public int Height { get; set; }
 

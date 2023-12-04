@@ -190,6 +190,14 @@ namespace PubSysLayout.Server.Controllers
             }
         }
 
+        [HttpGet("tabpages")]
+        public IEnumerable<KeyValuePair<int, string>> GetTabPage(string database, int id_form)
+        {
+            return GetData($"SELECT id_tabpage, name FROM FormControlsTabPages WHERE id_form = {id_form} ORDER BY id_tabpage", database)
+                .AsEnumerable()
+                .Select(dr => new KeyValuePair<int, string>(dr.Field<int>("id_tabpage"), dr.Field<string>("name")));
+        }
+
         [HttpPut]
         public IActionResult UpdateRow(UpdateRow update)
         {
@@ -272,7 +280,7 @@ namespace PubSysLayout.Server.Controllers
                     .Select(kv =>
                     {
                         var fc = formControls.Single(fc => fc.IdFControl == kv.Key);
-                        if (fc.Multival/*Field<bool>("parse_multival") !!!!!*/)
+                        if (fc.Multival && fc.ParseMultival)
                         {
                             return $"fi.id_item IN (SELECT fif.id_item FROM FormItemFieldsMultival mv JOIN FormItemFields fif ON mv.id_field=fif.id_field WHERE fif.id_fcontrol={kv.Key} AND mv.intvalue={kv.Value})";
                         }
