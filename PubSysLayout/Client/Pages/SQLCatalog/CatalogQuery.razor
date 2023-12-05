@@ -479,7 +479,8 @@
                 await DialogService.ShowMessageBox("Error", "Incompatible row format");
                 return;
             }
-            parameters.Add("IdItem", 0); 
+            parameters.Add("IdItem", 0);
+            parameters.Add("Released", false);
             parameters.Add("SourceRow", row);
             row = null;
             clipboard.Content = null;
@@ -487,6 +488,7 @@
         else
         {
             parameters.Add("IdItem", row != null ? row[0] : 0);
+            parameters.Add("Released", row != null ? (bool)row[1] : false);
         }
 
         parameters.Add("Query", query);
@@ -494,7 +496,7 @@
         parameters.Add("ListControlData", listControlData);
 
         mudTable.SelectedItem = row;
-        var result = await DialogService.Show<EditRowDialog>($"{query.Database} - {catList.Single(kv => kv.Key == query.IdForm).Value}{(copy ? " - copy row" : (row == null ? " - new row" : " - edit row"))}", parameters, options).Result;
+        var result = await DialogService.Show<EditRowDialog>($"{query.Database} - {catList.Single(kv => kv.Key == query.IdForm).Value}{(copy ? " - copy" : (row == null ? " - new" : " - edit " + row[0]))}", parameters, options).Result;
         if (!result.Canceled)
         {
             var updrow = (object[])result.Data;
