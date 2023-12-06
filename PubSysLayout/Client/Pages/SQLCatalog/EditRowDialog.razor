@@ -33,7 +33,7 @@
     }
 
     .editRowContainer {
-        max-height: calc(100vh - 360px);
+        max-height: calc(100vh - 365px);
         min-height: 50vh;
         overflow-y: scroll;
         padding-right: 12px;
@@ -57,7 +57,7 @@
     </TitleContent>
     <DialogContent>
         <div class="d-flex">
-            <MudSwitch Label="Released" Color="Color.Info" T="bool" Class="ml-4" @bind-Checked="Released" Disabled="@(IdItem <= 0)"/>
+            <MudSwitch Label="Released" Color="Color.Info" T="bool" Class="ml-4" @bind-Checked="Released" Disabled="@(false/*IdItem <= 0*/)"/>
             <MudSpacer></MudSpacer>
             <MudTextField DebounceInterval="300" @bind-Value="searchField" Placeholder="Search field" Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.End" AdornmentColor="Color.Info" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0 mb-4 ml-auto mr-2 flex-grow-0" Clearable="true" Style="width:350px" />
         </div>
@@ -134,6 +134,10 @@
                                             </MudTimePicker>
                                         </div>
                                     }
+                                    else if(fc.DataType == 5)
+                                    {
+                                        <Image IdFile="@((int?)val??0)" ServerName="@serverName" />
+                                    }
                                     else if (type == typeof(int))
                                     {
                                         <MudNumericField @key="p" Class="smallFieldEdit" Value="@((int?)val)" ValueChanged="(v) => editRow[p] = v" Label="@(fc.Title)" Variant="Variant.Text" T="int?" ReadOnly="@(false)" Required="@(fc.Required)" RequiredError='@($"{fc.Title} is  required")'></MudNumericField>
@@ -186,8 +190,11 @@
 
     private string searchField = "";
 
+    private string serverName = "";
+
     protected override async Task OnInitializedAsync()
     {
+        serverName = await Http.GetStringAsync($"api/sqlcatalog/servername?database={Query.Database}");
         await LoadTabPages();
         await LoadRow();
     }
@@ -261,7 +268,8 @@
                 IdForm = Query.IdForm,
                 IdItem = IdItem,
                 Row = editRow,
-                Include = Query.Include
+                Include = Query.Include,
+                Released = Released
             }));
 
         if (!response.IsSuccessStatusCode)

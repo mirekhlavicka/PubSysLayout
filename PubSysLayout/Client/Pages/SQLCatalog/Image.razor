@@ -1,0 +1,9 @@
+﻿@if (IdFile > 0)
+{    <div style="width:350px; margin:20px;display:inline-block">    
+        <img src="@($"https://{ServerName}/getthumbnail.aspx?q=60&crop=0&h=300&w=300&id_file={IdFile}")" />
+    </div>
+}
+@code {
+    [Parameter] public int IdFile { get; set; }
+    [Parameter] public string ServerName { get; set; }
+}

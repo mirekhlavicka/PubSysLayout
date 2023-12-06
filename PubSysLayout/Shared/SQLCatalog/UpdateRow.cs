@@ -12,6 +12,7 @@ namespace PubSysLayout.Shared.SQLCatalog
         public int IdForm { get; set; }
         public int IdItem { get; set; }        
         public object[] Row { get; set; }
+        public bool Released { get; set; }
         public HashSet<int> Include { get; set; }
     }
 }

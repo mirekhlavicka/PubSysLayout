@@ -133,7 +133,7 @@ namespace PubSysLayout.Server.Controllers
 
         [HttpGet("formitem")]
         public object[] GetFormItem(string database, int id_form, int id_item)
-        {
+        {           
             var data = GetData(@$"
                     SELECT
                         fc.id_fcontrol, fc.datatype, fif.strvalue, fif.intvalue, fif.numvalue, fif.moneyvalue, fif.datevalue, fif.richvalue
@@ -218,6 +218,10 @@ namespace PubSysLayout.Server.Controllers
                 }
 
                 SetFormData(update, formControls);
+                if (update.IdItem > 0)
+                {
+                    SetFormItemReleaseState(update.Database, update.IdItem, update.Released);
+                }
 
                 return Run(new Query
                 {
@@ -242,6 +246,13 @@ namespace PubSysLayout.Server.Controllers
         {
             DelCatalogItem(database, id_item);
             return NoContent();
+        }
+
+        [HttpGet("servername")]
+        public string GetDefaultDB(string database)
+        {
+            using var conn = new SqlConnection(String.Format(_configuration.GetConnectionString("PubSysDefault"), database));
+            return (string)GetData("SELECT TOP 1 server_name FROM ServerNames WHERE [default] = 1", conn).Rows[0][0];
         }
 
 
@@ -490,5 +501,43 @@ namespace PubSysLayout.Server.Controllers
                 cmd.Dispose();
             }
         }
+
+        private void SetFormItemReleaseState(string database, int id_item, bool released)
+        {
+            SqlConnection conn = new SqlConnection(String.Format(_configuration.GetConnectionString("PubSysDefault"), database));
+            SqlCommand cmd = new SqlCommand("spAdminSetFormItemReleaseState;1");
+            try
+            {
+                cmd.Parameters.Add(new SqlParameter("@id_server", SqlDbType.Int));
+                cmd.Parameters.Add(new SqlParameter("@id_user", SqlDbType.Int));
+                cmd.Parameters.Add(new SqlParameter("@id_language", SqlDbType.Int));
+                cmd.Parameters.Add(new SqlParameter("@id_item", SqlDbType.Int));
+                cmd.Parameters.Add(new SqlParameter("@released", SqlDbType.Bit));
+
+                cmd.Parameters["@id_user"].Value = 1;
+                cmd.Parameters["@id_server"].Value = 1;
+                cmd.Parameters["@id_language"].Value = 1029;
+                cmd.Parameters["@id_item"].Value = id_item;
+                cmd.Parameters["@released"].Value = released;
+
+                if (conn.State == ConnectionState.Closed)
+                {
+                    conn.Open();
+                }
+                cmd.Connection = conn;
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.ExecuteNonQuery();
+            }
+            finally
+            {
+                if (conn.State == ConnectionState.Open)
+                {
+                    conn.Close();
+                }
+                conn.Dispose();
+                cmd.Dispose();
+            }
+        }
+
     }
 }
