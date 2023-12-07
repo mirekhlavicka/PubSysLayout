@@ -1,4 +1,5 @@
 ﻿@using System.Net
+@using PubSysLayout.Shared.Files
 
 @inject HttpClient Http
 @inject IJSRuntime js
@@ -15,7 +16,6 @@
             </MudIconButton>
         </ButtonTemplate>
     </MudFileUpload>
-    @file?.Name,
     @ImgUrl
     @if (IdFile > 0)
     {
@@ -34,34 +34,34 @@
         //files.Add(file);
         //TODO upload the files to the server
 
-        if (file != null)
+        var fileData = new FileData();
+        var buffers = new byte[file.Size];
+        await file.OpenReadStream(maxAllowedSize: 5120000).ReadAsync(buffers);
+        fileData.FileName = file.Name;
+        fileData.FileSize = file.Size;
+        fileData.FileType = file.ContentType;
+        fileData.ImageBytes = buffers;
+
+        var res = await Http.PostAsJsonAsync($"api/sqlcatalog/savefile?serverName={ServerName}", fileData);
+
+        if (res.IsSuccessStatusCode)
         {
-            //var fileInfo = await file.ReadFileInfoAsync();
-            //using (var ms = await file.CreateMemoryStreamAsync(4 * 1024))
-            {
-                /*var buffers = new byte[file.Size];
-                await file.OpenReadStream(maxAllowedSize: 5120000).ReadAsync(buffers);
-                fileData.FileName = file.Name;
-                fileData.FileSize = file.Size;
-                fileData.FileType = file.ContentType;
-                fileData.ImageBytes = buffers;*/
-
-
-                var content = new MultipartFormDataContent();
-                content.Headers.ContentDisposition = new System.Net.Http.Headers.ContentDispositionHeaderValue("form-data");
-                content.Add(/*new StreamContent(ms, Convert.ToInt32(ms.Length))*/new StreamContent(file.OpenReadStream(5120000)), "image", file.Name);
-                ImgUrl = await UploadProductImage(content);
-                //await OnChange.InvokeAsync(ImgUrl);
-            }
+            ImgUrl = await res.Content.ReadAsStringAsync();
+            IdFile = Int32.Parse(ImgUrl.Split(":")[0]);
+            StateHasChanged();
         }
-
 
         this.file = file;
     }
 
     public async Task<string> UploadProductImage(MultipartFormDataContent content)
     {
-        //xhr.open("POST", "<%# ResolveUrl("~/PubSystem.Controls.Admin.Files/Upload.ashx")+"?nozip=1&id_user="+IdUser %>", true);
+        // var content = new MultipartFormDataContent();
+        // content.Headers.ContentDisposition = new System.Net.Http.Headers.ContentDispositionHeaderValue("form-data");
+        // content.Add(/*new StreamContent(ms, Convert.ToInt32(ms.Length))*/new StreamContent(file.OpenReadStream(5120000)), "image", file.Name);
+        // ImgUrl = await UploadProductImage(content);
+
+
         var postResult = await Http.PostAsync($"https://{ServerName}/siteadmin1/PubSystem.Controls.Admin.Files/Upload.ashx?nozip=1&id_user=1", content);
         var postContent = await postResult.Content.ReadAsStringAsync();
         if (!postResult.IsSuccessStatusCode)

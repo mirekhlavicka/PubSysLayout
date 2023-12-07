@@ -7,6 +7,8 @@ using Query = PubSysLayout.Shared.SQLCatalog.Query;
 using PubSysLayout.Shared.SQLCatalog;
 using Microsoft.Extensions.Caching.Memory;
 using System.Text.Json;
+using PubSysLayout.Shared.Files;
+using static System.Net.WebRequestMethods;
 
 namespace PubSysLayout.Server.Controllers
 {
@@ -255,6 +257,30 @@ namespace PubSysLayout.Server.Controllers
             return (string)GetData("SELECT TOP 1 server_name FROM ServerNames WHERE [default] = 1", conn).Rows[0][0];
         }
 
+        [HttpPost("savefile")]
+        public string SaveFile(string serverName, FileData fileData)
+        {
+            var content = new MultipartFormDataContent();
+            content.Headers.ContentDisposition = new System.Net.Http.Headers.ContentDispositionHeaderValue("form-data");
+            content.Add(/*new StreamContent(ms, Convert.ToInt32(ms.Length))*/new StreamContent(new MemoryStream(fileData.ImageBytes)), "image", fileData.FileName);
+
+            using var httpClient = httpClientFactory.CreateClient() ;
+
+            var postResult = httpClient.PostAsync($"https://{serverName}/siteadmin1/PubSystem.Controls.Admin.Files/Upload.ashx?nozip=1&id_user=1", new StreamContent(new MemoryStream(fileData.ImageBytes))/*content*/).Result;
+            var postContent = postResult.Content.ReadAsStringAsync().Result;
+            /*if (!postResult.IsSuccessStatusCode)
+            {
+                throw new ApplicationException(postContent);
+            }
+            else
+            {
+                var imgUrl = postContent;// Path.Combine("https://localhost:5011/", postContent);
+                return imgUrl;
+            }*/
+
+
+            return postContent;//serverName + "/" + fileData.FileName;
+        }
 
         private string BuildSQL(Query query, FormControl[] formControls)
         {
