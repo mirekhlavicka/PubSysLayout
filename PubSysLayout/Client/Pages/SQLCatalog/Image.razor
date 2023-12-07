@@ -1,9 +1,77 @@
-﻿@if (IdFile > 0)
-{    <div style="width:350px; margin:20px;display:inline-block">    
+﻿@using System.Net
+
+@inject HttpClient Http
+@inject IJSRuntime js
+@inject MudBlazor.ISnackbar snackBar
+
+
+<div style="width:350px; height: 350px; margin:20px;display:inline-block">
+    <MudFileUpload T="IBrowserFile" FilesChanged="UploadFiles">
+        <ButtonTemplate>
+            <MudIconButton HtmlTag="label"
+                           Color="Color.Info"
+                           Icon="@Icons.Material.Filled.PhotoCamera"
+                           for="@context.Id">
+            </MudIconButton>
+        </ButtonTemplate>
+    </MudFileUpload>
+    @file?.Name,
+    @ImgUrl
+    @if (IdFile > 0)
+    {
         <img src="@($"https://{ServerName}/getthumbnail.aspx?q=60&crop=0&h=300&w=300&id_file={IdFile}")" />
-    </div>
-}
+    }
+</div>
 @code {
     [Parameter] public int IdFile { get; set; }
     [Parameter] public string ServerName { get; set; }
+
+    IBrowserFile file = null;
+    string ImgUrl = "";
+
+    async private void UploadFiles(IBrowserFile file)
+    {
+        //files.Add(file);
+        //TODO upload the files to the server
+
+        if (file != null)
+        {
+            //var fileInfo = await file.ReadFileInfoAsync();
+            //using (var ms = await file.CreateMemoryStreamAsync(4 * 1024))
+            {
+                /*var buffers = new byte[file.Size];
+                await file.OpenReadStream(maxAllowedSize: 5120000).ReadAsync(buffers);
+                fileData.FileName = file.Name;
+                fileData.FileSize = file.Size;
+                fileData.FileType = file.ContentType;
+                fileData.ImageBytes = buffers;*/
+
+
+                var content = new MultipartFormDataContent();
+                content.Headers.ContentDisposition = new System.Net.Http.Headers.ContentDispositionHeaderValue("form-data");
+                content.Add(/*new StreamContent(ms, Convert.ToInt32(ms.Length))*/new StreamContent(file.OpenReadStream(5120000)), "image", file.Name);
+                ImgUrl = await UploadProductImage(content);
+                //await OnChange.InvokeAsync(ImgUrl);
+            }
+        }
+
+
+        this.file = file;
+    }
+
+    public async Task<string> UploadProductImage(MultipartFormDataContent content)
+    {
+        //xhr.open("POST", "<%# ResolveUrl("~/PubSystem.Controls.Admin.Files/Upload.ashx")+"?nozip=1&id_user="+IdUser %>", true);
+        var postResult = await Http.PostAsync($"https://{ServerName}/siteadmin1/PubSystem.Controls.Admin.Files/Upload.ashx?nozip=1&id_user=1", content);
+        var postContent = await postResult.Content.ReadAsStringAsync();
+        if (!postResult.IsSuccessStatusCode)
+        {
+            throw new ApplicationException(postContent);
+        }
+        else
+        {
+            var imgUrl = postContent;// Path.Combine("https://localhost:5011/", postContent);
+            return imgUrl;
+        }
+    }
 }
