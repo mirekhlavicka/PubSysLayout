@@ -5,29 +5,54 @@
 @inject IJSRuntime js
 @inject MudBlazor.ISnackbar snackBar
 
+<div class="imgItem border-0">
+    @if (IdFile > 0)
+    {
+        <MudIconButton Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" Class="btnRemoveImage" OnClick="@(async _ => {IdFile = 0; await IdFileChanged.InvokeAsync(IdFile);})" />
+    }
+    <MudText Typo="Typo.caption">@Title</MudText>
 
-<div style="width:350px; height: 350px; margin:20px;display:inline-block">
-    <MudFileUpload T="IBrowserFile" FilesChanged="UploadFiles">
+    <MudFileUpload T="IBrowserFile" FilesChanged="UploadFiles"
+                    Hidden="@false"
+                    InputClass="absolute mud-width-full mud-height-full overflow-hidden z-20"
+                   InputStyle="opacity:0; cursor: pointer"
+                    title="Drag and drop file here or click"
+                    @ondragenter="@SetDragClass"
+                    @ondragleave="@ClearDragClass"
+                    @ondragend="@ClearDragClass">
         <ButtonTemplate>
-            <MudIconButton HtmlTag="label"
+            <MudPaper Height="330px" Outlined="true" Class="@_dragClass">
+                @if (IdFile > 0)
+                {
+                    <img src="@($"https://{ServerName}/getthumbnail.aspx?q=60&crop=0&h=300&w=300&id_file={IdFile}")" />
+                }
+            </MudPaper>
+@*             <MudIconButton HtmlTag="label"
                            Color="Color.Info"
                            Icon="@Icons.Material.Filled.PhotoCamera"
                            for="@context.Id">
             </MudIconButton>
-        </ButtonTemplate>
+ *@        </ButtonTemplate>
     </MudFileUpload>
-    @ImgUrl
-    @if (IdFile > 0)
-    {
-        <img src="@($"https://{ServerName}/getthumbnail.aspx?q=60&crop=0&h=300&w=300&id_file={IdFile}")" />
-    }
 </div>
 @code {
     [Parameter] public int IdFile { get; set; }
+
+    [Parameter]
+    public EventCallback<int> IdFileChanged { get; set; }
+
+    [Parameter]
+    public string Title { get; set; }
+
+
     [Parameter] public string ServerName { get; set; }
 
-    IBrowserFile file = null;
-    string ImgUrl = "";
+    private const string DefaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mt-1 mud-width-full mud-height-full z-10 imgContainer";
+    private string _dragClass = DefaultDragClass;
+
+
+    // IBrowserFile file = null;
+    // string ImgUrl = "";
 
     async private void UploadFiles(IBrowserFile file)
     {
@@ -46,32 +71,39 @@
 
         if (res.IsSuccessStatusCode)
         {
-            ImgUrl = await res.Content.ReadAsStringAsync();
-            IdFile = Int32.Parse(ImgUrl.Split(":")[0]);
+            var tmp = await res.Content.ReadAsStringAsync();
+            IdFile = Int32.Parse(tmp.Split(":")[0]);
             StateHasChanged();
+            await IdFileChanged.InvokeAsync(IdFile);
         }
 
-        this.file = file;
+        //this.file = file;
     }
 
-    public async Task<string> UploadProductImage(MultipartFormDataContent content)
-    {
-        // var content = new MultipartFormDataContent();
-        // content.Headers.ContentDisposition = new System.Net.Http.Headers.ContentDispositionHeaderValue("form-data");
-        // content.Add(/*new StreamContent(ms, Convert.ToInt32(ms.Length))*/new StreamContent(file.OpenReadStream(5120000)), "image", file.Name);
-        // ImgUrl = await UploadProductImage(content);
+    private void SetDragClass()
+        => _dragClass = $"{DefaultDragClass} mud-border-primary";
+
+    private void ClearDragClass()
+        => _dragClass = DefaultDragClass;
+
+    // public async Task<string> UploadProductImage(MultipartFormDataContent content)
+    // {
+    //     // var content = new MultipartFormDataContent();
+    //     // content.Headers.ContentDisposition = new System.Net.Http.Headers.ContentDispositionHeaderValue("form-data");
+    //     // content.Add(/*new StreamContent(ms, Convert.ToInt32(ms.Length))*/new StreamContent(file.OpenReadStream(5120000)), "image", file.Name);
+    //     // ImgUrl = await UploadProductImage(content);
 
 
-        var postResult = await Http.PostAsync($"https://{ServerName}/siteadmin1/PubSystem.Controls.Admin.Files/Upload.ashx?nozip=1&id_user=1", content);
-        var postContent = await postResult.Content.ReadAsStringAsync();
-        if (!postResult.IsSuccessStatusCode)
-        {
-            throw new ApplicationException(postContent);
-        }
-        else
-        {
-            var imgUrl = postContent;// Path.Combine("https://localhost:5011/", postContent);
-            return imgUrl;
-        }
-    }
+    //     var postResult = await Http.PostAsync($"https://{ServerName}/siteadmin1/PubSystem.Controls.Admin.Files/Upload.ashx?nozip=1&id_user=1", content);
+    //     var postContent = await postResult.Content.ReadAsStringAsync();
+    //     if (!postResult.IsSuccessStatusCode)
+    //     {
+    //         throw new ApplicationException(postContent);
+    //     }
+    //     else
+    //     {
+    //         var imgUrl = postContent;// Path.Combine("https://localhost:5011/", postContent);
+    //         return imgUrl;
+    //     }
+    // }
 }
