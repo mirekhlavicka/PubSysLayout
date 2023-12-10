@@ -1,0 +1,27 @@
+﻿.imgItem {
+    width: 350px;
+    height: 400px;
+    margin: 10px;
+    display: inline-block;
+    overflow: hidden;
+    position: relative
+}
+
+::deep.imgItem .imgContainer {
+    /*text-align: center;*/
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/*.imgContainer img {
+                margin: auto;
+                display: block;
+            }*/
+
+::deep .btnRemoveImage {
+    z-index: 100;
+    position: absolute;
+    right: -10px;
+    top: -10px
+}
