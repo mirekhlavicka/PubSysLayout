@@ -8,7 +8,8 @@
 <div class="imgItem border-0">
     @if (IdFile > 0)
     {
-        <MudIconButton Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" Class="btnRemoveImage" OnClick="@(async _ => {IdFile = 0; await IdFileChanged.InvokeAsync(IdFile);})" />
+        <MudIconButton Href="@($"https://{ServerName}/getfile.aspx?id_file={IdFile}")" Title="Show full image" Target="_blank" Icon="@Icons.Material.Filled.Forward" Color="Color.Primary" Size="Size.Medium" Class="btnShowImage" />
+        <MudIconButton Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" Class="btnRemoveImage" OnClick="@(async _ => {IdFile = 0; await IdFileChanged.InvokeAsync(IdFile);})" Title="Remove image" />
     }
     <MudText Typo="Typo.caption">@Title</MudText>
 
@@ -24,7 +25,11 @@
             <MudPaper Height="330px" Outlined="true" Class="@_dragClass">
                 @if (IdFile > 0)
                 {
-                    <img src="@($"https://{ServerName}/getthumbnail.aspx?q=60&crop=0&h=300&w=300&id_file={IdFile}")" />
+                    <MudImage Src="@($"https://{ServerName}/getthumbnail.aspx?q=60&crop=0&h=300&w=350&id_file={IdFile}")" />
+                }
+                else if(uploading)
+                {
+                    <MudProgressCircular Color="Color.Info" Indeterminate="true" />
                 }
             </MudPaper>
 @*             <MudIconButton HtmlTag="label"
@@ -49,6 +54,7 @@
 
     private const string DefaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mt-1 mud-width-full mud-height-full z-10 imgContainer";
     private string _dragClass = DefaultDragClass;
+    private bool uploading = false;
 
 
     // IBrowserFile file = null;
@@ -58,6 +64,9 @@
     {
         //files.Add(file);
         //TODO upload the files to the server
+
+        uploading = true;
+        //StateHasChanged();
 
         var fileData = new FileData();
         var buffers = new byte[file.Size];
@@ -72,10 +81,13 @@
         if (res.IsSuccessStatusCode)
         {
             var tmp = await res.Content.ReadAsStringAsync();
-            IdFile = Int32.Parse(tmp.Split(":")[0]);
-            StateHasChanged();
+            IdFile = Int32.Parse(tmp.Split(":")[0]);                        
             await IdFileChanged.InvokeAsync(IdFile);
         }
+
+        uploading = false;
+        ClearDragClass();
+        StateHasChanged();
 
         //this.file = file;
     }
