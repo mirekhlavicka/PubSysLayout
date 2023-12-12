@@ -9,6 +9,7 @@ using Microsoft.Extensions.Caching.Memory;
 using System.Text.Json;
 using PubSysLayout.Shared.Files;
 using static System.Net.WebRequestMethods;
+using FileInfo = PubSysLayout.Shared.SQLCatalog.FileInfo;
 
 namespace PubSysLayout.Server.Controllers
 {
@@ -160,6 +161,33 @@ namespace PubSysLayout.Server.Controllers
                 }).ToArray();
         }
 
+        [HttpGet("formitemfiles")]
+        public Dictionary<int, FileInfo> GetFormItemFiles(string database, int id_item)
+        {
+            var data = GetData(@$"
+                        SELECT
+	                        f.*
+                        FROM
+                            FormItemFields fif JOIN
+                            Files f ON fif.intvalue = f.id_file
+                        WHERE
+                            fif.id_item = {id_item}", database)
+                .AsEnumerable();
+
+            return data.ToDictionary(dr => dr.Field<int>("id_file"), dr =>
+            {
+                string[] tmp = dr.Field<string>("description").Split("[br]");
+
+                return new FileInfo
+                {
+                    Width = dr.Field<int>("width"),
+                    Height = dr.Field<int>("height"),
+                    Description = tmp[0],
+                    Licence  = tmp.Length == 2 ? tmp[1] : ""
+                };
+            });
+        }
+
         [HttpGet("listcontroldata")]
         public Dictionary<int, ListControlData> GetListControlData(string database, int id_form, string serverName)
         {
@@ -260,26 +288,14 @@ namespace PubSysLayout.Server.Controllers
         [HttpPost("savefile")]
         public string SaveFile(string serverName, FileData fileData)
         {
-            var content = new MultipartFormDataContent();
+            /*var content = new MultipartFormDataContent();
             content.Headers.ContentDisposition = new System.Net.Http.Headers.ContentDispositionHeaderValue("form-data");
-            content.Add(/*new StreamContent(ms, Convert.ToInt32(ms.Length))*/new StreamContent(new MemoryStream(fileData.ImageBytes)), "image", fileData.FileName);
+            content.Add(new StreamContent(new MemoryStream(fileData.ImageBytes)), "image", fileData.FileName);*/
 
             using var httpClient = httpClientFactory.CreateClient() ;
-
             var postResult = httpClient.PostAsync($"https://{serverName}/siteadmin1/PubSystem.Controls.Admin.Files/Upload.ashx?nozip=1&id_user=1", new StreamContent(new MemoryStream(fileData.ImageBytes))/*content*/).Result;
             var postContent = postResult.Content.ReadAsStringAsync().Result;
-            /*if (!postResult.IsSuccessStatusCode)
-            {
-                throw new ApplicationException(postContent);
-            }
-            else
-            {
-                var imgUrl = postContent;// Path.Combine("https://localhost:5011/", postContent);
-                return imgUrl;
-            }*/
-
-
-            return postContent;//serverName + "/" + fileData.FileName;
+            return postContent;
         }
 
         private string BuildSQL(Query query, FormControl[] formControls)
