@@ -54,6 +54,7 @@
             <MudIcon Icon="@Icons.Material.Filled.Edit" Class="mr-3 mb-n1" />
             @MudDialog.Title
         </MudText>
+        <MudIconButton aria-label="close" Icon="@Icons.Material.Filled.Close" @onclick="Close" Style="top: 8px;right: 8px;position: absolute;" />
     </TitleContent>
     <DialogContent>
         <div class="d-flex">
@@ -91,7 +92,7 @@
                                     if (fc.Multival && type == typeof(string))
                                     {
                                         <div class="@(fc.Width < 400 ? "smallFieldEdit" : "longFieldEdit")" @key="@p">
-                                            <MudSelect MultiSelection="true" SelectAll="true" SelectedValues="@(((string)val)?.Split(',').Select(v => v.Trim()).Where(v => !String.IsNullOrEmpty(v)))" SelectedValuesChanged='(v) => editRow[p] = String.Join(", ", v) ' Label="@fc.Title" Variant="Variant.Text" T="string" Clearable="true" ToStringFunc="(v) => ListControlData[fc.IdFControl][v]" AnchorOrigin="Origin.BottomCenter">
+                                            <MudSelect MultiSelection="true" SelectAll="true" SelectedValues="@(((string)val)?.Split(',').Select(v => v.Trim()).Where(v => !String.IsNullOrEmpty(v)))" SelectedValuesChanged='(v) => ChangeVal(p, String.Join(", ", v)) ' Label="@fc.Title" Variant="Variant.Text" T="string" Clearable="true" ToStringFunc="(v) => ListControlData[fc.IdFControl][v]" AnchorOrigin="Origin.BottomCenter">
                                                 @foreach (var li in ListControlData[fc.IdFControl].Items/*.Where(li => !String.IsNullOrEmpty(li.Value))*/)
                                                 {
                                                     <MudSelectItem Value="@li.Value">@li.Text</MudSelectItem>
@@ -102,7 +103,7 @@
                                     else if (new int[] { 2, 3, 4, 5 }.Contains(fc.IdControl) && type == typeof(string))
                                     {
                                         <div class="@(fc.Width < 400 ? "smallFieldEdit" : "longFieldEdit")" @key="@p">
-                                            <MudSelect Value="@((string)val)" ValueChanged="(v) => editRow[p] = v" Label="@fc.Title" Variant="Variant.Text" T="string" Clearable="true" ToStringFunc="(v) => ListControlData[fc.IdFControl][v]" AnchorOrigin="Origin.BottomCenter" Required="@(fc.Required)" RequiredError='@($"{fc.Title} is  required")'>
+                                            <MudSelect Value="@((string)val)" ValueChanged="(v) => ChangeVal(p, v)" Label="@fc.Title" Variant="Variant.Text" T="string" Clearable="true" ToStringFunc="(v) => ListControlData[fc.IdFControl][v]" AnchorOrigin="Origin.BottomCenter" Required="@(fc.Required)" RequiredError='@($"{fc.Title} is  required")'>
                                                 @foreach (var li in ListControlData[fc.IdFControl].Items/*.Where(li => !String.IsNullOrEmpty(li.Value))*/)
                                                 {
                                                     <MudSelectItem Value="@li.Value">@li.Text</MudSelectItem>
@@ -117,38 +118,38 @@
                                             <div style="display:flex;margin-bottom:-8px"><MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.EditNote" Color="Color.Primary" OnClick="@(async () => await CodeEdit(p))" Title="Edit content" Class="ml-auto"></MudIconButton></div>
                                         }
 
-                                        <MudTextField @key="p" Class='@(fc.MultiLine || fc.DataType == 10 ? "multiLineEdit": (fc.Width < 400 ? "smallFieldEdit" : "longFieldEdit"))' Variant="@(fc.MultiLine || fc.DataType == 10 ? Variant.Outlined : Variant.Text)" Value="@((string)val)" ValueChanged="(v) => editRow[p] = v" T="string" Label="@(fc.Title)" T="string" ReadOnly="@(false)" MaxLength="@(fc.MaxLength > 0 ? fc.MaxLength : 524288)" Lines="@(fc.MultiLine || fc.DataType == 10 ? 5 : 1)"></MudTextField>
+                                        <MudTextField @key="p" Class='@(fc.MultiLine || fc.DataType == 10 ? "multiLineEdit": (fc.Width < 400 ? "smallFieldEdit" : "longFieldEdit"))' Variant="@(fc.MultiLine || fc.DataType == 10 ? Variant.Outlined : Variant.Text)" Value="@((string)val)" ValueChanged="(v) => ChangeVal(p, v)" T="string" Label="@(fc.Title)" T="string" ReadOnly="@(false)" MaxLength="@(fc.MaxLength > 0 ? fc.MaxLength : 524288)" Lines="@(fc.MultiLine || fc.DataType == 10 ? 5 : 1)" Required="@(fc.Required)" RequiredError='@($"{fc.Title} is  required")'></MudTextField>
                                     }
                                     else if (type == typeof(DateTime))
                                     {
                                         <div>
-                                            <MudDatePicker @key="p" @ref="datePickers[fc.IdFControl]" AutoClose="true" Editable="true" Placeholder="Select Date" Date="@(((DateTime?)val)?.Date)" DateChanged="(v) => {editRow[p] = v.HasValue ? (v.Value.Date).Add(((DateTime?)editRow[p])?.TimeOfDay ?? new TimeSpan(0)) : null;}" Label="@(fc.Title)" Variant="Variant.Text" ReadOnly="@(false)" Class="smallFieldEdit" Required="@(fc.Required)" RequiredError='@($"{fc.Title} is  required")'>
+                                            <MudDatePicker @key="p" @ref="datePickers[fc.IdFControl]" AutoClose="true" Editable="true" Placeholder="Select Date" Date="@(((DateTime?)val)?.Date)" DateChanged="(v) => {ChangeVal(p,  v.HasValue ? (v.Value.Date).Add(((DateTime?)editRow[p])?.TimeOfDay ?? new TimeSpan(0)) : null);}" Label="@(fc.Title)" Variant="Variant.Text" ReadOnly="@(false)" Class="smallFieldEdit" Required="@(fc.Required)" RequiredError='@($"{fc.Title} is  required")'>
                                                 <PickerActions>
-                                                    <MudButton Class="mr-auto align-self-start" OnClick="@(() => {editRow[p] = (DateTime.Today).Add(((DateTime?)editRow[p])?.TimeOfDay ?? new TimeSpan(0)); datePickers[fc.IdFControl].Close(); })">Today</MudButton>
+                                                    <MudButton Class="mr-auto align-self-start" OnClick="@(() => {ChangeVal(p, (DateTime.Today).Add(((DateTime?)editRow[p])?.TimeOfDay ?? new TimeSpan(0))); datePickers[fc.IdFControl].Close(); })">Today</MudButton>
                                                 </PickerActions>
                                             </MudDatePicker>
-                                            <MudTimePicker @key="p+1000" @ref="timePickers[fc.IdFControl]" AutoClose="true" Editable="true" Placeholder="Select Time" Time="@(((DateTime?)val)?.TimeOfDay)" TimeChanged="(v) => {if(v.HasValue) editRow[p] = ((DateTime?)editRow[p])?.Date.Add(v.Value); }" Variant="Variant.Text" ReadOnly="@(false)" Class="smallFieldEdit" Disabled="@(editRow[p] == null)">
+                                            <MudTimePicker @key="p+1000" @ref="timePickers[fc.IdFControl]" AutoClose="true" Editable="true" Placeholder="Select Time" Time="@(((DateTime?)val)?.TimeOfDay)" TimeChanged="(v) => {if(v.HasValue) ChangeVal(p, ((DateTime?)editRow[p])?.Date.Add(v.Value)); }" Variant="Variant.Text" ReadOnly="@(false)" Class="smallFieldEdit" Disabled="@(editRow[p] == null)">
                                                 <PickerActions>
-                                                    <MudButton Class="mr-auto align-self-start" OnClick="@(() => {editRow[p] = ((DateTime?)editRow[p])?.Date.Add(DateTime.Now.TimeOfDay); timePickers[fc.IdFControl].Close(); })">Now</MudButton>
+                                                    <MudButton Class="mr-auto align-self-start" OnClick="@(() => {ChangeVal(p, ((DateTime?)editRow[p])?.Date.Add(DateTime.Now.TimeOfDay)); timePickers[fc.IdFControl].Close(); })">Now</MudButton>
                                                 </PickerActions>
                                             </MudTimePicker>
                                         </div>
                                     }
                                     else if(fc.DataType == 5)
                                     {
-                                        <Image IdFile="@((int?)val??0)" IdFileChanged="(v) => editRow[p] = v" ServerName="@serverName" Title="@(fc.Title)" FileInfo="@(fileInfo.ContainsKey((int)val) ? fileInfo[(int)val] : null)" />
+                                        <Image @key="p" IdFile="@((int?)val??0)" IdFileChanged="(v) => ChangeVal(p, v)" FileInfoChanged='(fi => {fileInfo[(int)(editRow[p])] = fi;  Console.WriteLine($" {editRow[p]} = {fileInfo[(int)(editRow[p])]?.Width}/{fi?.Width}");})' ServerName="@serverName" Title="@(fc.Title)" FileInfo="@(fileInfo.ContainsKey((int)val) ? fileInfo[(int)val] : null)" />
                                     }
                                     else if (type == typeof(int))
                                     {
-                                        <MudNumericField @key="p" Class="smallFieldEdit" Value="@((int?)val)" ValueChanged="(v) => editRow[p] = v" Label="@(fc.Title)" Variant="Variant.Text" T="int?" ReadOnly="@(false)" Required="@(fc.Required)" RequiredError='@($"{fc.Title} is  required")'></MudNumericField>
+                                        <MudNumericField @key="p" Class="smallFieldEdit" Value="@((int?)val)" ValueChanged="(v) => ChangeVal(p, v)" Label="@(fc.Title)" Variant="Variant.Text" T="int?" ReadOnly="@(false)" Required="@(fc.Required)" RequiredError='@($"{fc.Title} is  required")'></MudNumericField>
                                     }
                                     else if (type == typeof(decimal))
                                     {
-                                        <MudNumericField @key="p" Class="smallFieldEdit" Value="@((decimal?)val)" Format="n2" ValueChanged="(v) => editRow[p] = v" Label="@(fc.Title)" Variant="Variant.Text" T="decimal?" ReadOnly="@(false)" Required="@(fc.Required)" RequiredError='@($"{fc.Title} is  required")'></MudNumericField>
+                                        <MudNumericField @key="p" Class="smallFieldEdit" Value="@((decimal?)val)" Format="n2" ValueChanged="(v) => ChangeVal(p, v)" Label="@(fc.Title)" Variant="Variant.Text" T="decimal?" ReadOnly="@(false)" Required="@(fc.Required)" RequiredError='@($"{fc.Title} is  required")'></MudNumericField>
                                     }
                                     else
                                     {
-                                        <MudTextField @key="p" Class='@(fc.MultiLine ? "multiLineEdit": "smallFieldEdit")' Variant="@(fc.MultiLine ? Variant.Outlined : Variant.Text)" Value="@((val??"").ToString())" ValueChanged='async (v) => {try{editRow[p] = TypeDescriptor.GetConverter(type).ConvertFrom(v);} catch(Exception exc){await DialogService.ShowMessageBox(" Error", exc.Message);}}' Label="@(fc.Title)" T="string" ReadOnly="@(false)" MaxLength="@(fc.MaxLength > 0 ? fc.MaxLength : 524288)" Lines="@(fc.MultiLine ? 5 : 1)"></MudTextField>
+                                        <MudTextField @key="p" Class='@(fc.MultiLine ? "multiLineEdit": "smallFieldEdit")' Variant="@(fc.MultiLine ? Variant.Outlined : Variant.Text)" Value="@((val??"").ToString())" ValueChanged='async (v) => {try{ChangeVal(p, TypeDescriptor.GetConverter(type).ConvertFrom(v));} catch(Exception exc){await DialogService.ShowMessageBox(" Error", exc.Message);}}' Label="@(fc.Title)" T="string" ReadOnly="@(false)" MaxLength="@(fc.MaxLength > 0 ? fc.MaxLength : 524288)" Lines="@(fc.MultiLine ? 5 : 1)"></MudTextField>
                                     }
                                 }
                             </MudContainer>
@@ -160,8 +161,8 @@
     </DialogContent>
     <DialogActions>
         <MudIconButton Icon="@Icons.Material.Filled.Delete" Color="Color.Secondary" OnClick="Delete" Class="ml-6" Title="Delete row" Disabled="@(IdItem <= 0)"></MudIconButton>
-        <MudButton OnClick="Cancel" Variant="Variant.Filled" Class="ml-auto">Cancel</MudButton>
-        <MudButton Color="Color.Primary" OnClick="OK" Variant="Variant.Filled" accesskey="s" Class="mr-5" Disabled="@(false/*!canSave*/)">Save</MudButton>
+        <MudButton OnClick="Close" Variant="Variant.Filled" Class="ml-auto">Cancel</MudButton>
+        <MudButton Color="@(changes ? Color.Primary : Color.Default)" OnClick="OK" Variant="Variant.Filled" accesskey="s" Class="mr-5" Disabled="@(false/*!canSave*/)">Save</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -188,6 +189,7 @@
 
     MudForm form;
     bool canSave;
+    bool changes = false;
 
     private string searchField = "";
 
@@ -339,13 +341,50 @@
         }
     }
 
+    private void ChangeVal(int p, object val)
+    {
+        editRow[p] = val;
+        changes = true;
+
+        if ((bool)MudDialog.Options.CloseOnEscapeKey)
+        {
+            MudDialog.Options.CloseOnEscapeKey = false;
+            MudDialog.SetOptions(MudDialog.Options);
+        }
+    }
+
     private async Task CodeEdit(int p)
     {
          await codeEdit.EditCode($"{MudDialog.Title}/{FormControls[p].Title}", (string)editRow[p], async (code, _) => { editRow[p] = code; return true; });
     }
 
-    private void Cancel()
+    private bool messageBoxShown = false;
+    private async void Close()
     {
-        MudDialog.Cancel();
+        if (messageBoxShown)
+        {
+            return;
+        }
+
+        if (changes)
+        {
+            messageBoxShown = true;
+            var res = await DialogService.ShowMessageBox(
+                "Unsaved changes",
+                "Are you sure you want to discard the changes ?",
+                yesText: "Discard",  cancelText: "Cancel", options: new DialogOptions { MaxWidth = MaxWidth.Small });
+            messageBoxShown = false;
+
+            if (res == null)
+            {
+                return;
+            }
+
+            MudDialog.Cancel();
+        }
+        else
+        {
+            MudDialog.Cancel();
+        }
     }
 }

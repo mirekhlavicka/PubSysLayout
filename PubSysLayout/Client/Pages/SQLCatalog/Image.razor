@@ -35,26 +35,27 @@
             </MudPaper>
         </ButtonTemplate>
     </MudFileUpload>
-
-    <MudText Typo="Typo.caption">@FileInfo?.Width</MudText> x <MudText Typo="Typo.caption">@FileInfo?.Height</MudText>
-    <div>@((MarkupString)(FileInfo?.Licence))</div>
-
+    <MudText Typo="Typo.caption">@($"{FileInfo?.Width} x {FileInfo?.Height}")</MudText>
+        <div>@((MarkupString)(FileInfo?.Licence))</div>
 </div>
 @code {
-    [Parameter] 
+    [Parameter]
     public int IdFile { get; set; }
 
     [Parameter]
     public EventCallback<int> IdFileChanged { get; set; }
 
     [Parameter]
+    public EventCallback<FileInfo> FileInfoChanged { get; set; }
+
+    [Parameter]
     public string Title { get; set; }
 
-    [Parameter] 
+    [Parameter]
     public string ServerName { get; set; }
 
     [Parameter]
-    public  FileInfo FileInfo { get; set; }
+    public FileInfo FileInfo { get; set; }
 
     private const string DefaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mt-1 mud-width-full mud-height-full z-10 imgContainer";
     private string _dragClass = DefaultDragClass;
@@ -76,9 +77,22 @@
 
         if (res.IsSuccessStatusCode)
         {
-            var tmp = await res.Content.ReadAsStringAsync();
-            IdFile = Int32.Parse(tmp.Split(":")[0]);
+            var s = await res.Content.ReadAsStringAsync();
+            var tmp = s.Split(":");
+            IdFile = Int32.Parse(tmp[0]);
+            FileInfo = new FileInfo
+                {
+                    Description = "",
+                    Licence = "",
+                    Width = Int32.Parse(tmp[1]),
+                    Height = Int32.Parse(tmp[2])
+                };
+            /*FileInfo.Description = "";
+            FileInfo.Licence = "";
+            FileInfo.Width = Int32.Parse(tmp[1]);
+            FileInfo.Height = Int32.Parse(tmp[2]);*/
             await IdFileChanged.InvokeAsync(IdFile);
+            await FileInfoChanged.InvokeAsync(FileInfo);
         }
 
         uploading = false;

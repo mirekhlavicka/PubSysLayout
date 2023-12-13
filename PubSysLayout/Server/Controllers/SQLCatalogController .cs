@@ -171,7 +171,7 @@ namespace PubSysLayout.Server.Controllers
                             FormItemFields fif JOIN
                             Files f ON fif.intvalue = f.id_file
                         WHERE
-                            fif.id_item = {id_item}", database)
+                            fif.datetype=5 AND fif.id_item = {id_item}", database)
                 .AsEnumerable();
 
             return data.ToDictionary(dr => dr.Field<int>("id_file"), dr =>
