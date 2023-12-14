@@ -6,37 +6,54 @@
     display: inline-block;
     overflow: hidden;
     position: relative;
-    /*background-color: lightgray*/
+    padding: 4px;
 }
 
-::deep.imgItem .imgContainer {
-    /*text-align: center;*/
+    .imgItem:hover {
+        box-shadow: 0 2px 6px 0 rgba(0, 0, 0, 0.16);
+    }
+
+    ::deep.imgItem .imgContainer {
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
-/*.imgContainer img {
-                margin: auto;
-                display: block;
-            }*/
-
-::deep.imgItem .btnRemoveImage, ::deep .btnShowImage {
+::deep.imgItem .btnRemoveImage, ::deep .btnShowImage, ::deep .btnEditFile {
     z-index: 100;
     position: absolute;
-    top: 30px;
     display: none
 }
 
 ::deep.imgItem .btnRemoveImage {
+    top: 30px;
     right: 0px;
 }
 
 
 ::deep.imgItem .btnShowImage {
+    top: 30px;
     right: 40px;
 }
 
-::deep.imgItem:hover .btnRemoveImage, ::deep.imgItem:hover .btnShowImage {
+::deep.imgItem .btnEditFile {
+    bottom: 20px;
+    right: 0px;
+}
+
+::deep.imgItem:hover .btnRemoveImage, ::deep.imgItem:hover .btnShowImage, ::deep.imgItem:hover .btnEditFile {
     display: block
 }
+
+.fileDesc, .fileLic {
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.fileDesc {
+    font-weight: 500;
+}
+
+::deep.fileDesc a:hover, ::deep.fileLic a:hover {
+    text-decoration: underline
+} 

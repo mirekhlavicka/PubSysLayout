@@ -137,7 +137,7 @@
                                     }
                                     else if(fc.DataType == 5)
                                     {
-                                        <Image @key="p" IdFile="@((int?)val??0)" IdFileChanged="(v) => ChangeVal(p, v)" FileInfoChanged='(fi => {fileInfo[(int)(editRow[p])] = fi;  Console.WriteLine($" {editRow[p]} = {fileInfo[(int)(editRow[p])]?.Width}/{fi?.Width}");})' ServerName="@serverName" Title="@(fc.Title)" FileInfo="@(fileInfo.ContainsKey((int)val) ? fileInfo[(int)val] : null)" />
+                                        <Image @key="p" FileInfo="@(fileInfo.TryGetValue((int)val, out var ret) ? ret : default)" FileChanged="(fi) => {ChangeVal(p, fi?.IdFile ?? 0); if((fi?.IdFile ?? 0) > 0) { fileInfo[fi.IdFile] = fi;} }" ServerName="@serverName" Title="@(fc.Title)" />
                                     }
                                     else if (type == typeof(int))
                                     {

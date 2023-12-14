@@ -8,6 +8,7 @@ namespace PubSysLayout.Shared.SQLCatalog
 {
     public class FileInfo
     {
+        public int IdFile { get; set; }
         public int Width { get; set; }
         public int Height { get; set; }
         public string Description { get; set; }

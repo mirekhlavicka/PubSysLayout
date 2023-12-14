@@ -180,6 +180,7 @@ namespace PubSysLayout.Server.Controllers
 
                 return new FileInfo
                 {
+                    IdFile = dr.Field<int>("id_file"),
                     Width = dr.Field<int>("width"),
                     Height = dr.Field<int>("height"),
                     Description = tmp[0],

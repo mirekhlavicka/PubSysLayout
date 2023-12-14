@@ -10,18 +10,26 @@
     @if (IdFile > 0)
     {
         <MudIconButton Href="@($"https://{ServerName}/getfile.aspx?id_file={IdFile}")" Title="Show full image" Target="_blank" Icon="@Icons.Material.Filled.Forward" Color="Color.Primary" Size="Size.Medium" Class="btnShowImage" />
-        <MudIconButton Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" Class="btnRemoveImage" OnClick="@(async _ => {IdFile = 0; await IdFileChanged.InvokeAsync(IdFile);})" Title="Remove image" />
+        <MudIconButton Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" Class="btnRemoveImage" OnClick="@(async _ => {FileInfo = new FileInfo{}; await FileChanged.InvokeAsync(FileInfo);})" Title="Remove image" />
+        <MudIconButton Color="Color.Primary" Icon="@Icons.Material.Filled.Edit" Class="btnEditFile" OnClick="@(async _ => {FileInfo = new FileInfo{}; await FileChanged.InvokeAsync(FileInfo);})" Title="Edit image description and licence" />
     }
-    <MudText Typo="Typo.caption">@Title</MudText>
+
+    <div class="d-flex">
+        <MudText Typo="Typo.caption">@Title</MudText>
+        @if (IdFile > 0)
+        {
+            <MudText Typo="Typo.caption" Class="ml-auto">@($"{FileInfo?.Width} x {FileInfo?.Height}")</MudText>
+        }
+    </div>
 
     <MudFileUpload T="IBrowserFile" FilesChanged="UploadFiles"
-                   Hidden="@false"
-                   InputClass="absolute mud-width-full mud-height-full overflow-hidden z-20"
-                   InputStyle="opacity:0; cursor: pointer"
-                   title="Drag and drop file here or click"
-    @ondragenter="@SetDragClass"
-    @ondragleave="@ClearDragClass"
-    @ondragend="@ClearDragClass">
+            Hidden="@false"
+            InputClass="absolute mud-width-full mud-height-full overflow-hidden z-20"
+            InputStyle="opacity:0; cursor: pointer"
+            title="Drag and drop file here or click"
+            @ondragenter="@SetDragClass"
+            @ondragleave="@ClearDragClass"
+            @ondragend="@ClearDragClass">
         <ButtonTemplate>
             <MudPaper Height="330px" Outlined="true" Class="@_dragClass">
                 @if (IdFile > 0)
@@ -35,18 +43,16 @@
             </MudPaper>
         </ButtonTemplate>
     </MudFileUpload>
-    <MudText Typo="Typo.caption">@($"{FileInfo?.Width} x {FileInfo?.Height}")</MudText>
-        <div>@((MarkupString)(FileInfo?.Licence))</div>
+    <div class="fileDesc">@((MarkupString)(FileInfo?.Description))</div>
+    <div class="fileLic">@((MarkupString)(FileInfo?.Licence))</div>
 </div>
 @code {
     [Parameter]
-    public int IdFile { get; set; }
+    public FileInfo FileInfo { get; set; }
+    private int IdFile { get { return FileInfo?.IdFile ?? 0; } }
 
     [Parameter]
-    public EventCallback<int> IdFileChanged { get; set; }
-
-    [Parameter]
-    public EventCallback<FileInfo> FileInfoChanged { get; set; }
+    public EventCallback<FileInfo> FileChanged { get; set; }
 
     [Parameter]
     public string Title { get; set; }
@@ -54,8 +60,6 @@
     [Parameter]
     public string ServerName { get; set; }
 
-    [Parameter]
-    public FileInfo FileInfo { get; set; }
 
     private const string DefaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mt-1 mud-width-full mud-height-full z-10 imgContainer";
     private string _dragClass = DefaultDragClass;
@@ -79,20 +83,15 @@
         {
             var s = await res.Content.ReadAsStringAsync();
             var tmp = s.Split(":");
-            IdFile = Int32.Parse(tmp[0]);
             FileInfo = new FileInfo
                 {
+                    IdFile = Int32.Parse(tmp[0]),
                     Description = "",
                     Licence = "",
                     Width = Int32.Parse(tmp[1]),
                     Height = Int32.Parse(tmp[2])
                 };
-            /*FileInfo.Description = "";
-            FileInfo.Licence = "";
-            FileInfo.Width = Int32.Parse(tmp[1]);
-            FileInfo.Height = Int32.Parse(tmp[2]);*/
-            await IdFileChanged.InvokeAsync(IdFile);
-            await FileInfoChanged.InvokeAsync(FileInfo);
+            await FileChanged.InvokeAsync(FileInfo);
         }
 
         uploading = false;
