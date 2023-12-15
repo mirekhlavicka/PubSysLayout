@@ -23,6 +23,7 @@ namespace PubSysLayout.Shared.SQLCatalog
         public bool ParseMultival { get; set; }
         public int Width { get; set; }
         public int Height { get; set; }
+        public string Style { get; set; }
 
         [JsonIgnore]
         public Type Type

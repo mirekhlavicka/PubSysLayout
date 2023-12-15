@@ -5,20 +5,22 @@
 @inject HttpClient Http
 @inject IJSRuntime js
 @inject MudBlazor.ISnackbar snackBar
+@inject IDialogService DialogService
+
 
 <div class="imgItem">
     @if (IdFile > 0)
     {
         <MudIconButton Href="@($"https://{ServerName}/getfile.aspx?id_file={IdFile}")" Title="Show full image" Target="_blank" Icon="@Icons.Material.Filled.Forward" Color="Color.Primary" Size="Size.Medium" Class="btnShowImage" />
         <MudIconButton Color="Color.Secondary" Icon="@Icons.Material.Filled.Delete" Class="btnRemoveImage" OnClick="@(async _ => {FileInfo = new FileInfo{}; await FileChanged.InvokeAsync(FileInfo);})" Title="Remove image" />
-        <MudIconButton Color="Color.Primary" Icon="@Icons.Material.Filled.Edit" Class="btnEditFile" OnClick="@(async _ => {FileInfo = new FileInfo{}; await FileChanged.InvokeAsync(FileInfo);})" Title="Edit image description and licence" />
+        <MudIconButton Color="Color.Primary" Icon="@Icons.Material.Filled.Edit" Class="btnEditFile" OnClick="@(async _ => {await EditFileInfo();})" Title="Edit image description and licence" />
     }
 
     <div class="d-flex">
         <MudText Typo="Typo.caption">@Title</MudText>
         @if (IdFile > 0)
         {
-            <MudText Typo="Typo.caption" Class="ml-auto">@($"{FileInfo?.Width} x {FileInfo?.Height}")</MudText>
+            <MudText Typo="Typo.caption" Class="ml-auto">@($"{FileInfo?.Width} × {FileInfo?.Height}")</MudText>
         }
     </div>
 
@@ -97,6 +99,32 @@
         uploading = false;
         ClearDragClass();
         StateHasChanged();
+    }
+
+
+    private async Task EditFileInfo()
+    {
+        var options = new DialogOptions
+            {
+                MaxWidth = MaxWidth.Small,
+                CloseButton = true
+            };
+
+        var parameters = new DialogParameters
+            {
+                ["FileInfo"] =  new FileInfo { Description = FileInfo.Description, Licence = FileInfo.Licence}
+            };
+
+
+        var result = await DialogService.Show<FileInfoDialog>("Edit image info", parameters, options).Result;
+
+        if (!result.Canceled)
+        {
+            FileInfo.Description = ((FileInfo)(result.Data)).Description;
+            FileInfo.Licence = ((FileInfo)(result.Data)).Licence;
+
+            StateHasChanged();
+        }
     }
 
     private void SetDragClass()

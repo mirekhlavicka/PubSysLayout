@@ -1,0 +1,63 @@
+﻿@inject HttpClient Http
+@inject IJSRuntime js
+@inject NavigationManager uriHelper
+@inject MudBlazor.ISnackbar snackBar
+@inject IDialogService DialogService
+@using PubSysLayout.Shared.SQLCatalog
+
+
+<MudDialog DefaultFocus="DefaultFocus.FirstChild">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Image" Class="mr-3 mb-n1"/>
+            @MudDialog.Title
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="form" @bind-IsValid="@canSave">
+            <MudTextField Variant="@Variant.Outlined" T="string" @bind-Value="FileInfo.Description"
+                            Label="Description" 
+                            Lines="5" Required="false" />
+            <MudTextField Variant="@Variant.Outlined" T="string" @bind-Value="FileInfo.Licence"
+                            Label="Licence"
+                            Lines="5" Required="false" Class="mt-4" />
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" Variant="Variant.Filled">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="OK" Disabled="@(false/*!canSave*/)" Variant="Variant.Filled" accesskey="s"  Class="mr-5">Save</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+
+    [Parameter]
+    public FileInfo FileInfo { get; set; }
+
+    MudForm form;
+    bool canSave = false;
+
+    // protected async override Task OnInitializedAsync()
+    // {
+    //     //await LoadData();
+    // }
+
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private async void OK()
+    {
+        await form.Validate();
+
+        if (!form.IsValid)
+        {
+            return;
+        }
+
+        MudDialog.Close(FileInfo);
+    }
+}

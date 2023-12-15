@@ -89,9 +89,16 @@
                                     object val = editRow[p];
                                     Type type = fc.Type;
 
+                                    string className = !fc.Style.Contains("small") && (fc.Style.Contains("long") /*|| fc.Width >= 400*/) ? "longFieldEdit" : "smallFieldEdit";
+
+                                    if(fc.Style.Contains("newline"))
+                                    {
+                                        <div/>
+                                    }
+
                                     if (fc.Multival && type == typeof(string))
                                     {
-                                        <div class="@(fc.Width < 400 ? "smallFieldEdit" : "longFieldEdit")" @key="@p">
+                                        <div class="@className" @key="@p">
                                             <MudSelect MultiSelection="true" SelectAll="true" SelectedValues="@(((string)val)?.Split(',').Select(v => v.Trim()).Where(v => !String.IsNullOrEmpty(v)))" SelectedValuesChanged='(v) => ChangeVal(p, String.Join(", ", v)) ' Label="@fc.Title" Variant="Variant.Text" T="string" Clearable="true" ToStringFunc="(v) => ListControlData[fc.IdFControl][v]" AnchorOrigin="Origin.BottomCenter">
                                                 @foreach (var li in ListControlData[fc.IdFControl].Items/*.Where(li => !String.IsNullOrEmpty(li.Value))*/)
                                                 {
@@ -102,7 +109,7 @@
                                     }
                                     else if (new int[] { 2, 3, 4, 5 }.Contains(fc.IdControl) && type == typeof(string))
                                     {
-                                        <div class="@(fc.Width < 400 ? "smallFieldEdit" : "longFieldEdit")" @key="@p">
+                                        <div class="@className" @key="@p">
                                             <MudSelect Value="@((string)val)" ValueChanged="(v) => ChangeVal(p, v)" Label="@fc.Title" Variant="Variant.Text" T="string" Clearable="true" ToStringFunc="(v) => ListControlData[fc.IdFControl][v]" AnchorOrigin="Origin.BottomCenter" Required="@(fc.Required)" RequiredError='@($"{fc.Title} is  required")'>
                                                 @foreach (var li in ListControlData[fc.IdFControl].Items/*.Where(li => !String.IsNullOrEmpty(li.Value))*/)
                                                 {
@@ -118,7 +125,9 @@
                                             <div style="display:flex;margin-bottom:-8px"><MudIconButton Size="Size.Small" Icon="@Icons.Material.Filled.EditNote" Color="Color.Primary" OnClick="@(async () => await CodeEdit(p))" Title="Edit content" Class="ml-auto"></MudIconButton></div>
                                         }
 
-                                        <MudTextField @key="p" Class='@(fc.MultiLine || fc.DataType == 10 ? "multiLineEdit": (fc.Width < 400 ? "smallFieldEdit" : "longFieldEdit"))' Variant="@(fc.MultiLine || fc.DataType == 10 ? Variant.Outlined : Variant.Text)" Value="@((string)val)" ValueChanged="(v) => ChangeVal(p, v)" T="string" Label="@(fc.Title)" T="string" ReadOnly="@(false)" MaxLength="@(fc.MaxLength > 0 ? fc.MaxLength : 524288)" Lines="@(fc.MultiLine || fc.DataType == 10 ? 5 : 1)" Required="@(fc.Required)" RequiredError='@($"{fc.Title} is  required")'></MudTextField>
+                                        <MudTextField @key="p" Class='@(fc.MultiLine || fc.DataType == 10 ? "multiLineEdit": className)' Variant="@(fc.MultiLine || fc.DataType == 10 ? Variant.Outlined : Variant.Text)"
+                                                      Value="@((string)val)" ValueChanged="(v) => ChangeVal(p, v)" T="string" Label="@(fc.Title)" T="string" ReadOnly="@(false)" MaxLength="@(fc.MaxLength > 0 ? fc.MaxLength : 524288)" 
+                                            Lines="@(fc.MultiLine || fc.DataType == 10 ? 5 : 1)" Required="@(fc.Required)" RequiredError='@($"{fc.Title} is  required")'></MudTextField>
                                     }
                                     else if (type == typeof(DateTime))
                                     {
