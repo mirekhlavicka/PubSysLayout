@@ -4,7 +4,13 @@
 @inject MudBlazor.ISnackbar snackBar
 @inject IDialogService DialogService
 @using PubSysLayout.Shared.SQLCatalog
+@using TinyMCE.Blazor
 
+<style>
+    .tox-tinymce-aux {
+        z-index: 110000;
+    }
+</style>
 
 <MudDialog DefaultFocus="DefaultFocus.FirstChild">
     <TitleContent>
@@ -15,12 +21,19 @@
     </TitleContent>
     <DialogContent>
         <MudForm @ref="form" @bind-IsValid="@canSave">
-            <MudTextField Variant="@Variant.Outlined" T="string" @bind-Value="FileInfo.Description"
+@*             <MudTextField Variant="@Variant.Outlined" T="string" @bind-Value="FileInfo.Description"
                             Label="Description" 
                             Lines="5" Required="false" />
             <MudTextField Variant="@Variant.Outlined" T="string" @bind-Value="FileInfo.Licence"
                             Label="Licence"
-                            Lines="5" Required="false" Class="mt-4" />
+                            Lines="5" Required="false" Class="mt-4" /> *@
+
+            <MudText Typo="Typo.caption">Description</MudText>
+            <Editor ScriptSrc="/lib/tinymce/tinymce.min.js" Conf="@editorConf" Inline="false" @bind-Value="FileInfo.Description" />
+
+            <MudText Typo="Typo.caption">Licence</MudText>
+            <Editor ScriptSrc="/lib/tinymce/tinymce.min.js" Conf="@editorConf" Inline="false" @bind-Value="FileInfo.Licence" />
+
         </MudForm>
     </DialogContent>
     <DialogActions>
@@ -42,6 +55,19 @@
     // {
     //     //await LoadData();
     // }
+
+    private Dictionary<string, object> editorConf = new Dictionary<string, object>{
+    {"language" , "cs"},
+    { "plugins", "link code" },
+    {"toolbar", "undo redo | bold italic | link | code"}, /*underline*/
+    //{"width", 400},
+    {"height", 200},
+    {"menubar", ""},
+    {"promotion", false},
+    {"statusbar", false}
+    //{"forced_root_block", ""},
+    //{"force_p_newlines", false}
+  };
 
 
     private void Cancel()
