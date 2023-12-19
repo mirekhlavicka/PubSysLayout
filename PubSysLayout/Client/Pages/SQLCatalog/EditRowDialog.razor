@@ -9,6 +9,7 @@
 @using PubSysLayout.Shared.SQLCatalog;
 @using System.ComponentModel;
 @using System.Text.Json;
+@using TinyMCE.Blazor
 
 <style>
     .smallFieldEdit {
@@ -46,7 +47,16 @@
     .singleTab .mud-tabs-toolbar {
         display: none
     }
+
+    .tox-tinymce-aux {
+        z-index: 110000;
+    }
+
+    .tox .tox-dialog-wrap__backdrop {
+        background-color: var(--mud-palette-overlay-dark);
+    }
 </style>
+
 
 <MudDialog DefaultFocus="DefaultFocus.Element">
     <TitleContent>
@@ -118,6 +128,12 @@
                                             </MudSelect>
                                         </div>
                                     }
+                                    else if (fc.DataType == 10)
+                                    {
+                                        <div Class="mt-2"><MudText Typo="Typo.caption">@fc.Title</MudText></div>
+                                        <Editor ScriptSrc="lib/tinymce/tinymce.min.js" Conf="@editorConf" Inline="false" Value="@((string)val)" ValueChanged="(v) => ChangeVal(p, v)" />
+                                        <div Class="mb-2"></div>
+                                    }
                                     else if (type == typeof(string))
                                     {
                                         if (fc.MultiLine || fc.DataType == 10)
@@ -126,7 +142,7 @@
                                         }
 
                                         <MudTextField @key="p" Class='@(fc.MultiLine || fc.DataType == 10 ? "multiLineEdit": className)' Variant="@(fc.MultiLine || fc.DataType == 10 ? Variant.Outlined : Variant.Text)"
-                                                      Value="@((string)val)" ValueChanged="(v) => ChangeVal(p, v)" T="string" Label="@(fc.Title)" T="string" ReadOnly="@(false)" MaxLength="@(fc.MaxLength > 0 ? fc.MaxLength : 524288)" 
+                                            Value="@((string)val)" ValueChanged="(v) => ChangeVal(p, v)" T="string" Label="@(fc.Title)" T="string" ReadOnly="@(false)" MaxLength="@(fc.MaxLength > 0 ? fc.MaxLength : 524288)" 
                                             Lines="@(fc.MultiLine || fc.DataType == 10 ? 5 : 1)" Required="@(fc.Required)" RequiredError='@($"{fc.Title} is  required")'></MudTextField>
                                     }
                                     else if (type == typeof(DateTime))
@@ -146,7 +162,9 @@
                                     }
                                     else if(fc.DataType == 5)
                                     {
-                                        <Image @key="p" FileInfo="@(fileInfo.TryGetValue((int)val, out var ret) ? ret : default)" FileChanged="(fi) => {ChangeVal(p, fi?.IdFile ?? 0); if((fi?.IdFile ?? 0) > 0) { fileInfo[fi.IdFile] = fi;} }" ServerName="@serverName" Title="@(fc.Title)" />
+                                        <CascadingValue Value="Query">
+                                            <Image @key="p" FileInfo="@(fileInfo.TryGetValue((int)val, out var ret) ? ret : default)" FileChanged="(fi) => {ChangeVal(p, fi?.IdFile ?? 0); if((fi?.IdFile ?? 0) > 0) { fileInfo[fi.IdFile] = fi;} }" ServerName="@serverName" Title="@(fc.Title)" />
+                                        </CascadingValue>    
                                     }
                                     else if (type == typeof(int))
                                     {
@@ -203,6 +221,20 @@
     private string searchField = "";
 
     private string serverName = "";
+
+    private Dictionary<string, object> editorConf = new Dictionary<string, object>
+    {
+        //{"language" , "cs"},
+        { "plugins", "link code" },
+        {"toolbar", "undo redo | bold italic | link | code"}, /*underline*/
+        //{"width", 400},
+        {"height", 300},
+        {"menubar", ""},
+        {"promotion", false},
+        {"statusbar", false},
+        {"allow_unsafe_link_target", true },
+        {"entity_encoding", "raw"}
+    };
 
     protected override async Task OnInitializedAsync()
     {

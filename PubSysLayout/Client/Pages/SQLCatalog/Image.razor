@@ -25,22 +25,22 @@
     </div>
 
     <MudFileUpload T="IBrowserFile" FilesChanged="UploadFiles"
-            Hidden="@false"
-            InputClass="absolute mud-width-full mud-height-full overflow-hidden z-20"
-            InputStyle="opacity:0; cursor: pointer"
-            title="Drag and drop file here or click"
-            @ondragenter="@SetDragClass"
-            @ondragleave="@ClearDragClass"
-            @ondragend="@ClearDragClass">
+                   Hidden="@false"
+                   InputClass="absolute mud-width-full mud-height-full overflow-hidden z-20"
+                   InputStyle="opacity:0; cursor: pointer"
+                   title="Drag and drop file here or click"
+    @ondragenter="@SetDragClass"
+    @ondragleave="@ClearDragClass"
+    @ondragend="@ClearDragClass">
         <ButtonTemplate>
             <MudPaper Height="330px" Outlined="true" Class="@_dragClass">
                 @if (IdFile > 0)
                 {
                     <MudImage Src="@($"https://{ServerName}/getthumbnail.aspx?q=60&crop=0&h=300&w=350&id_file={IdFile}")" />
                 }
-                else if (uploading)
+                @if (uploading)
                 {
-                    <MudProgressCircular Color="Color.Info" Indeterminate="true" />
+                    <MudProgressCircular Color="Color.Info" Indeterminate="true" Style="position:absolute" />
                 }
             </MudPaper>
         </ButtonTemplate>
@@ -49,6 +49,8 @@
     <div class="fileLic">@((MarkupString)(FileInfo?.Licence))</div>
 </div>
 @code {
+    [CascadingParameter] Query Query { get; set; }
+
     [Parameter]
     public FileInfo FileInfo { get; set; }
     private int IdFile { get { return FileInfo?.IdFile ?? 0; } }
@@ -61,7 +63,6 @@
 
     [Parameter]
     public string ServerName { get; set; }
-
 
     private const string DefaultDragClass = "relative rounded-lg border-2 border-dashed pa-4 mt-1 mud-width-full mud-height-full z-10 imgContainer";
     private string _dragClass = DefaultDragClass;
@@ -112,7 +113,9 @@
 
         var parameters = new DialogParameters
             {
-                ["FileInfo"] =  new FileInfo { Description = FileInfo.Description, Licence = FileInfo.Licence}
+                ["FileInfo"] = new FileInfo { IdFile = FileInfo.IdFile, Description = FileInfo.Description, Licence = FileInfo.Licence },
+                ["Query"] = Query,
+                ["ImgURL"] = $"https://{ServerName}/getthumbnail.aspx?q=60&crop=0&h=300&w=350&id_file={IdFile}"
             };
 
 

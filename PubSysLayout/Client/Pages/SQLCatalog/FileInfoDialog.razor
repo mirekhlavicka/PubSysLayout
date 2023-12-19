@@ -10,9 +10,13 @@
     .tox-tinymce-aux {
         z-index: 110000;
     }
+
+    .tox .tox-dialog-wrap__backdrop {
+        background-color: var(--mud-palette-overlay-dark);
+    }
 </style>
 
-<MudDialog DefaultFocus="DefaultFocus.FirstChild">
+<MudDialog DefaultFocus="DefaultFocus.Element">
     <TitleContent>
         <MudText Typo="Typo.h6">
             <MudIcon Icon="@Icons.Material.Filled.Image" Class="mr-3 mb-n1"/>
@@ -20,20 +24,15 @@
         </MudText>
     </TitleContent>
     <DialogContent>
+
+        <div class="d-flex justify-center" style="height:150px">
+            <MudImage Src="@ImgURL" Elevation="25" Class="rounded-lg" ObjectPosition="ObjectPosition.Center" Fluid="true" />
+        </div>
         <MudForm @ref="form" @bind-IsValid="@canSave">
-@*             <MudTextField Variant="@Variant.Outlined" T="string" @bind-Value="FileInfo.Description"
-                            Label="Description" 
-                            Lines="5" Required="false" />
-            <MudTextField Variant="@Variant.Outlined" T="string" @bind-Value="FileInfo.Licence"
-                            Label="Licence"
-                            Lines="5" Required="false" Class="mt-4" /> *@
-
-            <MudText Typo="Typo.caption">Description</MudText>
-            <Editor ScriptSrc="/lib/tinymce/tinymce.min.js" Conf="@editorConf" Inline="false" @bind-Value="FileInfo.Description" />
-
-            <MudText Typo="Typo.caption">Licence</MudText>
-            <Editor ScriptSrc="/lib/tinymce/tinymce.min.js" Conf="@editorConf" Inline="false" @bind-Value="FileInfo.Licence" />
-
+            <div Class="mt-4"><MudText Typo="Typo.caption">Description</MudText></div>
+            <Editor ScriptSrc="lib/tinymce/tinymce.min.js" Conf="@editorConf" Inline="false" @bind-Value="FileInfo.Description" />
+            <div Class="mt-4"><MudText Typo="Typo.caption">Licence</MudText></div>
+            <Editor ScriptSrc="lib/tinymce/tinymce.min.js" Conf="@editorConf" Inline="false" @bind-Value="FileInfo.Licence" />
         </MudForm>
     </DialogContent>
     <DialogActions>
@@ -43,32 +42,36 @@
 </MudDialog>
 
 @code {
-    [CascadingParameter] MudDialogInstance MudDialog { get; set; }
+    [CascadingParameter] 
+    MudDialogInstance MudDialog { get; set; }
+    
+    [Parameter] 
+    public Query Query { get; set; }
 
     [Parameter]
     public FileInfo FileInfo { get; set; }
 
+    [Parameter]
+    public string ImgURL { get; set; }
+
+
     MudForm form;
     bool canSave = false;
 
-    // protected async override Task OnInitializedAsync()
-    // {
-    //     //await LoadData();
-    // }
 
-    private Dictionary<string, object> editorConf = new Dictionary<string, object>{
-    {"language" , "cs"},
-    { "plugins", "link code" },
-    {"toolbar", "undo redo | bold italic | link | code"}, /*underline*/
-    //{"width", 400},
-    {"height", 200},
-    {"menubar", ""},
-    {"promotion", false},
-    {"statusbar", false}
-    //{"forced_root_block", ""},
-    //{"force_p_newlines", false}
-  };
-
+    private Dictionary<string, object> editorConf = new Dictionary<string, object>
+    {
+        //{"language" , "cs"},
+        { "plugins", "link code" },
+        {"toolbar", "undo redo | bold italic | link | code"}, /*underline*/
+        //{"width", 400},
+        {"height", 200},
+        {"menubar", ""},
+        {"promotion", false},
+        {"statusbar", false},
+        {"allow_unsafe_link_target", true },
+        {"entity_encoding", "raw"}
+    };
 
     private void Cancel()
     {
@@ -83,6 +86,9 @@
         {
             return;
         }
+
+        await Http.PutAsJsonAsync($"api/sqlcatalog/fileinfo?database={Query.Database}", FileInfo);
+        snackBar.Add($"Image info saved", Severity.Success);
 
         MudDialog.Close(FileInfo);
     }

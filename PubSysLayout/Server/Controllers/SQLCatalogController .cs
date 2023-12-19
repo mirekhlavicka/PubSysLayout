@@ -10,6 +10,7 @@ using System.Text.Json;
 using PubSysLayout.Shared.Files;
 using static System.Net.WebRequestMethods;
 using FileInfo = PubSysLayout.Shared.SQLCatalog.FileInfo;
+using System.Text.RegularExpressions;
 
 namespace PubSysLayout.Server.Controllers
 {
@@ -299,6 +300,16 @@ namespace PubSysLayout.Server.Controllers
             return postContent;
         }
 
+        [HttpPut("fileinfo")]
+        public IActionResult UpdateFileInfo(string database, FileInfo fileInfo)
+        {
+            fileInfo.Description = Regex.Replace(fileInfo.Description, @"<\/?p>", "");
+            fileInfo.Licence = Regex.Replace(fileInfo.Licence, @"<\/?p>", "");
+
+            SetArticleFileDescription(database, fileInfo.IdFile, !String.IsNullOrEmpty(fileInfo.Licence) ?  $"{fileInfo.Description}[br]{fileInfo.Licence}" : fileInfo.Description);
+            return NoContent();
+        }
+
         private string BuildSQL(Query query, FormControl[] formControls)
         {
             var selectList = String.Join(",\r\n", formControls.Where(fc => query.Include.Contains(fc.IdFControl)).Select(fc => $"\tfif{fc.IdFControl}." + fc.DataType switch
@@ -582,5 +593,35 @@ namespace PubSysLayout.Server.Controllers
             }
         }
 
+        private void SetArticleFileDescription(string database, int id_file, string description)
+        {
+            SqlConnection conn = new SqlConnection(String.Format(_configuration.GetConnectionString("PubSysDefault"), database));
+            SqlCommand cmd = new SqlCommand("spAdminSetFileDescription;1");
+            try
+            {
+                cmd.Parameters.Add(new SqlParameter("@id_user", SqlDbType.Int)).Value = 1;
+                cmd.Parameters.Add(new SqlParameter("@id_server", SqlDbType.Int)).Value = 1;
+                cmd.Parameters.Add(new SqlParameter("@id_language", SqlDbType.Int)).Value = 1029;
+                cmd.Parameters.Add(new SqlParameter("@id_file", SqlDbType.Int)).Value = id_file;
+                cmd.Parameters.Add(new SqlParameter("@description", SqlDbType.NVarChar, 1000)).Value = description;
+
+                if (conn.State == ConnectionState.Closed)
+                {
+                    conn.Open();
+                }
+                cmd.Connection = conn;
+                cmd.CommandType = CommandType.StoredProcedure;
+                cmd.ExecuteNonQuery();
+            }
+            finally
+            {
+                if (conn.State == ConnectionState.Open)
+                {
+                    conn.Close();
+                }
+                conn.Dispose();
+                cmd.Dispose();
+            }
+        }
     }
 }
