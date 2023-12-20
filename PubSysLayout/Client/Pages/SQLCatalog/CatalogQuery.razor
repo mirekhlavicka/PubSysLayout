@@ -25,6 +25,13 @@
         position: relative
     }
 
+  
+        .valTD .htmlField {
+                max-height: 70px;
+                overflow: auto
+        }
+
+
         .valTD .btnMore {
             display: none;
             position: absolute;
@@ -223,6 +230,10 @@
                                 if (!String.IsNullOrEmpty(searchString))
                                 {
                                     <MudHighlighter Text="@(val.ToString())" HighlightedText="@searchString" />
+                                }
+                                else if (((string)val ?? "").StartsWith("<"))
+                                {
+                                    <div class="htmlField">@((MarkupString)((string)val ?? ""))</div>
                                 }
                                 else
                                 {
