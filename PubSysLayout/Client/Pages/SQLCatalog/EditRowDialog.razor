@@ -164,7 +164,13 @@
                                     {
                                         <CascadingValue Value="Query">
                                             <Image @key="p" FileInfo="@(fileInfo.TryGetValue((int?)val??0, out var ret) ? ret : default)" FileChanged="(fi) => {ChangeVal(p, fi?.IdFile ?? 0); if((fi?.IdFile ?? 0) > 0) { fileInfo[fi.IdFile] = fi;} }" ServerName="@serverName" Title="@(fc.Title)" />
-                                        </CascadingValue>    
+                                        </CascadingValue>
+                                    }
+                                    else if(fc.DataType == 6)
+                                    {
+                                        <CascadingValue Value="Query">
+                                            <Article @key="p" IdArticle="@((int)val)" IdArticleChanged="(id) => ChangeVal(p, id)" />
+                                        </CascadingValue>
                                     }
                                     else if (type == typeof(int))
                                     {

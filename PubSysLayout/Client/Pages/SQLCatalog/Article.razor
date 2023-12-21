@@ -1,0 +1,41 @@
+﻿@using PubSysLayout.Shared.SQLCatalog
+
+@inject HttpClient Http
+
+<MudAutocomplete Dense="true" T="KeyValuePair<int, string>" SearchFunc="@SearchArticle" DebounceInterval="500"
+                 ResetValueOnEmptyText="true" CoerceText="true" CoerceValue="false"
+                 ToStringFunc='kv => kv.Key > 0 ? $"{kv.Value} ({kv.Key})" : ""' MaxItems="100"
+                 Value="article"
+                 ValueChanged="async (v) => {article = v; IdArticle = v.Key; await IdArticleChanged.InvokeAsync(IdArticle);}"
+                 Placeholder="Type article title or ID" Required="false"
+                 AdornmentIcon="@Icons.Material.Filled.Search" AdornmentColor="Color.Default" Clearable="true" Class="longFieldEdit" spellcheck="false" />
+
+
+@code {
+    [CascadingParameter] Query Query { get; set; }
+
+    [Parameter]
+    public int IdArticle { get; set; }
+
+    [Parameter]
+    public EventCallback<int> IdArticleChanged { get; set; }
+
+    private KeyValuePair<int, string> article;
+
+    protected async override Task OnInitializedAsync/*OnParametersSetAsync*/()
+    {
+        if (IdArticle > 0 && article.Key != IdArticle)
+        {
+            article = (await SearchArticle(IdArticle.ToString())).FirstOrDefault();
+        }
+        else
+        {
+            article = new KeyValuePair<int, string>();
+        }
+    }
+
+    private async Task<IEnumerable<KeyValuePair<int, string>>> SearchArticle(string search)
+    {
+        return (await Http.GetFromJsonAsync<KeyValuePair<int, string>[]>($"api/sqlcatalog/searcharticle?database={Query.Database}&&search={search}"));
+    }
+}

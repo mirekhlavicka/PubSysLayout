@@ -310,6 +310,17 @@ namespace PubSysLayout.Server.Controllers
             return NoContent();
         }
 
+        [HttpGet("searcharticle")]
+        public IEnumerable<KeyValuePair<int, string>> SearchArticle(string database, string search)
+        {
+            int id_article = 0;
+            Int32.TryParse(search, out id_article);
+
+            return GetData($"SELECT TOP 20 id_article, title FROM Articles WHERE {(id_article > 0 ? $"id_article={id_article}" : $"del=0 AND title LIKE '{search}%'")} ORDER BY datereleased DESC", database)
+                .AsEnumerable()
+                .Select(dr => new KeyValuePair<int, string>(dr.Field<int>("id_article"), dr.Field<string>("title")));
+        }
+
         private string BuildSQL(Query query, FormControl[] formControls)
         {
             var selectList = String.Join(",\r\n", formControls.Where(fc => query.Include.Contains(fc.IdFControl)).Select(fc => $"\tfif{fc.IdFControl}." + fc.DataType switch
