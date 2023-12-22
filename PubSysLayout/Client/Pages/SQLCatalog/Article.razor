@@ -2,23 +2,32 @@
 
 @inject HttpClient Http
 
-<MudAutocomplete Dense="true" T="KeyValuePair<int, string>" SearchFunc="@SearchArticle" DebounceInterval="500"
-                 ResetValueOnEmptyText="true" CoerceText="true" CoerceValue="false"
-                 ToStringFunc='kv => kv.Key > 0 ? $"{kv.Value} ({kv.Key})" : ""' MaxItems="100"
-                 Value="article"
-                 ValueChanged="async (v) => {article = v; IdArticle = v.Key; await IdArticleChanged.InvokeAsync(IdArticle);}"
-                 Placeholder="Type article title or ID" Required="false"
-                 AdornmentIcon="@Icons.Material.Filled.Search" AdornmentColor="Color.Default" Clearable="true" Class="longFieldEdit" spellcheck="false" />
-
+<div class="d-flex">
+    <MudAutocomplete Dense="true" T="KeyValuePair<int, string>" SearchFunc="@SearchArticle" DebounceInterval="500"
+                     ResetValueOnEmptyText="true" CoerceText="true" CoerceValue="false"
+                     ToStringFunc='kv => kv.Key > 0 ? $"({kv.Key}) {kv.Value}" : ""' MaxItems="100"
+                     Value="article" Label="@Title"
+                     ValueChanged="async (v) => {article = v; IdArticle = v.Key; await IdArticleChanged.InvokeAsync(IdArticle);}"
+                     Placeholder="Type article title or ID" Required="false"
+                     AdornmentIcon="@Icons.Material.Filled.Search" AdornmentColor="Color.Default" Clearable="true" spellcheck="false" />
+    <MudIconButton Href="@($"https://{ServerName}/?article={IdArticle}")" Title="Show article" Target="_blank" Icon="@Icons.Material.Filled.Forward" Color="Color.Primary" Size="Size.Medium" Class="mt-2 mb-2" Disabled="@(IdArticle == 0)" />
+</div>
 
 @code {
-    [CascadingParameter] Query Query { get; set; }
+    [Parameter] 
+    public string Database { get; set; }
 
     [Parameter]
     public int IdArticle { get; set; }
 
     [Parameter]
     public EventCallback<int> IdArticleChanged { get; set; }
+
+    [Parameter]
+    public string Title { get; set; }
+
+    [Parameter]
+    public string ServerName { get; set; }
 
     private KeyValuePair<int, string> article;
 
@@ -28,14 +37,10 @@
         {
             article = (await SearchArticle(IdArticle.ToString())).FirstOrDefault();
         }
-        else
-        {
-            article = new KeyValuePair<int, string>();
-        }
     }
 
     private async Task<IEnumerable<KeyValuePair<int, string>>> SearchArticle(string search)
     {
-        return (await Http.GetFromJsonAsync<KeyValuePair<int, string>[]>($"api/sqlcatalog/searcharticle?database={Query.Database}&&search={search}"));
+        return (await Http.GetFromJsonAsync<KeyValuePair<int, string>[]>($"api/sqlcatalog/searcharticle?database={Database}&&search={search}"));
     }
 }

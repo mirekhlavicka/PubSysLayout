@@ -168,9 +168,7 @@
                                     }
                                     else if(fc.DataType == 6)
                                     {
-                                        <CascadingValue Value="Query">
-                                            <Article @key="p" IdArticle="@((int)val)" IdArticleChanged="(id) => ChangeVal(p, id)" />
-                                        </CascadingValue>
+                                        <Article @key="p" IdArticle="@((int)val)" Database="@(Query.Database)" ServerName="@serverName" Title="@(fc.Title)" IdArticleChanged="(id) => ChangeVal(p, id)" />
                                     }
                                     else if (type == typeof(int))
                                     {

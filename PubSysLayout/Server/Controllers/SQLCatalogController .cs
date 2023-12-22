@@ -68,6 +68,13 @@ namespace PubSysLayout.Server.Controllers
                                 r[i + 2] = (r[i + 2] != System.DBNull.Value && (int)r[i + 2] > 0) ? $"https://{serverName}/getfile.aspx?id_file={r[i + 2]}" : null;
                             }
                         }
+                        else if (shown[i].DataType == 6)
+                        {
+                            foreach (var r in items)
+                            {
+                                r[i + 2] = (r[i + 2] != System.DBNull.Value && (int)r[i + 2] > 0) ? $"https://{serverName}/?article={r[i + 2]}" : null;
+                            }
+                        }
                     }
 
                     return Ok(new QueryResult
@@ -76,7 +83,7 @@ namespace PubSysLayout.Server.Controllers
                         Columns = dtItems.Columns.Cast<DataColumn>().Select((dc, i) => new QueryResultColumn
                         {
                             Name = dc.ColumnName,
-                            TypeName = (i > 1 && shown[i - 2].DataType == 5 ? "System.String" : dc.DataType.ToString()),
+                            TypeName = (i > 1 && (shown[i - 2].DataType == 5 || shown[i - 2].DataType == 6) ? "System.String" : dc.DataType.ToString()),
                             ReadOnly = dc.ReadOnly,
                             MaxLength = dc.MaxLength,
                             AllowDBNull = dc.AllowDBNull
