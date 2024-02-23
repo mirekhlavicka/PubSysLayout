@@ -361,12 +361,7 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
-/PubSysLayout/Server/Keys/key-95f6bb1c-9bc3-49ae-b987-56635d1fc7ac.xml
-/PubSysLayout/Server/Keys/key-daa22528-76ab-4be0-ba9e-d9dc69f2e551.xml
-/PubSysLayout/Server/Keys/key-3688aa62-ec02-4ed4-8cdd-c34e1842d1ff.xml
-/PubSysLayout/Server/Keys/key-f61dceba-e86d-47e1-bb1c-d9f7b349048f.xml
+
 /PubSysLayout/Server/savedSQL
-/PubSysLayout/Server/Keys/key-210a5bef-bf1d-4d83-a4e1-e12361fb8cab.xml
-/PubSysLayout/Server/Keys/key-2abfa356-c990-4934-8459-cf1df5290708.xml
-/PubSysLayout/Server/Keys/key-aab10da8-fde3-4872-8957-d58f3cf54ab5.xml
-/PubSysLayout/Server/Keys/key-7c228c3b-3fe8-4d14-8ac1-d6cec8093ea3.xml
+/PubSysLayout/Server/Keys
+
